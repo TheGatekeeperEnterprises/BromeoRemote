@@ -89,10 +89,18 @@ export class PeerSession {
     this.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
+        console.log("[ice] local candidate:", ev.candidate.type, ev.candidate.protocol, ev.candidate.candidate);
         this.signaling.send({ type: "signal", targetId: this.peerId, payload: { candidate: ev.candidate.toJSON() } });
+      } else {
+        console.log("[ice] gathering complete (null candidate)");
       }
     };
+    this.pc.onicegatheringstatechange = () => console.log("[ice] gatheringState:", this.pc.iceGatheringState);
+    this.pc.oniceconnectionstatechange = () => console.log("[ice] iceConnectionState:", this.pc.iceConnectionState);
+    this.pc.onicecandidateerror = (ev: any) =>
+      console.error("[ice] candidate error:", ev.errorCode, ev.errorText, ev.url ?? ev.address);
     this.pc.onconnectionstatechange = () => {
+      console.log("[ice] connectionState:", this.pc.connectionState);
       this.callbacks.onConnectionState?.(this.pc.connectionState);
       if (this.pc.connectionState === "connected") this.startStatsLoop();
       if (["disconnected", "failed", "closed"].includes(this.pc.connectionState)) this.stopStatsLoop();

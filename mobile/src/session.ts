@@ -71,10 +71,19 @@ export class MobileSession {
 
     this.pc.addEventListener("icecandidate", (event: any) => {
       if (event.candidate) {
+        console.log("[ice] local candidate:", event.candidate.type, event.candidate.protocol, event.candidate.candidate);
         this.signaling.send({ type: "signal", targetId: this.peerId, payload: { candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate } });
+      } else {
+        console.log("[ice] gathering complete (null candidate)");
       }
     });
+    this.pc.addEventListener("icegatheringstatechange", () => console.log("[ice] gatheringState:", this.pc.iceGatheringState));
+    this.pc.addEventListener("iceconnectionstatechange", () => console.log("[ice] iceConnectionState:", this.pc.iceConnectionState));
+    this.pc.addEventListener("icecandidateerror", (event: any) =>
+      console.error("[ice] candidate error:", event.errorCode, event.errorText, event.url ?? event.address)
+    );
     this.pc.addEventListener("connectionstatechange", () => {
+      console.log("[ice] connectionState:", this.pc.connectionState);
       this.callbacks.onConnectionState?.(this.pc.connectionState);
       if (this.pc.connectionState === "connected") this.startStatsLoop();
       if (["disconnected", "failed", "closed"].includes(this.pc.connectionState)) this.stopStatsLoop();
