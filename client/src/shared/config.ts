@@ -6,7 +6,7 @@
 const envSignalingUrl =
   typeof process !== "undefined" && process.env ? process.env.BROMEO_SIGNALING_URL : undefined;
 
-export const DEFAULT_SIGNALING_URL = envSignalingUrl ?? "ws://localhost:21116";
+export const DEFAULT_SIGNALING_URL = envSignalingUrl ?? "wss://remote.bromeoremote.com";
 
 export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
