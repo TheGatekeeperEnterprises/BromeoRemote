@@ -1,0 +1,12 @@
+services:
+  coturn:
+    image: coturn/coturn:4.6
+    container_name: bromeoremote-coturn
+    restart: unless-stopped
+    # TURN needs raw UDP on arbitrary relay ports — that doesn't work through
+    # Coolify's normal Traefik/HTTPS routing, so this binds straight to the
+    # host's network interface instead of going through Docker's port mapping.
+    network_mode: host
+    volumes:
+      - ./turnserver.conf:/etc/coturn/turnserver.conf:ro
+    command: ["-c", "/etc/coturn/turnserver.conf", "-v"]

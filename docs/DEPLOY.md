@@ -52,6 +52,10 @@ remote.jouwdomein.nl {
 
 Nodig voor verbindingen die niet direct P2P kunnen (bedrijfsnetwerken, strikte firewalls, symmetrische NAT). We gebruiken **coturn** — niet zelf herbouwen, dat is precies waar dit project (RFC 5766, al 10+ jaar in productie bij o.a. WhatsApp, Discord) voor bedoeld is.
 
+**Als je Coolify gebruikt** (zoals deze deployment): `coturn/` in de repo-root bevat een kant-en-klare `docker-compose.yml` + `turnserver.conf`. Maak een nieuwe resource aan met build pack "Docker Compose", base directory `/coturn`. Belangrijk: dit draait met `network_mode: host` omdat TURN losse UDP-poorten nodig heeft die niet via Traefik/HTTPS te routeren zijn — de `turn.jouwdomein.nl`-domeinnaam hoeft dus niet als Coolify-domein aan deze resource gekoppeld te worden, DNS hoeft alleen naar hetzelfde publieke IP te wijzen. Open in je router/firewall: **3478/udp+tcp** en de relay-poortrange uit `turnserver.conf` (**49152-49252/udp** by default) naar het interne IP van de Coolify-host.
+
+Zonder Coolify, handmatig op een kale VPS:
+
 ```bash
 sudo apt install coturn
 
