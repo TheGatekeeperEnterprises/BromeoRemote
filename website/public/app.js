@@ -32,11 +32,12 @@
         const key = link.getAttribute("data-download");
         const configKey = key === "windows-portable" ? "windowsPortable" : key;
         if (!config.downloads[configKey]) {
-          link.classList.add("is-disabled");
-          link.setAttribute("aria-disabled", "true");
-          link.setAttribute("tabindex", "-1");
-          link.textContent = "Binnenkort beschikbaar";
-          link.removeAttribute("href");
+          link.classList.add("is-pending");
+          link.setAttribute("href", "#contact");
+          const label = link.querySelector("span");
+          const title = link.querySelector("strong");
+          if (label) label.textContent = "Downloadlink";
+          if (title) title.textContent = "Aanvragen";
         }
       });
     } catch {

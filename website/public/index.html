@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="BromeoRemote is remote support software voor Windows en mobiel, zelf gehost en gebouwd voor veilig meekijken, besturen, bestanden delen en chat.">
+    <meta name="description" content="BromeoRemote is remote support software voor Windows en Android, zelf gehost en gebouwd voor veilig meekijken, besturen, bestanden delen en chat.">
     <title>BromeoRemote | Remote support software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="stylesheet" href="/styles.css">
@@ -15,7 +15,7 @@
       </a>
       <nav class="nav-links" aria-label="Hoofdnavigatie">
         <a href="#downloads">Downloads</a>
-        <a href="#platformen">Platformen</a>
+        <a href="#platformen">Platform</a>
         <a href="#veiligheid">Veiligheid</a>
         <a href="#contact">Contact</a>
       </nav>
@@ -25,124 +25,164 @@
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Remote support op je eigen infrastructuur</p>
-          <h1 id="hero-title">BromeoRemote</h1>
+          <p class="eyebrow">Windows en Android remote support</p>
+          <h1 id="hero-title">Remote support software voor je eigen merk en server.</h1>
           <p class="hero-lead">
-            Help klanten, collega&apos;s en familie op afstand met schermdelen, bediening,
-            chat, bestanden en onbeheerde toegang. Zonder vendor-lock-in, klaar voor je eigen server.
+            BromeoRemote helpt je veilig meekijken, besturen, chatten en bestanden overzetten.
+            Gebouwd voor zelfstandige IT-support, met eigen hosting via Coolify.
           </p>
           <div class="hero-actions" aria-label="Belangrijkste acties">
-            <a class="primary-action" href="/download/windows" data-download="windows">Windows downloaden</a>
-            <a class="secondary-action" href="/download/android" data-download="android">Android app</a>
+            <a class="primary-action" href="#downloads">Download starten</a>
+            <a class="secondary-action" href="#contact">Zakelijk contact</a>
           </div>
-          <dl class="hero-facts">
-            <div>
-              <dt>Windows</dt>
-              <dd>Installer en portable</dd>
-            </div>
-            <div>
-              <dt>Mobiel</dt>
-              <dd>Android viewer en bediening</dd>
-            </div>
-            <div>
-              <dt>Zelf gehost</dt>
-              <dd>Signaling, updates en website</dd>
-            </div>
-          </dl>
+          <ul class="hero-checks" aria-label="Belangrijkste functies">
+            <li>ID + sessiewachtwoord</li>
+            <li>Bestanden en klembord</li>
+            <li>Onbeheerde toegang met 2FA</li>
+          </ul>
         </div>
 
         <div class="hero-product" aria-label="BromeoRemote productvoorbeeld">
-          <div class="remote-window">
-            <div class="window-topbar">
-              <span class="traffic-dot"></span>
-              <span class="session-id">177 258 887</span>
-              <span class="status-pill">Verbonden</span>
-              <span class="metric-pill">30 fps | 300 kbps</span>
-            </div>
-            <div class="remote-stage">
-              <div class="remote-sidebar">
-                <span></span><span></span><span></span><span></span><span></span>
+          <div class="product-frame">
+            <div class="console-window">
+              <div class="console-bar">
+                <span class="live-dot"></span>
+                <strong>Remote support console</strong>
+                <span>30 fps</span>
+                <span>300 kbps</span>
               </div>
-              <div class="remote-desktop">
-                <div class="app-panel large"></div>
-                <div class="app-panel medium"></div>
-                <div class="floating-controller">
-                  <strong>Sessie actief</strong>
-                  <span>Klembord</span>
-                  <span>Chat</span>
-                  <span>Stop</span>
+              <div class="console-body">
+                <aside class="console-nav" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </aside>
+                <div class="console-main">
+                  <div class="session-strip">
+                    <div>
+                      <small>Partner</small>
+                      <strong>177 258 887</strong>
+                    </div>
+                    <div>
+                      <small>Status</small>
+                      <strong class="green-text">Verbonden</strong>
+                    </div>
+                    <div>
+                      <small>Rechten</small>
+                      <strong>Muis, toetsenbord, bestanden</strong>
+                    </div>
+                  </div>
+                  <div class="desktop-preview">
+                    <div class="preview-toolbar">
+                      <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="desktop-grid">
+                      <span></span><span></span><span></span><span></span>
+                      <span></span><span></span><span></span><span></span>
+                    </div>
+                    <div class="support-panel">
+                      <strong>Sessietools</strong>
+                      <button type="button">Chat</button>
+                      <button type="button">Bestanden</button>
+                      <button type="button">Verbreken</button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
+            <div class="phone-preview" aria-label="Mobiele app preview">
+              <div class="phone-top"></div>
+              <strong>Android app</strong>
+              <span>Touch-modus</span>
+              <span>Muismodus</span>
+              <span>Chat en bestanden</span>
+            </div>
+            <div class="security-badge">
+              <small>Self-hosted</small>
+              <strong>Controle over signaling en data</strong>
+            </div>
           </div>
+        </div>
+
+        <div class="hero-metrics" aria-label="Product samenvatting">
+          <div>
+            <strong>Windows</strong>
+            <span>Installer en portable build</span>
+          </div>
+          <div>
+            <strong>Android</strong>
+            <span>Mobiele viewer en bediening</span>
+          </div>
+          <div>
+            <strong>Eigen server</strong>
+            <span>Coolify, PostgreSQL en SMTP</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="download-band" id="downloads" aria-labelledby="downloads-title">
+        <div>
+          <p class="eyebrow">Downloads</p>
+          <h2 id="downloads-title">Installeer BromeoRemote op je apparaat.</h2>
+        </div>
+        <div class="download-actions">
+          <a class="download-action primary" href="/download/windows" data-download="windows">
+            <span>Windows</span>
+            <strong>Installer downloaden</strong>
+          </a>
+          <a class="download-action" href="/download/windows-portable" data-download="windows-portable">
+            <span>Portable</span>
+            <strong>Direct starten</strong>
+          </a>
+          <a class="download-action" href="/download/android" data-download="android">
+            <span>Android</span>
+            <strong>Mobiele app</strong>
+          </a>
         </div>
       </section>
 
       <section class="quick-strip" aria-label="Productstatus">
         <div>
-          <strong>Gebouwd voor support</strong>
-          <span>Snelle sessies met ID en wachtwoord.</span>
+          <strong>Snelle support</strong>
+          <span>Verbind met ID, wachtwoord en duidelijke sessierechten.</span>
         </div>
         <div>
-          <strong>Professionele bediening</strong>
-          <span>Toolbar, sessietools, privacy en logging.</span>
+          <strong>Professionele sessies</strong>
+          <span>Chat, bestandsoverdracht, opname, privacy en logging.</span>
         </div>
         <div>
-          <strong>Eigen merk</strong>
-          <span>bromeoremote.com, eigen mail en eigen server.</span>
-        </div>
-      </section>
-
-      <section class="section downloads-section" id="downloads" aria-labelledby="downloads-title">
-        <div class="section-heading">
-          <p class="eyebrow">Aan de slag</p>
-          <h2 id="downloads-title">Download BromeoRemote</h2>
-          <p>Kies de juiste versie voor je apparaat. Downloads kunnen in Coolify of via je update-subdomein gekoppeld worden.</p>
-        </div>
-
-        <div class="download-grid">
-          <article class="download-card">
-            <div class="download-icon">PC</div>
-            <h3>Windows installer</h3>
-            <p>Voor normale installatie met automatische updates.</p>
-            <a class="card-action" href="/download/windows" data-download="windows">Installer downloaden</a>
-          </article>
-          <article class="download-card">
-            <div class="download-icon">EXE</div>
-            <h3>Windows portable</h3>
-            <p>Direct starten zonder installatie, handig voor snelle hulp.</p>
-            <a class="card-action" href="/download/windows-portable" data-download="windows-portable">Portable downloaden</a>
-          </article>
-          <article class="download-card">
-            <div class="download-icon">APK</div>
-            <h3>Android app</h3>
-            <p>Bekijk en bestuur een pc vanaf je telefoon.</p>
-            <a class="card-action" href="/download/android" data-download="android">Android downloaden</a>
-          </article>
+          <strong>Eigen infrastructuur</strong>
+          <span>Draai website, signaling en database op je eigen server.</span>
         </div>
       </section>
 
       <section class="section platform-section" id="platformen" aria-labelledby="platformen-title">
         <div class="section-heading">
-          <p class="eyebrow">Voor wie</p>
-          <h2 id="platformen-title">Remote support zonder gedoe</h2>
+          <p class="eyebrow">Platform</p>
+          <h2 id="platformen-title">Alles wat een supportteam nodig heeft, zonder zware suite.</h2>
+          <p>BromeoRemote richt zich op het werk dat dagelijks telt: snel verbinden, veilig overnemen, overzicht houden en gebruikers vertrouwen geven.</p>
         </div>
         <div class="feature-grid">
           <article>
-            <h3>IT-support</h3>
-            <p>Neem veilig sessies over, wissel monitoren, synchroniseer klembord en verstuur bestanden tijdens dezelfde verbinding.</p>
+            <span class="feature-kicker">01</span>
+            <h3>Remote bediening</h3>
+            <p>Bekijk en bestuur Windows-pc&apos;s met muis, toetsenbord, multi-monitor en view-only waar nodig.</p>
           </article>
           <article>
-            <h3>Onderweg</h3>
-            <p>Gebruik de mobiele app als viewer met touch- en muismodus, chat en snelle sessieacties.</p>
+            <span class="feature-kicker">02</span>
+            <h3>Sessietools</h3>
+            <p>Chat, bestandsoverdracht, klembord, opname, herstart en snelle beheeracties in dezelfde sessie.</p>
           </article>
           <article>
-            <h3>Onbeheerde toegang</h3>
-            <p>Laat vertrouwde apparaten verbinden met vaste wachtwoorden, 2FA en duidelijke sessiemeldingen.</p>
+            <span class="feature-kicker">03</span>
+            <h3>Mobiele app</h3>
+            <p>Gebruik Android onderweg met touchmodus, muismodus, lichte modus en snelle acties.</p>
           </article>
           <article>
-            <h3>Eigen beheer</h3>
-            <p>Draai signaling, updates, website, database en mail op je eigen server via Coolify.</p>
+            <span class="feature-kicker">04</span>
+            <h3>Zelf gehost</h3>
+            <p>Publiceer via bromeoremote.com, Coolify, PostgreSQL en je eigen domeinmail.</p>
           </article>
         </div>
       </section>
@@ -150,22 +190,34 @@
       <section class="security-band" id="veiligheid" aria-labelledby="security-title">
         <div class="section-heading">
           <p class="eyebrow">Veiligheid</p>
-          <h2 id="security-title">Gebouwd met controle aan jouw kant</h2>
-          <p>De website verzamelt alleen wat nodig is voor downloads en contact. De remote sessies lopen via WebRTC-versleuteling; de server koppelt apparaten maar ziet geen scherminhoud.</p>
+          <h2 id="security-title">Controle voor de host, vertrouwen voor de gebruiker.</h2>
+          <p>Remote support moet zichtbaar, begrijpelijk en afsluitbaar zijn. Daarom krijgt de host duidelijke sessiemeldingen, rechten per verbinding en directe noodknoppen.</p>
         </div>
         <ul class="security-list">
-          <li>Session ID + wachtwoord, view-only en rechten per sessie.</li>
-          <li>Host ziet altijd dat er iemand verbonden is en kan direct verbreken.</li>
-          <li>PostgreSQL logging voor contactaanvragen, nieuwsbrief en downloadstatistiek.</li>
-          <li>SMTP via je eigen domeinmail, ingesteld als Coolify secret.</li>
+          <li>
+            <strong>Per sessie rechten</strong>
+            <span>Muis, toetsenbord, klembord en bestanden kunnen apart worden toegestaan.</span>
+          </li>
+          <li>
+            <strong>Altijd zichtbare melding</strong>
+            <span>De host ziet wie verbonden is en kan de sessie direct stoppen.</span>
+          </li>
+          <li>
+            <strong>Onbeheerd met extra beveiliging</strong>
+            <span>Vast wachtwoord, vertrouwde apparaten en 2FA voor beheer op afstand.</span>
+          </li>
+          <li>
+            <strong>Eigen dataflow</strong>
+            <span>Je beheert website, database, mail en signaling via je eigen infrastructuur.</span>
+          </li>
         </ul>
       </section>
 
       <section class="section contact-section" id="contact" aria-labelledby="contact-title">
         <div class="section-heading">
           <p class="eyebrow">Contact</p>
-          <h2 id="contact-title">Vragen of zakelijke interesse?</h2>
-          <p>Laat een bericht achter. De aanvraag wordt opgeslagen in PostgreSQL en doorgestuurd naar je BromeoRemote mailbox.</p>
+          <h2 id="contact-title">Hulp nodig met installatie, hosting of zakelijke inzet?</h2>
+          <p>Stuur een bericht. De aanvraag wordt opgeslagen in PostgreSQL en doorgestuurd naar de BromeoRemote mailbox.</p>
         </div>
 
         <div class="contact-layout">
