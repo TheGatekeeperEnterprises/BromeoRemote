@@ -154,9 +154,20 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
   }
 });
 
-app.use(express.static(publicDir, { maxAge: "1h", etag: true }));
+app.use(
+  express.static(publicDir, {
+    etag: true,
+    maxAge: "1d",
+    setHeaders(res, filePath) {
+      if (/\.(html|css|js|xml|webmanifest)$/i.test(filePath)) {
+        res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
+      }
+    },
+  }),
+);
 
 app.get("*", (_req, res) => {
+  res.setHeader("Cache-Control", "public, max-age=0, must-revalidate");
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
