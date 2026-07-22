@@ -18,7 +18,7 @@ Open daarna `http://localhost:3000`.
 Gebruik in Coolify deze instellingen:
 
 - Build type: Dockerfile
-- Base directory: `website`
+- Base directory: leeg laten voor de root-`Dockerfile`, of `website` als je deze map direct bouwt
 - Dockerfile: `Dockerfile`
 - Port: `3000`
 - Healthcheck path: `/health`

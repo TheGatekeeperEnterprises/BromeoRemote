@@ -17,8 +17,8 @@ Maak in Coolify een nieuw project aan:
 1. Voeg een PostgreSQL 17 database toe.
 2. Voeg een nieuwe app toe vanuit je GitHub repository.
 3. Kies `Dockerfile`.
-4. Zet `Base Directory` op `website`.
-5. Zet de interne poort op `3000`.
+4. Zet de interne poort op `3000`.
+5. Laat `Base Directory` leeg als Coolify de root-`Dockerfile` gebruikt, of zet `Base Directory` op `website` als je `website/Dockerfile` wilt gebruiken.
 6. Zet de healthcheck op `/health`.
 7. Koppel domein `bromeoremote.com` en laat Coolify HTTPS regelen.
 
