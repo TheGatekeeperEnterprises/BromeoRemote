@@ -16,7 +16,19 @@ export class DeviceRegistry {
   }
 
   register(socket: WebSocket, requestedId?: string): string {
-    if (requestedId && !this.idToSocket.has(requestedId)) {
+    if (requestedId) {
+      // A device reconnecting with its own persisted ID should always
+      // reclaim it — if another (necessarily stale/dead, since a live
+      // device can't have two sockets) socket is squatting on it, close
+      // that one out rather than silently handing the requester a
+      // different random ID. Without a ping/pong heartbeat, a force-killed
+      // app's socket can otherwise sit in the registry for a long time
+      // after it's actually gone.
+      const stale = this.idToSocket.get(requestedId);
+      if (stale && stale !== socket) {
+        this.socketToId.delete(stale);
+        stale.close();
+      }
       this.idToSocket.set(requestedId, socket);
       this.socketToId.set(socket, requestedId);
       return requestedId;

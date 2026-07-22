@@ -40,25 +40,30 @@ wss.on("connection", (socket: WebSocket) => {
     switch (msg.type) {
       case "hello": {
         const id = registry.register(socket, msg.id);
+        console.log(`[hello] registered id=${id}`);
         send(socket, { type: "welcome", id });
         break;
       }
 
       case "connect-request": {
         const selfId = registry.idFor(socket);
+        console.log(`[connect-request] from=${selfId ?? "?"} target=${msg.targetId}`);
         if (!selfId) {
           send(socket, { type: "error", message: "Registreer eerst (hello) voordat je verbindt." });
           return;
         }
         if (!connectLimiter.allow(selfId)) {
+          console.log(`[connect-request] rate-limited from=${selfId}`);
           send(socket, { type: "error", message: "Te veel verbindingspogingen. Probeer straks opnieuw." });
           return;
         }
         const target = registry.get(msg.targetId);
         if (!target) {
+          console.log(`[connect-request] target=${msg.targetId} not found in registry`);
           send(socket, { type: "connect-response", fromId: msg.targetId, accept: false, reason: "offline" });
           return;
         }
+        console.log(`[connect-request] forwarding incoming-request to target=${msg.targetId}`);
         send(target, {
           type: "incoming-request",
           fromId: selfId,
@@ -73,9 +78,13 @@ wss.on("connection", (socket: WebSocket) => {
 
       case "connect-response": {
         const selfId = registry.idFor(socket);
+        console.log(`[connect-response] from=${selfId ?? "?"} target=${msg.targetId} accept=${msg.accept}`);
         if (!selfId) return;
         const target = registry.get(msg.targetId);
-        if (!target) return;
+        if (!target) {
+          console.log(`[connect-response] target=${msg.targetId} not found in registry`);
+          return;
+        }
         send(target, { type: "connect-response", fromId: selfId, accept: msg.accept, reason: msg.reason });
         break;
       }
@@ -84,6 +93,8 @@ wss.on("connection", (socket: WebSocket) => {
         const selfId = registry.idFor(socket);
         if (!selfId) return;
         const target = registry.get(msg.targetId);
+        const kind = "sdp" in (msg.payload as object) ? "sdp" : "candidate" in (msg.payload as object) ? "candidate" : "?";
+        console.log(`[signal] from=${selfId} target=${msg.targetId} kind=${kind} targetOnline=${!!target}`);
         if (!target) {
           send(socket, { type: "error", message: "Partner is niet meer online." });
           return;
@@ -135,6 +146,7 @@ wss.on("connection", (socket: WebSocket) => {
   socket.on("close", () => {
     const id = registry.remove(socket);
     if (!id) return;
+    console.log(`[close] removed id=${id}`);
     // Best-effort: we don't track who was talking to whom here (that's
     // negotiated peer-to-peer once WebRTC connects), so we don't broadcast
     // disconnects widely — the live WebRTC connection itself will drop and
