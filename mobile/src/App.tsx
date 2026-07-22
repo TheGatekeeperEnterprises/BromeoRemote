@@ -873,6 +873,8 @@ export default function App(): React.JSX.Element {
   }
 
   function connectTo(id: string, passwordHash: string, remember: boolean, label: string, totpCodeValue?: string): void {
+    console.log("[connectTo] called, id=", id);
+    console.trace("[connectTo] call stack");
     pendingConnectRef.current = { targetId: id, passwordHash, remember, label };
     lastConnectRef.current = { targetId: id, passwordHash };
     setConnectStatus("Verbinding maken…");
@@ -955,10 +957,14 @@ export default function App(): React.JSX.Element {
       },
       onConnectionState: (state) => {
         if (["disconnected", "failed", "closed"].includes(state)) {
+          console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
           const reconnect = restartRequestedForRef.current === peerId ? lastConnectRef.current : null;
           restartRequestedForRef.current = null;
           endSession();
-          if (reconnect) scheduleAutoReconnect(reconnect.targetId, reconnect.passwordHash);
+          if (reconnect) {
+            console.log("[viewer] scheduling auto-reconnect");
+            scheduleAutoReconnect(reconnect.targetId, reconnect.passwordHash);
+          }
         }
       },
       onStats: (stats) => {
