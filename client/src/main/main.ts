@@ -6,6 +6,7 @@ import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
 import { sendMagicPacket } from "./wol";
 import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow } from "./system";
+import { askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { installSas, isSasInstalled, sendCtrlAltDel, uninstallSas } from "./sasControl";
 import { setMonitorPower } from "./display";
 import { generateSecret, buildOtpauthUri, verifyTotp } from "./totp";
@@ -328,6 +329,19 @@ ipcMain.handle("bromeo:set-monitor-power", (_e, on: boolean) => {
   setMonitorPower(on);
   return true;
 });
+
+// "AI Buddy" — the key itself never leaves the main process (never sent to
+// the renderer), and the OpenAI call itself also happens here (see
+// aiBuddy.ts) rather than in the renderer, avoiding both key exposure and
+// any renderer-side CORS considerations.
+ipcMain.handle("bromeo:set-openai-key", (_e, key: string | null) => {
+  store.setOpenAiApiKey(key && key.trim() ? key.trim() : null);
+  return !!store.getOpenAiApiKey();
+});
+
+ipcMain.handle("bromeo:get-openai-key-status", () => !!store.getOpenAiApiKey());
+
+ipcMain.handle("bromeo:ask-ai-buddy", (_e, history: AiBuddyMessage[]) => askAiBuddy(history));
 
 // Kept only in memory during enrollment — never written to disk until the
 // user proves their authenticator app produces a matching code.

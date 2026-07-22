@@ -22,6 +22,9 @@ export interface StoreData {
   // Encrypted base32 TOTP secret — a live ongoing credential, same trust
   // level as an actual password, so it gets the same safeStorage treatment.
   totpSecretEncrypted: string | null;
+  // Encrypted OpenAI API key for "AI Buddy" — a billable credential, same
+  // safeStorage treatment as the TOTP secret above.
+  openaiApiKeyEncrypted: string | null;
 }
 
 function randomDeviceId(): string {
@@ -67,6 +70,7 @@ class Store {
           totpEnabled: !!raw.totpEnabled,
           savedDevicesEncrypted: raw.savedDevicesEncrypted ?? null,
           totpSecretEncrypted: raw.totpSecretEncrypted ?? null,
+          openaiApiKeyEncrypted: raw.openaiApiKeyEncrypted ?? null,
         };
       } catch {
         // fall through to defaults on corrupt file
@@ -83,6 +87,7 @@ class Store {
       totpEnabled: false,
       savedDevicesEncrypted: null,
       totpSecretEncrypted: null,
+      openaiApiKeyEncrypted: null,
     };
   }
 
@@ -158,6 +163,35 @@ class Store {
     if (safeStorage.isEncryptionAvailable()) {
       const encrypted = safeStorage.encryptString(secret);
       this.update({ totpSecretEncrypted: encrypted.toString("base64") });
+    }
+  }
+
+  private openaiApiKeyCache: string | null | undefined; // undefined = not loaded yet, null = none set
+
+  getOpenAiApiKey(): string | null {
+    if (this.openaiApiKeyCache !== undefined) return this.openaiApiKeyCache;
+    let key: string | null = null;
+    if (this.data.openaiApiKeyEncrypted) {
+      try {
+        if (!safeStorage.isEncryptionAvailable()) throw new Error("encryption unavailable");
+        key = safeStorage.decryptString(Buffer.from(this.data.openaiApiKeyEncrypted, "base64"));
+      } catch {
+        key = null;
+      }
+    }
+    this.openaiApiKeyCache = key;
+    return key;
+  }
+
+  setOpenAiApiKey(key: string | null): void {
+    this.openaiApiKeyCache = key;
+    if (key === null) {
+      this.update({ openaiApiKeyEncrypted: null });
+      return;
+    }
+    if (safeStorage.isEncryptionAvailable()) {
+      const encrypted = safeStorage.encryptString(key);
+      this.update({ openaiApiKeyEncrypted: encrypted.toString("base64") });
     }
   }
 }

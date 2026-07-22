@@ -1,6 +1,22 @@
 // Mirrors server/src/types.ts — kept manually in sync since client and server
 // are separate npm packages. Do not send/receive anything outside this shape.
 
+// AI Buddy — local-only (never touches the signaling server), a device asks
+// its own configured OpenAI account for help while looking at a remote
+// session. Shared here since main.ts (calls OpenAI), preload.ts, and
+// global.d.ts (renderer types) all need the same shape.
+export interface AiBuddyMessage {
+  role: "user" | "assistant";
+  text: string;
+  imageBase64?: string; // data URL, e.g. "data:image/jpeg;base64,..."
+}
+
+export interface AiBuddyResult {
+  ok: boolean;
+  reply?: string;
+  error?: string;
+}
+
 export interface SavedDevice {
   id: string;
   label: string;
