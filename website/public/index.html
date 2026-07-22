@@ -4,8 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="BromeoRemote is remote support software voor Windows en Android, zelf gehost en gebouwd voor veilig meekijken, besturen, bestanden delen en chat.">
+    <meta name="theme-color" content="#0b1425">
+    <link rel="canonical" href="https://bromeoremote.com/">
+    <meta property="og:title" content="BromeoRemote | Remote support software">
+    <meta property="og:description" content="Remote support software voor Windows en Android, klaar voor je eigen server, database en domeinmail.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://bromeoremote.com/">
+    <meta property="og:image" content="https://bromeoremote.com/assets/logo.png">
     <title>BromeoRemote | Remote support software</title>
     <link rel="icon" href="/assets/icon.png">
+    <link rel="manifest" href="/site.webmanifest">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
@@ -15,6 +23,7 @@
       </a>
       <nav class="nav-links" aria-label="Hoofdnavigatie">
         <a href="#downloads">Downloads</a>
+        <a href="#werkwijze">Werkwijze</a>
         <a href="#platformen">Platform</a>
         <a href="#veiligheid">Veiligheid</a>
         <a href="#contact">Contact</a>
@@ -157,6 +166,33 @@
         </div>
       </section>
 
+      <section class="section workflow-section" id="werkwijze" aria-labelledby="workflow-title">
+        <div class="section-heading split-heading">
+          <div>
+            <p class="eyebrow">Werkwijze</p>
+            <h2 id="workflow-title">Van download naar hulpsessie in drie stappen.</h2>
+          </div>
+          <p>De flow blijft begrijpelijk voor eindgebruikers: zij hoeven alleen de app te openen en hun gegevens te delen. Jij behoudt controle over rechten en sessietools.</p>
+        </div>
+        <div class="workflow-grid">
+          <article>
+            <span>01</span>
+            <h3>Open BromeoRemote</h3>
+            <p>De gebruiker ziet direct een apparaat-ID en tijdelijk sessiewachtwoord.</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>Vraag toegang aan</h3>
+            <p>Je verbindt met ID, wachtwoord en de juiste sessierechten voor bediening of alleen meekijken.</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>Los het probleem op</h3>
+            <p>Gebruik chat, klembord, bestanden, herstart, opname en beheeracties binnen dezelfde sessie.</p>
+          </article>
+        </div>
+      </section>
+
       <section class="section platform-section" id="platformen" aria-labelledby="platformen-title">
         <div class="section-heading">
           <p class="eyebrow">Platform</p>
@@ -187,6 +223,34 @@
         </div>
       </section>
 
+      <section class="section operations-section" aria-labelledby="operations-title">
+        <div class="operations-panel">
+          <div class="section-heading">
+            <p class="eyebrow">Eigen infrastructuur</p>
+            <h2 id="operations-title">Klaar voor Coolify, PostgreSQL en je eigen maildomein.</h2>
+            <p>BromeoRemote is opgezet zodat de publieke website, database, SMTP en downloadlinks op je eigen server kunnen draaien. Zo houd je branding en operationele controle in eigen hand.</p>
+          </div>
+          <div class="ops-grid">
+            <div>
+              <strong>Website</strong>
+              <span>Dockerfile, healthcheck en omgevingvariabelen voor Coolify.</span>
+            </div>
+            <div>
+              <strong>Database</strong>
+              <span>PostgreSQL opslag voor contact, releaselijst en downloadregistratie.</span>
+            </div>
+            <div>
+              <strong>Downloads</strong>
+              <span>Windows installer, portable build en Android APK via eigen downloadlinks.</span>
+            </div>
+            <div>
+              <strong>Mail</strong>
+              <span>SMTP via info@bromeoremote.com voor contactaanvragen en opvolging.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="security-band" id="veiligheid" aria-labelledby="security-title">
         <div class="section-heading">
           <p class="eyebrow">Veiligheid</p>
@@ -211,6 +275,64 @@
             <span>Je beheert website, database, mail en signaling via je eigen infrastructuur.</span>
           </li>
         </ul>
+      </section>
+
+      <section class="section requirements-section" aria-labelledby="requirements-title">
+        <div class="section-heading">
+          <p class="eyebrow">Systeemeisen</p>
+          <h2 id="requirements-title">Duidelijk voor gebruikers en beheerders.</h2>
+        </div>
+        <div class="requirements-grid">
+          <article>
+            <h3>Windows client</h3>
+            <ul>
+              <li>Windows 10 of nieuwer</li>
+              <li>Internetverbinding voor externe sessies</li>
+              <li>Installer voor updates of portable voor snelle hulp</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Android app</h3>
+            <ul>
+              <li>Android viewer voor onderweg</li>
+              <li>Touchmodus en muismodus</li>
+              <li>Optionele machtigingen voor bediening en meldingen</li>
+            </ul>
+          </article>
+          <article>
+            <h3>Server</h3>
+            <ul>
+              <li>Coolify app met Dockerfile</li>
+              <li>PostgreSQL 17 database</li>
+              <li>HTTPS, signaling en optioneel TURN-relay</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="section faq-section" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <p class="eyebrow">FAQ</p>
+          <h2 id="faq-title">Veelgestelde vragen.</h2>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>Is BromeoRemote bedoeld als TeamViewer-alternatief?</summary>
+            <p>Ja. De focus ligt op remote support, meekijken, besturen, chatten en bestanden overzetten, maar met eigen hosting en branding.</p>
+          </details>
+          <details>
+            <summary>Kan ik de server zelf beheren?</summary>
+            <p>Ja. De website is voorbereid voor Coolify. De signaling server en downloads kunnen ook via eigen subdomeinen worden aangeboden.</p>
+          </details>
+          <details>
+            <summary>Waar worden contactaanvragen opgeslagen?</summary>
+            <p>In PostgreSQL. De website stuurt daarnaast een mail via de ingestelde SMTP-server, zonder wachtwoorden in de code op te slaan.</p>
+          </details>
+          <details>
+            <summary>Zijn de downloadknoppen direct actief?</summary>
+            <p>Ja zodra de download-URL&apos;s in Coolify zijn ingesteld. Tot die tijd verwijzen ze netjes naar contact.</p>
+          </details>
+        </div>
       </section>
 
       <section class="section contact-section" id="contact" aria-labelledby="contact-title">
@@ -263,9 +385,16 @@
     </main>
 
     <footer class="site-footer">
-      <span>&copy; <span id="year"></span> BromeoRemote</span>
-      <a href="/health">Status</a>
-      <a href="#contact">Contact</a>
+      <div>
+        <strong>BromeoRemote</strong>
+        <span>&copy; <span id="year"></span> Remote support software</span>
+      </div>
+      <nav aria-label="Footer links">
+        <a href="/health">Status</a>
+        <a href="/privacy/">Privacy</a>
+        <a href="/voorwaarden/">Voorwaarden</a>
+        <a href="#contact">Contact</a>
+      </nav>
     </footer>
 
     <script src="/app.js" defer></script>

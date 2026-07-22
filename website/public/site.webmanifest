@@ -1,0 +1,16 @@
+{
+  "name": "BromeoRemote",
+  "short_name": "BromeoRemote",
+  "description": "Remote support software voor Windows en Android.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f7fb",
+  "theme_color": "#0b1425",
+  "icons": [
+    {
+      "src": "/assets/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
