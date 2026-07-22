@@ -1,0 +1,56 @@
+{
+  "name": "bromeoremote",
+  "productName": "BromeoRemote",
+  "version": "1.0.0",
+  "description": "BromeoRemote — Access Anywhere. Cross-platform remote desktop access & support.",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && tsc -p tsconfig.renderer.json && node scripts/copy-static.js",
+    "start": "npm run build && electron .",
+    "dev": "tsc -p tsconfig.json -w",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "electron-updater": "^6.8.9",
+    "koffi": "^3.1.2"
+  },
+  "build": {
+    "appId": "nl.bromeo.remote",
+    "productName": "BromeoRemote",
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "nsis"
+      ],
+      "icon": "assets/icon.png"
+    },
+    "portable": {
+      "artifactName": "BromeoRemote-Setup.exe"
+    },
+    "nsis": {
+      "artifactName": "BromeoRemote-Installer.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "generic",
+      "url": "https://updates.jouwdomein.nl/bromeoremote/"
+    }
+  }
+}

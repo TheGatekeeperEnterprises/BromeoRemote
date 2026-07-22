@@ -1,0 +1,6 @@
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splash_background" />
+    <item android:gravity="center" android:width="280dp" android:height="36dp">
+        <bitmap android:src="@drawable/splash_logo" android:gravity="center" />
+    </item>
+</layer-list>

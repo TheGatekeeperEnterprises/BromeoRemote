@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "670373348511",
+    "project_id": "bromeoremotemobile",
+    "storage_bucket": "bromeoremotemobile.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:670373348511:android:bd6d4719b1fbd4a1280eaa",
+        "android_client_info": {
+          "package_name": "com.bromeoremotemobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6sVEnTwpE5i7A7o-nQ7DyTgZFDQL8h-k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

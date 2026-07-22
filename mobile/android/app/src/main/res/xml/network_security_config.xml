@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release builds block plain ws:// (cleartext) traffic by default (Android
+  API 28+ security hardening) — only debug builds allow it universally.
+  Production should use wss:// (see docs/DEPLOY.md), which needs no entry
+  here at all. This carve-out exists only so a release build can reach a
+  plain ws:// signaling server on your local network for testing; update the
+  IP below (or add another <domain>) to match your own test server.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.1.128</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

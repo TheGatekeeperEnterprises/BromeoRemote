@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">BromeoRemoteMobile</string>
+    <string name="accessibility_service_description">Laat een pc die met dit toestel verbindt via BromeoRemote tikken/vegen simuleren, zodat je je telefoon op afstand kunt bedienen. Leest geen scherminhoud — voert alleen aanraakgebaren uit die de verbonden pc stuurt.</string>
+</resources>

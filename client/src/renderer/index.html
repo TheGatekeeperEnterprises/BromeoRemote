@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; media-src 'self' blob:;" />
+  <title>BromeoRemote</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <svg class="icon-sprite" aria-hidden="true" focusable="false">
+    <symbol id="icon-volume" viewBox="0 0 24 24">
+      <path d="M4.5 9.25h4l5.25-4.25v14L8.5 14.75h-4z" />
+      <path d="M17 8.2a5.5 5.5 0 0 1 0 7.6" />
+      <path d="M20 5.8a9.5 9.5 0 0 1 0 12.4" />
+    </symbol>
+    <symbol id="icon-volume-x" viewBox="0 0 24 24">
+      <path d="M4.5 9.25h4l5.25-4.25v14L8.5 14.75h-4z" />
+      <path d="M17.5 9.25l4 4m0-4l-4 4" />
+    </symbol>
+    <symbol id="icon-record" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="7.25" />
+    </symbol>
+    <symbol id="icon-stop" viewBox="0 0 24 24">
+      <path d="M7.5 7.5h9v9h-9z" />
+    </symbol>
+    <symbol id="icon-clipboard" viewBox="0 0 24 24">
+      <path d="M8.5 5.75H6.75A1.75 1.75 0 0 0 5 7.5v11.25c0 .97.78 1.75 1.75 1.75h10.5c.97 0 1.75-.78 1.75-1.75V7.5a1.75 1.75 0 0 0-1.75-1.75H15.5" />
+      <path d="M9 4h6v3.5H9z" />
+      <path d="M8.75 12h6.5M8.75 15.5h5" />
+    </symbol>
+    <symbol id="icon-text" viewBox="0 0 24 24">
+      <path d="M5 6.5h14M12 6.5v11M8.75 18h6.5" />
+    </symbol>
+    <symbol id="icon-keyboard" viewBox="0 0 24 24">
+      <path d="M4 7.25h16v9.5H4z" />
+      <path d="M7 10.25h.01M10.25 10.25h.01M13.5 10.25h.01M16.75 10.25h.01M7 13.5h7M17 13.5h.01" />
+    </symbol>
+    <symbol id="icon-note" viewBox="0 0 24 24">
+      <path d="M7 4.5h7.5L19 9v10.5H7z" />
+      <path d="M14.5 4.5V9H19M10 13h5M10 16h4" />
+    </symbol>
+    <symbol id="icon-chat" viewBox="0 0 24 24">
+      <path d="M5 6.5h14v9.75H9l-4 3.25z" />
+      <path d="M8.5 10h7M8.5 13h4.75" />
+    </symbol>
+    <symbol id="icon-folder" viewBox="0 0 24 24">
+      <path d="M3.75 7.25h6.2l2 2.5h8.3v8.5H3.75z" />
+      <path d="M3.75 10h16.5" />
+    </symbol>
+    <symbol id="icon-restart" viewBox="0 0 24 24">
+      <path d="M18.8 12a6.8 6.8 0 1 1-2.25-5.05" />
+      <path d="M18.8 4.75V9h-4.25" />
+    </symbol>
+    <symbol id="icon-lock" viewBox="0 0 24 24">
+      <path d="M7 10.25h10v9.25H7z" />
+      <path d="M9.25 10.25V7.8a2.75 2.75 0 0 1 5.5 0v2.45" />
+    </symbol>
+    <symbol id="icon-lock-end" viewBox="0 0 24 24">
+      <path d="M6.5 10.25h9.25v9.25H6.5z" />
+      <path d="M8.6 10.25V7.9a2.55 2.55 0 0 1 5.1 0v2.35" />
+      <path d="M17.25 5.25h3.25v3.25M20.25 5.5l-4 4" />
+    </symbol>
+    <symbol id="icon-block-input" viewBox="0 0 24 24">
+      <path d="M9 3.5h6a3 3 0 0 1 3 3v7.25a6 6 0 0 1-12 0V6.5a3 3 0 0 1 3-3z" />
+      <path d="M12 3.5v5.75M4.5 20L19.5 4" />
+    </symbol>
+    <symbol id="icon-fullscreen" viewBox="0 0 24 24">
+      <path d="M8 4.75H4.75V8M16 4.75h3.25V8M19.25 16v3.25H16M4.75 16v3.25H8" />
+    </symbol>
+    <symbol id="icon-window" viewBox="0 0 24 24">
+      <path d="M5 5h14v14H5z" />
+      <path d="M8 8h8v8H8z" />
+    </symbol>
+    <symbol id="icon-power" viewBox="0 0 24 24">
+      <path d="M12 3.75v7" />
+      <path d="M7 7.25a7.25 7.25 0 1 0 10 0" />
+    </symbol>
+  </svg>
+  <div id="sharing-bar" class="sharing-bar hidden">
+    <span class="dot"></span>
+    <span id="sharing-text">Iemand bekijkt en bestuurt dit apparaat</span>
+    <button id="host-clipboard-sync-btn" class="btn btn-outline btn-sm">Klembord</button>
+    <div class="chat-wrap">
+      <button id="host-chat-toggle-btn" class="btn btn-outline btn-sm">Chat</button>
+      <div id="host-chat-panel" class="chat-panel hidden">
+        <div class="notify-panel-header"><h4>Chat</h4></div>
+        <div id="host-chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
+        <div class="chat-input-row">
+          <input id="host-chat-input" class="input" placeholder="Typ een bericht…" />
+          <button id="host-chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+        </div>
+      </div>
+    </div>
+    <button id="curtain-manual-toggle" class="btn btn-outline btn-sm hidden">Scherm uit</button>
+    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beëindigen</button>
+    <button id="sharing-panic" class="btn btn-outline btn-sm">Beëindigen + wachtwoord wijzigen</button>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <img src="../../assets/logo2.png" alt="BromeoRemote — Access Anywhere" class="brand-logo" />
+    </div>
+    <div class="topbar-right">
+      <span id="server-status" class="status-pill status-pill--pending"><span class="status-dot"></span><span id="server-status-text">Verbinden…</span></span>
+      <div class="notify-wrap">
+        <button id="notify-bell-btn" class="btn btn-icon" title="Meldingen" aria-label="Meldingen">!</button>
+        <div id="notify-panel" class="notify-panel hidden">
+          <div class="notify-panel-header">
+            <h4>Meldingen</h4>
+            <button id="notify-clear-btn" class="btn btn-ghost btn-sm">Wissen</button>
+          </div>
+          <div id="notify-list" class="notify-list"><p class="muted small">Nog geen meldingen.</p></div>
+        </div>
+        <span id="notify-badge" class="badge hidden">0</span>
+      </div>
+      <button id="theme-toggle" class="btn btn-icon" title="Thema wisselen" aria-label="Thema wisselen">M</button>
+    </div>
+  </header>
+
+  <main id="home" class="home">
+    <section class="overview-panel">
+      <div>
+        <p class="eyebrow">BromeoRemote desktop</p>
+        <h1>Remote support console</h1>
+        <p class="muted">Snel verbinden, veilig meekijken en dit apparaat klaarzetten voor hulp op afstand.</p>
+      </div>
+      <div class="overview-actions">
+        <span class="status-card">
+          <span class="status-card-label">Apparaatnaam</span>
+          <span id="overview-label" class="status-card-value status-card-value--text">—</span>
+        </span>
+        <span class="status-card">
+          <span class="status-card-label">Dit apparaat</span>
+          <span id="overview-id" class="status-card-value">—</span>
+        </span>
+        <span class="status-card">
+          <span class="status-card-label">Sessiecode</span>
+          <span id="overview-password" class="status-card-value">—</span>
+        </span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="card-icon">PC</span>Dit apparaat</h2>
+      <p class="muted">Geef deze gegevens door aan iemand die je op afstand wil helpen.</p>
+      <div class="field">
+        <label>Apparaatnaam</label>
+        <div class="value-row">
+          <input id="device-label" class="input" placeholder="Bijv. Kantoor-pc" maxlength="60" />
+          <button id="device-label-save" class="btn btn-outline btn-sm">Opslaan</button>
+        </div>
+        <p class="muted small">Deze naam wordt getoond bij inkomende verbindingsaanvragen.</p>
+      </div>
+      <div class="field">
+        <label>Jouw BromeoRemote-ID</label>
+        <div class="value-row">
+          <span id="my-id" class="value-mono">—</span>
+          <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Sessiewachtwoord (verandert bij elke herstart)</label>
+        <div class="value-row">
+          <span id="my-password" class="value-mono">—</span>
+          <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
+        </div>
+      </div>
+      <div class="quick-actions">
+        <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging kopiëren</button>
+        <button id="regenerate-password" class="btn btn-outline btn-sm">Nieuw sessiewachtwoord</button>
+      </div>
+      <hr />
+      <div class="field row-between">
+        <div>
+          <label>Onbeheerde toegang</label>
+          <p class="muted small">Sta verbindingen toe zonder dat je hoeft te bevestigen (vast wachtwoord).</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="unattended-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div id="unattended-form" class="field hidden">
+        <label>Vast wachtwoord voor onbeheerde toegang</label>
+        <div class="value-row">
+          <input id="unattended-password" type="password" class="input" placeholder="Kies een sterk wachtwoord" />
+          <button id="unattended-save" class="btn btn-primary btn-sm">Opslaan</button>
+        </div>
+        <div id="unattended-strength" class="password-strength hidden">
+          <span class="password-strength-track"><span></span></span>
+          <strong>Voer een wachtwoord in</strong>
+        </div>
+      </div>
+      <hr />
+      <div class="field row-between">
+        <div>
+          <label>Privacyscherm (curtain mode)</label>
+          <p class="muted small">Schakelt je fysieke beeldscherm uit zodra iemand verbindt en bestuurt — voorkomt meekijken door iemand naast je. Schermdeling zelf blijft gewoon werken. Blokkeert geen lokale muis/toetsenbord: die wekken het scherm weer.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="curtain-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <hr />
+      <div class="field row-between">
+        <div>
+          <label>Alleen vertrouwde apparaten toestaan</label>
+          <p class="muted small">Weiger inkomende verbindingen van BromeoRemote-ID's die niet bij je opgeslagen apparaten staan. Handig voor vaste werkplekken en onbeheerde toegang.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="trusted-only-toggle" />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <hr />
+      <div class="field">
+        <label>Twee-factor-authenticatie (2FA)</label>
+        <p class="muted small">Extra beveiliging bovenop onbeheerde toegang: naast het vaste wachtwoord is ook een 6-cijferige code uit je authenticator-app (Google Authenticator, Authy, …) nodig.</p>
+
+        <div id="totp-disabled-state">
+          <button id="totp-start-setup" class="btn btn-outline btn-sm">2FA inschakelen</button>
+        </div>
+
+        <div id="totp-setup" class="hidden">
+          <p class="muted small">Voeg deze sleutel handmatig toe in je authenticator-app als "BromeoRemote", en bevestig daarna met de code die de app toont:</p>
+          <div class="value-row">
+            <span id="totp-secret" class="value-mono totp-secret"></span>
+            <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
+          </div>
+          <div class="value-row totp-verify-row">
+            <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
+            <button id="totp-confirm" class="btn btn-primary btn-sm">Bevestigen</button>
+          </div>
+        </div>
+
+        <div id="totp-enabled-state" class="row-between hidden">
+          <p class="muted small totp-enabled-text">2FA is ingeschakeld voor onbeheerde toegang.</p>
+          <button id="totp-disable" class="btn btn-outline btn-sm">Uitschakelen</button>
+        </div>
+      </div>
+      <hr />
+      <div class="field">
+        <label>Ctrl+Alt+Del op afstand ontvangen (experimenteel)</label>
+        <p class="muted small">Laat iemand die dit apparaat bestuurt Ctrl+Alt+Del versturen (bv. om een vergrendeld scherm te ontgrendelen). Windows staat dit normaal niet toe voor gewone apps — dit registreert een SYSTEM-taak in Taakplanner die alleen op aanvraag draait (nooit bij opstarten), plus de bijbehorende beveiligingsinstelling. Vereist eenmalig een beheerdersbevestiging (UAC). <strong>Experimenteel:</strong> op een echte Windows 11-machine registreert dit correct, maar het daadwerkelijke Ctrl+Alt+Del-scherm verscheen niet — mogelijk werkt dit mechanisme niet (meer) op recente Windows-versies.</p>
+        <div id="sas-disabled-state">
+          <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelen…</button>
+        </div>
+        <div id="sas-enabled-state" class="row-between hidden">
+          <p class="muted small">Ingeschakeld.</p>
+          <button id="sas-uninstall-btn" class="btn btn-outline btn-sm">Uitschakelen</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2><span class="card-icon">ID</span>Verbinden met een ander apparaat</h2>
+
+      <input id="saved-devices-filter" class="input saved-filter hidden" placeholder="Zoek opgeslagen apparaat of groep" />
+      <div id="saved-devices-list" class="saved-devices hidden"></div>
+
+      <p class="muted">Vraag het BromeoRemote-ID en wachtwoord aan de andere kant.</p>
+      <div class="field">
+        <label>Partner-ID</label>
+        <input id="target-id" class="input" placeholder="bv. 482913650" inputmode="numeric" />
+      </div>
+      <div class="field">
+        <label>Wachtwoord</label>
+        <input id="target-password" class="input" type="password" placeholder="Wachtwoord van de partner" />
+      </div>
+      <div class="field">
+        <label class="checkbox-row">
+          <input type="checkbox" id="view-only-toggle" />
+          <span>Alleen bekijken (geen muis-/toetsenbordbesturing)</span>
+        </label>
+      </div>
+      <div class="field permissions-box">
+        <label>Sessierechten</label>
+        <div class="permissions-grid">
+          <label class="checkbox-row">
+            <input type="checkbox" id="permission-control" checked />
+            <span>Muis en toetsenbord</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="permission-clipboard" checked />
+            <span>Klembord delen</span>
+          </label>
+          <label class="checkbox-row">
+            <input type="checkbox" id="permission-files" checked />
+            <span>Bestanden overzetten</span>
+          </label>
+        </div>
+      </div>
+      <div class="field remember-row">
+        <label class="checkbox-row">
+          <input type="checkbox" id="remember-device" />
+          <span>Dit apparaat onthouden voor één-tik verbinden</span>
+        </label>
+        <input id="remember-label" class="input hidden" placeholder="Naam (bv. Kantoor-pc)" />
+        <input id="remember-group" class="input hidden" placeholder="Groep (optioneel, bv. Werk, Klanten, Thuis)" />
+        <input id="remember-mac" class="input hidden" placeholder="MAC-adres (optioneel, voor Wake-on-LAN)" />
+        <p class="muted small">Werkt het betrouwbaarst als het andere apparaat "Onbeheerde toegang" met een vast wachtwoord gebruikt — een roterend sessiewachtwoord verandert bij elke herstart.</p>
+      </div>
+      <button id="connect-btn" class="btn btn-primary">Verbinden</button>
+      <p id="connect-status" class="muted small"></p>
+    </section>
+
+    <section class="card card-wide">
+      <div class="section-heading-row">
+        <h2><span class="card-icon">LOG</span>Recente sessies</h2>
+        <button id="clear-session-history" class="btn btn-ghost btn-sm">Wissen</button>
+      </div>
+      <div id="session-history-list" class="session-history-list">
+        <p class="muted small">Nog geen sessies.</p>
+      </div>
+    </section>
+
+    <section class="card card-wide">
+      <h2><span class="card-icon">API</span>Agent-meldingen (bijv. Google Antigravity)</h2>
+      <p class="muted">Laat lokale tools zoals Google Antigravity een melding of bevestigingsverzoek naar BromeoRemote sturen zodra ze jouw aandacht nodig hebben — ook als je niet achter dit scherm zit.</p>
+      <div class="field">
+        <label>Meldingen doorsturen naar (BromeoRemote-ID, optioneel)</label>
+        <div class="value-row">
+          <input id="notify-forward-id" class="input" placeholder="bv. het ID van je telefoon of laptop" inputmode="numeric" />
+          <button id="notify-forward-save" class="btn btn-primary btn-sm">Opslaan</button>
+        </div>
+        <p class="muted small">Laat leeg om meldingen alleen op dit apparaat te tonen.</p>
+      </div>
+      <div class="field">
+        <label>Lokaal koppeladres voor tools op dit apparaat</label>
+        <span class="value-mono bridge-url">http://localhost:8973/notify · /confirm</span>
+        <p class="muted small">Alleen bereikbaar vanaf dit apparaat — zie <code>docs/ANTIGRAVITY.md</code> voor een kant-en-klaar voorbeeld.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <span>BromeoRemote v<span id="app-version">—</span></span>
+    <button id="check-updates-btn" class="btn btn-ghost btn-sm">Controleer op updates</button>
+    <span id="update-status-text" class="muted small"></span>
+    <div class="spacer"></div>
+    <button id="install-update-btn" class="btn btn-primary btn-sm hidden">Herstart &amp; installeer update</button>
+  </footer>
+
+  <div id="totp-required-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>Verificatiecode vereist</h3>
+      <p id="totp-required-message">Dit apparaat gebruikt twee-factor-authenticatie. Voer de 6-cijferige code uit de authenticator-app in.</p>
+      <div class="field">
+        <input id="totp-required-input" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
+      </div>
+      <div class="modal-actions">
+        <button id="totp-required-cancel" class="btn btn-outline">Annuleren</button>
+        <button id="totp-required-submit" class="btn btn-primary">Verbinden</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="restart-confirm-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>Apparaat herstarten?</h3>
+      <p><strong id="restart-target">—</strong> wordt over enkele seconden opnieuw opgestart. Niet-opgeslagen werk op dat apparaat kan verloren gaan. BromeoRemote probeert daarna automatisch opnieuw te verbinden.</p>
+      <div class="modal-actions">
+        <button id="restart-cancel" class="btn btn-outline">Annuleren</button>
+        <button id="restart-confirm" class="btn btn-danger">Herstarten</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="incoming-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3>Inkomende verbindingsaanvraag</h3>
+      <p><strong id="incoming-from">—</strong> wil verbinden met dit apparaat <span id="incoming-action">en het besturen</span>.</p>
+      <p id="incoming-timeout" class="muted small modal-note">Aanvraag verloopt over 60 seconden.</p>
+      <div class="modal-actions">
+        <button id="incoming-decline" class="btn btn-outline">Weigeren</button>
+        <button id="incoming-accept" class="btn btn-primary">Toestaan</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="bridge-confirm-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <h3 id="bridge-confirm-title">Bevestiging nodig</h3>
+      <div class="value-row">
+        <p id="bridge-confirm-source" class="muted small" style="margin:0;"></p>
+        <span id="bridge-confirm-risk" class="risk-badge hidden"></span>
+      </div>
+      <p id="bridge-confirm-message"></p>
+      <pre id="bridge-confirm-command" class="notify-command hidden"></pre>
+      <div class="modal-actions">
+        <button id="bridge-confirm-view" class="btn btn-outline hidden">Bekijk live</button>
+        <button id="bridge-confirm-deny" class="btn btn-outline">Weigeren</button>
+        <button id="bridge-confirm-allow" class="btn btn-primary">Bevestigen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="session-view" class="session-view hidden">
+    <div class="session-toolbar">
+      <div class="session-identity">
+        <span class="session-label">Partner</span>
+        <span id="session-peer" class="session-peer"></span>
+      </div>
+      <span id="viewonly-badge" class="badge-tag hidden">Alleen kijken</span>
+      <span id="session-duration" class="session-chip">00:00</span>
+      <span id="session-state" class="session-chip session-chip--pending">Verbinden</span>
+      <span id="session-stats" class="session-chip">Beeld wordt geladen</span>
+      <span id="recording-indicator" class="recording-indicator hidden"><span class="rec-dot"></span><span id="recording-time">00:00</span></span>
+      <div class="spacer"></div>
+      <div class="toolbar-group">
+        <button id="chat-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Chat" aria-label="Chat"><svg class="toolbar-icon"><use href="#icon-chat"></use></svg><span class="sr-only">Chat</span></button>
+        <button id="files-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Bestanden" aria-label="Bestanden"><svg class="toolbar-icon"><use href="#icon-folder"></use></svg><span class="sr-only">Bestanden</span></button>
+        <button id="fullscreen-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Volledig scherm" aria-label="Volledig scherm"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span class="sr-only">Volledig scherm</span></button>
+      </div>
+      <div class="toolbar-menu">
+        <button class="toolbar-menu-trigger" data-menu-target="view-menu" title="Beeldinstellingen"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span>Beeld</span></button>
+        <div id="view-menu" class="toolbar-menu-panel hidden">
+          <label>Scherm</label>
+          <select id="monitor-select" class="monitor-select hidden" title="Scherm wisselen"></select>
+          <label>Weergave</label>
+          <select id="fit-mode-select" class="monitor-select" title="Beeldweergave">
+            <option value="fit">Passend</option>
+            <option value="actual">100%</option>
+            <option value="stretch">Vullen</option>
+          </select>
+          <label>Kwaliteit</label>
+          <select id="quality-select" class="monitor-select" title="Kwaliteit">
+            <option value="auto">Automatisch</option>
+            <option value="high">Hoog</option>
+            <option value="low">Laag (trage verbinding)</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar-menu">
+        <button class="toolbar-menu-trigger" data-menu-target="session-menu" title="Sessie-instellingen"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span>Sessie</span></button>
+        <div id="session-menu" class="toolbar-menu-panel hidden">
+          <button id="record-toggle-btn" class="toolbar-menu-item" title="Opnemen" aria-label="Opnemen"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span class="sr-only">Opnemen</span><span class="toolbar-visible-label">Opnemen</span></button>
+          <label>Automatische opname</label>
+          <select id="recording-mode-select" class="monitor-select" title="Sessie-opname">
+            <option value="manual">Handmatig</option>
+            <option value="auto">Automatisch</option>
+          </select>
+          <label>Inactiviteit</label>
+          <select id="idle-timeout-select" class="monitor-select" title="Automatisch verbreken bij inactiviteit">
+            <option value="0">Uit</option>
+            <option value="5">5 minuten</option>
+            <option value="15">15 minuten</option>
+            <option value="30">30 minuten</option>
+            <option value="60">60 minuten</option>
+          </select>
+          <button id="notes-toggle-btn" class="toolbar-menu-item" title="Sessienotitie" aria-label="Sessienotitie"><svg class="toolbar-icon"><use href="#icon-note"></use></svg><span class="sr-only">Sessienotitie</span><span>Notitie</span></button>
+        </div>
+      </div>
+      <div class="toolbar-menu">
+        <button class="toolbar-menu-trigger" data-menu-target="tools-menu" title="Tools"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span>Tools</span></button>
+        <div id="tools-menu" class="toolbar-menu-panel hidden">
+          <button id="audio-toggle-btn" class="toolbar-menu-item" title="Geluid uit" aria-label="Geluid uit"><svg class="toolbar-icon"><use href="#icon-volume-x"></use></svg><span class="sr-only">Geluid uit</span><span class="toolbar-visible-label">Geluid uit</span></button>
+          <button id="clipboard-sync-btn" class="toolbar-menu-item" title="Klembord verzenden" aria-label="Klembord verzenden"><svg class="toolbar-icon"><use href="#icon-clipboard"></use></svg><span class="sr-only">Klembord verzenden</span><span>Klembord</span></button>
+          <button id="text-toggle-btn" class="toolbar-menu-item" title="Tekst plakken" aria-label="Tekst plakken"><svg class="toolbar-icon"><use href="#icon-text"></use></svg><span class="sr-only">Tekst plakken</span><span>Tekst plakken</span></button>
+          <button id="shortcuts-toggle-btn" class="toolbar-menu-item" title="Sneltoetsen" aria-label="Sneltoetsen"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span class="sr-only">Sneltoetsen</span><span>Sneltoetsen</span></button>
+        </div>
+      </div>
+      <div class="toolbar-menu">
+        <button class="toolbar-menu-trigger" data-menu-target="admin-menu" title="Beheer"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span>Beheer</span></button>
+        <div id="admin-menu" class="toolbar-menu-panel toolbar-menu-panel--right hidden">
+          <button id="restart-btn" class="toolbar-menu-item" title="Herstarten" aria-label="Herstarten"><svg class="toolbar-icon"><use href="#icon-restart"></use></svg><span class="sr-only">Herstarten</span><span>Herstarten</span></button>
+          <button id="lock-btn" class="toolbar-menu-item" title="Vergrendelen" aria-label="Vergrendelen"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span class="sr-only">Vergrendelen</span><span>Vergrendelen</span></button>
+          <button id="lock-on-end-btn" class="toolbar-menu-item" title="Vergrendel bij einde" aria-label="Vergrendel bij einde"><svg class="toolbar-icon"><use href="#icon-lock-end"></use></svg><span class="sr-only">Vergrendel bij einde</span><span class="toolbar-visible-label">Vergrendel bij einde</span></button>
+          <button id="block-input-btn" class="toolbar-menu-item" title="Externe invoer blokkeren" aria-label="Externe invoer blokkeren"><svg class="toolbar-icon"><use href="#icon-block-input"></use></svg><span class="sr-only">Externe invoer blokkeren</span><span class="toolbar-visible-label">Externe invoer blokkeren</span></button>
+          <button id="ctrl-alt-del-btn" class="toolbar-menu-item" title="Ctrl+Alt+Del" aria-label="Ctrl+Alt+Del"><span class="toolbar-keycap" aria-hidden="true">CAD</span><span class="sr-only">Ctrl+Alt+Del</span><span>Ctrl+Alt+Del</span></button>
+        </div>
+      </div>
+      <div class="toolbar-group toolbar-group--end">
+        <button id="session-disconnect-btn" class="btn btn-danger btn-icon-sm session-action-btn session-action-btn--danger" title="Verbinding verbreken" aria-label="Verbinding verbreken"><svg class="toolbar-icon"><use href="#icon-power"></use></svg><span class="sr-only">Verbinding verbreken</span></button>
+      </div>
+    </div>
+    <div class="video-wrap" data-fit="fit">
+      <div id="session-hint" class="session-hint">Beeld wordt geladen…</div>
+      <video id="remote-video" autoplay playsinline></video>
+    </div>
+    <div id="files-panel" class="files-panel hidden">
+      <h4>Bestandsoverdracht</h4>
+      <button id="send-file-btn" class="btn btn-primary btn-sm">Bestand versturen…</button>
+      <div id="files-list" class="files-list"></div>
+    </div>
+    <div id="chat-panel" class="chat-panel chat-panel--session hidden">
+      <div class="notify-panel-header"><h4>Chat</h4></div>
+      <div id="chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
+      <div class="chat-input-row">
+        <input id="chat-input" class="input" placeholder="Typ een bericht…" />
+        <button id="chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+      </div>
+    </div>
+    <div id="text-panel" class="text-panel hidden">
+      <div class="notify-panel-header"><h4>Tekst plakken</h4></div>
+      <textarea id="remote-text-input" class="input remote-textarea" placeholder="Tekst voor het externe apparaat"></textarea>
+      <div class="panel-actions">
+        <button id="remote-text-clear-btn" class="btn btn-outline btn-sm">Wissen</button>
+        <button id="remote-text-send-btn" class="btn btn-primary btn-sm">Invoegen</button>
+      </div>
+    </div>
+    <div id="shortcuts-panel" class="shortcuts-panel hidden">
+      <div class="notify-panel-header"><h4>Sneltoetsen</h4></div>
+      <div class="shortcut-grid">
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="task-manager">Taakbeheer</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="alt-tab">Alt+Tab</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="win-r">Win+R</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="ctrl-c">Ctrl+C</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="ctrl-v">Ctrl+V</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="ctrl-alt-del">Ctrl+Alt+Del</button>
+      </div>
+    </div>
+    <div id="notes-panel" class="notes-panel hidden">
+      <div class="notify-panel-header"><h4>Sessienotitie</h4></div>
+      <textarea id="session-notes-input" class="input remote-textarea" placeholder="Wat is er gedaan, opgelost of nog nodig?"></textarea>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

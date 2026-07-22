@@ -1,0 +1,188 @@
+const path = require("path");
+const compression = require("compression");
+const express = require("express");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
+const { config } = require("./config");
+const {
+  closeDatabase,
+  healthCheck,
+  initDatabase,
+  saveContactRequest,
+  saveDownloadEvent,
+  saveNewsletterSignup,
+} = require("./database");
+const { sendContactNotification } = require("./mailer");
+const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
+
+const app = express();
+const publicDir = path.join(__dirname, "..", "public");
+
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        baseUri: ["'self'"],
+        connectSrc: ["'self'"],
+        formAction: ["'self'"],
+        fontSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        imgSrc: ["'self'", "data:"],
+        objectSrc: ["'none'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+      },
+    },
+  }),
+);
+app.use(compression());
+app.use(express.json({ limit: "32kb" }));
+app.use(express.urlencoded({ extended: false, limit: "32kb" }));
+
+const apiLimiter = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+
+const contactLimiter = rateLimit({
+  windowMs: 10 * 60_000,
+  limit: 6,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+});
+
+function requestMeta(req) {
+  return {
+    ip: req.ip,
+    userAgent: req.get("user-agent") || "",
+  };
+}
+
+function downloadUrlForPlatform(platform) {
+  switch (platform) {
+    case "windows":
+      return config.downloads.windows;
+    case "windows-portable":
+      return config.downloads.windowsPortable;
+    case "android":
+      return config.downloads.android;
+    case "github":
+      return config.downloads.github;
+    default:
+      return "";
+  }
+}
+
+app.get("/health", async (_req, res) => {
+  const database = await healthCheck();
+  const ok = !database.configured || database.ok;
+  res.status(ok ? 200 : 503).json({
+    status: ok ? "ok" : "degraded",
+    app: "bromeoremote-website",
+    database,
+  });
+});
+
+app.get("/api/site-config", apiLimiter, (_req, res) => {
+  res.json({
+    baseUrl: config.publicBaseUrl,
+    downloads: {
+      windows: Boolean(config.downloads.windows),
+      windowsPortable: Boolean(config.downloads.windowsPortable),
+      android: Boolean(config.downloads.android),
+      github: Boolean(config.downloads.github),
+    },
+    links: config.links,
+  });
+});
+
+app.post("/api/contact", contactLimiter, async (req, res, next) => {
+  try {
+    const { value, errors } = validateContact(req.body);
+    if (hasErrors(errors)) {
+      res.status(400).json({ ok: false, errors });
+      return;
+    }
+
+    const id = await saveContactRequest(value, requestMeta(req));
+    const mailed = await sendContactNotification(value);
+    res.status(202).json({ ok: true, id, mailed });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/newsletter", contactLimiter, async (req, res, next) => {
+  try {
+    const { value, errors } = validateNewsletter(req.body);
+    if (hasErrors(errors)) {
+      res.status(400).json({ ok: false, errors });
+      return;
+    }
+
+    const id = await saveNewsletterSignup(value, requestMeta(req));
+    res.status(202).json({ ok: true, id });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get("/download/:platform", apiLimiter, async (req, res, next) => {
+  try {
+    const platform = validatePlatform(req.params.platform);
+    if (!platform) {
+      res.status(404).json({ ok: false, error: "Onbekend downloadplatform." });
+      return;
+    }
+
+    const targetUrl = downloadUrlForPlatform(platform);
+    if (!targetUrl) {
+      res.status(503).json({ ok: false, error: "Deze download is nog niet gekoppeld." });
+      return;
+    }
+
+    await saveDownloadEvent(platform, requestMeta(req));
+    res.redirect(302, targetUrl);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.use(express.static(publicDir, { maxAge: "1h", etag: true }));
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
+});
+
+app.use((error, _req, res, _next) => {
+  console.error(error);
+  res.status(500).json({ ok: false, error: "Er ging iets mis. Probeer het later opnieuw." });
+});
+
+async function start() {
+  await initDatabase();
+  const server = app.listen(config.port, () => {
+    console.log(`BromeoRemote website luistert op poort ${config.port}`);
+  });
+
+  async function shutdown() {
+    server.close(async () => {
+      await closeDatabase();
+      process.exit(0);
+    });
+  }
+
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+}
+
+start().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

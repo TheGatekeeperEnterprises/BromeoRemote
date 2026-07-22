@@ -1,0 +1,16 @@
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+    </style>
+
+    <!-- Shown as the window background from process start until MainActivity
+         swaps back to AppTheme in onCreate, so the branded logo is visible
+         immediately instead of a blank/white flash before JS loads. -->
+    <style name="LaunchTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/launch_screen</item>
+    </style>
+
+</resources>

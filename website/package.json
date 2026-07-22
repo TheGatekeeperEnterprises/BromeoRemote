@@ -1,0 +1,25 @@
+{
+  "name": "bromeoremote-website",
+  "version": "1.0.0",
+  "description": "Publieke website voor BromeoRemote downloads, leads en supportaanvragen.",
+  "private": true,
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node src/server.js",
+    "check": "node --check src/config.js && node --check src/database.js && node --check src/mailer.js && node --check src/server.js && node --check src/validation.js"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0",
+    "nodemailer": "^9.0.3",
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

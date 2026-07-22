@@ -1,0 +1,35 @@
+node_modules/
+dist/
+*.log
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*firebase-adminsdk*.json
+service-account*.json
+
+# Local editor/agent state
+.claude/
+.agents/
+.git-backups/
+
+# Build outputs and packaged binaries
+client/dist/
+client/release/
+client/out/
+server/dist/
+website/node_modules/
+mobile/node_modules/
+mobile/android/app/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/app/debug.keystore
+mobile/ios/Pods/
+mobile/ios/build/
+
+# OS noise
+Thumbs.db
+.DS_Store
