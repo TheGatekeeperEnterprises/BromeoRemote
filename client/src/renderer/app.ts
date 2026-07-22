@@ -170,6 +170,20 @@ const el = {
   hostChatMessages: $<HTMLDivElement>("host-chat-messages"),
   hostChatInput: $<HTMLInputElement>("host-chat-input"),
   hostChatSendBtn: $<HTMLButtonElement>("host-chat-send-btn"),
+  aiBuddyToggleBtn: $<HTMLButtonElement>("ai-buddy-toggle-btn"),
+  aiBuddyPanel: $<HTMLDivElement>("ai-buddy-panel"),
+  aiBuddyStatus: $<HTMLSpanElement>("ai-buddy-status"),
+  aiBuddyMessages: $<HTMLDivElement>("ai-buddy-messages"),
+  aiBuddyScreenshotPreview: $<HTMLDivElement>("ai-buddy-screenshot-preview"),
+  aiBuddyScreenshotImg: $<HTMLImageElement>("ai-buddy-screenshot-img"),
+  aiBuddyScreenshotRemove: $<HTMLButtonElement>("ai-buddy-screenshot-remove"),
+  aiBuddyScreenshotBtn: $<HTMLButtonElement>("ai-buddy-screenshot-btn"),
+  aiBuddyInput: $<HTMLInputElement>("ai-buddy-input"),
+  aiBuddySendBtn: $<HTMLButtonElement>("ai-buddy-send-btn"),
+  aiBuddyCaptureCanvas: $<HTMLCanvasElement>("ai-buddy-capture-canvas"),
+  openaiKeyInput: $<HTMLInputElement>("openai-key-input"),
+  openaiKeySave: $<HTMLButtonElement>("openai-key-save"),
+  openaiKeyStatus: $<HTMLParagraphElement>("openai-key-status"),
   toast: $<HTMLDivElement>("toast"),
   notifyForwardId: $<HTMLInputElement>("notify-forward-id"),
   notifyForwardSave: $<HTMLButtonElement>("notify-forward-save"),
@@ -217,6 +231,9 @@ let sessionStartedAt: number | null = null;
 let sessionDurationHandle: ReturnType<typeof setInterval> | null = null;
 let filesTransferredCount = 0;
 let chatLog: { text: string; timestamp: number; mine: boolean }[] = [];
+let aiBuddyLog: { role: "user" | "assistant"; text: string; imageBase64?: string; timestamp: number }[] = [];
+let aiBuddyPendingScreenshot: string | null = null;
+let aiBuddySending = false;
 let restartRequestedFor: string | null = null;
 let curtainModeEnabled = false;
 let monitorIsOff = false;
@@ -271,6 +288,9 @@ async function init(): Promise<void> {
   el.notifyForwardId.value = notifyForwardId ?? "";
   trustedOnlyConnections = localStorage.getItem(TRUSTED_ONLY_KEY) === "1";
   el.trustedOnlyToggle.checked = trustedOnlyConnections;
+  window.bromeo.getOpenAiKeyStatus().then((hasKey) => {
+    el.openaiKeyStatus.textContent = hasKey ? "Sleutel ingesteld en versleuteld opgeslagen." : "Nog geen sleutel ingesteld.";
+  });
 
   savedDevices = await window.bromeo.getSavedDevices();
   renderSavedDevices();
@@ -636,7 +656,7 @@ function sendNamedShortcut(name: string): void {
 
 function toggleSessionPanel(panel: HTMLElement): void {
   const willOpen = panel.classList.contains("hidden");
-  [el.filesPanel, el.chatPanel, el.textPanel, el.shortcutsPanel, el.notesPanel].forEach((p) => p.classList.add("hidden"));
+  [el.filesPanel, el.chatPanel, el.textPanel, el.shortcutsPanel, el.notesPanel, el.aiBuddyPanel].forEach((p) => p.classList.add("hidden"));
   panel.classList.toggle("hidden", !willOpen);
   closeToolbarMenus();
 }
@@ -975,6 +995,21 @@ function wireUi(): void {
     if (e.key === "Enter") sendChatMessage(el.hostChatInput);
   };
 
+  el.aiBuddyToggleBtn.onclick = () => toggleSessionPanel(el.aiBuddyPanel);
+  el.aiBuddyScreenshotBtn.onclick = () => {
+    const frame = captureRemoteVideoFrame();
+    if (!frame) {
+      toast("Kon geen screenshot maken — is het beeld al geladen?");
+      return;
+    }
+    setAiBuddyScreenshot(frame);
+  };
+  el.aiBuddyScreenshotRemove.onclick = () => clearAiBuddyScreenshot();
+  el.aiBuddySendBtn.onclick = () => sendAiBuddyMessage();
+  el.aiBuddyInput.onkeydown = (e) => {
+    if (e.key === "Enter") sendAiBuddyMessage();
+  };
+
   el.restartBtn.onclick = () => {
     if (!currentSession || currentRole !== "viewer") return;
     el.restartTarget.textContent = el.sessionPeer.textContent;
@@ -1105,6 +1140,13 @@ function wireUi(): void {
     }
     notifyForwardId = await window.bromeo.setNotifyForward(val || null);
     toast(notifyForwardId ? `Meldingen worden ook doorgestuurd naar ${formatId(notifyForwardId)}.` : "Doorsturen van meldingen uitgeschakeld.");
+  };
+  el.openaiKeySave.onclick = async () => {
+    const key = el.openaiKeyInput.value.trim();
+    const hasKey = await window.bromeo.setOpenAiKey(key || null);
+    el.openaiKeyInput.value = "";
+    el.openaiKeyStatus.textContent = hasKey ? "Sleutel ingesteld en versleuteld opgeslagen." : "Nog geen sleutel ingesteld.";
+    toast(hasKey ? "OpenAI-sleutel opgeslagen." : "OpenAI-sleutel verwijderd.");
   };
   el.notifyBellBtn.onclick = () => {
     el.notifyPanel.classList.toggle("hidden");
@@ -1970,6 +2012,10 @@ function endSession(): void {
   el.hostChatMessages.innerHTML = '<p class="muted small">Nog geen berichten.</p>';
   el.chatInput.value = "";
   el.hostChatInput.value = "";
+  aiBuddyLog = [];
+  clearAiBuddyScreenshot();
+  el.aiBuddyPanel.classList.add("hidden");
+  renderAiBuddyMessages();
   el.restartConfirmModal.classList.add("hidden");
   el.monitorSelect.innerHTML = "";
   el.monitorSelect.classList.add("hidden");
@@ -2111,6 +2157,86 @@ function renderChat(): void {
     })
     .join("");
   container.scrollTop = container.scrollHeight;
+}
+
+// --- AI Buddy (local-only — the user's own OpenAI key, never touches the
+// signaling server) ---
+
+// Snapshots the current remote-session <video> frame via an offscreen
+// canvas — a real DOM element, trivial to draw and export unlike mobile's
+// native SurfaceView-backed RTCView (see mobile/src/aiBuddy.ts's PixelCopy
+// native module for that side of the story).
+function captureRemoteVideoFrame(): string | null {
+  const video = el.remoteVideo;
+  if (!video.videoWidth || !video.videoHeight) return null;
+  const canvas = el.aiBuddyCaptureCanvas;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.85);
+}
+
+function setAiBuddyScreenshot(dataUrl: string): void {
+  aiBuddyPendingScreenshot = dataUrl;
+  el.aiBuddyScreenshotImg.src = dataUrl;
+  el.aiBuddyScreenshotPreview.classList.remove("hidden");
+}
+
+function clearAiBuddyScreenshot(): void {
+  aiBuddyPendingScreenshot = null;
+  el.aiBuddyScreenshotImg.src = "";
+  el.aiBuddyScreenshotPreview.classList.add("hidden");
+}
+
+function renderAiBuddyMessages(): void {
+  if (aiBuddyLog.length === 0) {
+    el.aiBuddyMessages.innerHTML =
+      '<p class="muted small">Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</p>';
+    return;
+  }
+  el.aiBuddyMessages.innerHTML = aiBuddyLog
+    .map((m) => {
+      const imageHtml = m.imageBase64 ? `<div class="chat-bubble--ai-buddy-image"><img src="${m.imageBase64}" alt="Screenshot" /></div>` : "";
+      return `<div class="chat-bubble ${m.role === "user" ? "chat-bubble--mine" : ""}">${imageHtml}${escapeHtml(m.text)}</div>`;
+    })
+    .join("");
+  el.aiBuddyMessages.scrollTop = el.aiBuddyMessages.scrollHeight;
+}
+
+async function sendAiBuddyMessage(): Promise<void> {
+  const text = el.aiBuddyInput.value.trim();
+  if (!text || aiBuddySending) return;
+  if (!(await window.bromeo.getOpenAiKeyStatus())) {
+    toast("Stel eerst je OpenAI API-sleutel in bij de AI Buddy-instellingen.");
+    return;
+  }
+  const imageBase64 = aiBuddyPendingScreenshot ?? undefined;
+  aiBuddyLog.push({ role: "user", text, imageBase64, timestamp: Date.now() });
+  el.aiBuddyInput.value = "";
+  clearAiBuddyScreenshot();
+  renderAiBuddyMessages();
+
+  aiBuddySending = true;
+  el.aiBuddySendBtn.disabled = true;
+  el.aiBuddyStatus.textContent = "AI Buddy denkt na…";
+  try {
+    const history = aiBuddyLog.map((m) => ({ role: m.role, text: m.text, imageBase64: m.imageBase64 }));
+    const result = await window.bromeo.askAiBuddy(history);
+    aiBuddyLog.push({
+      role: "assistant",
+      text: result.ok && result.reply ? result.reply : `⚠️ ${result.error ?? "Onbekende fout."}`,
+      timestamp: Date.now(),
+    });
+  } catch (err) {
+    aiBuddyLog.push({ role: "assistant", text: `⚠️ ${(err as Error).message}`, timestamp: Date.now() });
+  } finally {
+    aiBuddySending = false;
+    el.aiBuddySendBtn.disabled = false;
+    el.aiBuddyStatus.textContent = "";
+    renderAiBuddyMessages();
+  }
 }
 
 // --- Multi-monitor switching (viewer side) ---

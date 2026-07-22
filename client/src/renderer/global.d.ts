@@ -1,4 +1,4 @@
-import type { InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
+import type { AiBuddyMessage, AiBuddyResult, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
 
 export interface BromeoConfig {
   deviceId: string;
@@ -42,6 +42,9 @@ export interface BromeoBridge {
   setNotifyForward(targetId: string | null): Promise<string | null>;
   setCurtainMode(enabled: boolean): Promise<boolean>;
   setMonitorPower(on: boolean): Promise<boolean>;
+  setOpenAiKey(key: string | null): Promise<boolean>;
+  getOpenAiKeyStatus(): Promise<boolean>;
+  askAiBuddy(history: AiBuddyMessage[]): Promise<AiBuddyResult>;
   generateTotpSecret(): Promise<{ secret: string; otpauthUri: string }>;
   enableTotp(code: string): Promise<{ ok: boolean }>;
   disableTotp(): Promise<boolean>;

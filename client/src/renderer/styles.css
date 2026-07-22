@@ -1391,6 +1391,59 @@ hr {
   background: rgba(47, 111, 237, 0.12);
 }
 
+/* Left-positioned (unlike chat/files/notes, which all sit on the right) —
+   AI Buddy is meant to sit alongside the remote session, not stack with
+   the other session panels. */
+.ai-buddy-panel {
+  position: absolute;
+  top: 58px;
+  left: 16px;
+  z-index: 41;
+  width: min(360px, calc(100vw - 32px));
+  padding: 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  color: var(--text);
+  text-align: left;
+}
+
+.ai-buddy-messages {
+  max-height: 320px;
+}
+
+.ai-buddy-screenshot-preview {
+  position: relative;
+  margin: 8px 0;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.ai-buddy-screenshot-preview img {
+  display: block;
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+}
+
+.ai-buddy-screenshot-preview button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+}
+
+.chat-bubble--ai-buddy-image img {
+  display: block;
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-bottom: 6px;
+}
+
 .chat-bubble-time {
   display: block;
   margin-top: 3px;

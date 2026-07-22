@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { InputEvent, NotificationPayload, SavedDevice, UpdateStatus } from "../shared/protocol";
+import type { AiBuddyMessage, InputEvent, NotificationPayload, SavedDevice, UpdateStatus } from "../shared/protocol";
 
 interface MiniControllerState {
   peer: string;

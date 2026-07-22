@@ -43,6 +43,10 @@
       <path d="M5 6.5h14v9.75H9l-4 3.25z" />
       <path d="M8.5 10h7M8.5 13h4.75" />
     </symbol>
+    <symbol id="icon-ai-buddy" viewBox="0 0 24 24">
+      <path d="M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9-1.9 5.1-1.9-5.1-5.1-1.9 5.1-1.9z" />
+      <path d="M19 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" />
+    </symbol>
     <symbol id="icon-folder" viewBox="0 0 24 24">
       <path d="M3.75 7.25h6.2l2 2.5h8.3v8.5H3.75z" />
       <path d="M3.75 10h16.5" />
@@ -332,6 +336,19 @@
         <p class="muted small">Alleen bereikbaar vanaf dit apparaat — zie <code>docs/ANTIGRAVITY.md</code> voor een kant-en-klaar voorbeeld.</p>
       </div>
     </section>
+
+    <section class="card card-wide">
+      <h2><span class="card-icon">AI</span>AI Buddy</h2>
+      <p class="muted">Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen — maak een screenshot van het scherm op afstand en stel een vraag, AI Buddy helpt stap voor stap. De sleutel wordt versleuteld lokaal opgeslagen en verlaat dit apparaat nooit, behalve rechtstreeks naar OpenAI.</p>
+      <div class="field">
+        <label>OpenAI API-sleutel</label>
+        <div class="value-row">
+          <input id="openai-key-input" class="input" type="password" placeholder="sk-…" autocomplete="off" />
+          <button id="openai-key-save" class="btn btn-primary btn-sm">Opslaan</button>
+        </div>
+        <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
+      </div>
+    </section>
   </main>
 
   <footer class="app-footer">
@@ -410,6 +427,7 @@
       <div class="spacer"></div>
       <div class="toolbar-group">
         <button id="chat-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Chat" aria-label="Chat"><svg class="toolbar-icon"><use href="#icon-chat"></use></svg><span class="sr-only">Chat</span></button>
+        <button id="ai-buddy-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="AI Buddy" aria-label="AI Buddy"><svg class="toolbar-icon"><use href="#icon-ai-buddy"></use></svg><span class="sr-only">AI Buddy</span></button>
         <button id="files-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Bestanden" aria-label="Bestanden"><svg class="toolbar-icon"><use href="#icon-folder"></use></svg><span class="sr-only">Bestanden</span></button>
         <button id="fullscreen-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Volledig scherm" aria-label="Volledig scherm"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span class="sr-only">Volledig scherm</span></button>
       </div>
@@ -479,6 +497,7 @@
       <div id="session-hint" class="session-hint">Beeld wordt geladen…</div>
       <video id="remote-video" autoplay playsinline></video>
     </div>
+    <canvas id="ai-buddy-capture-canvas" class="hidden"></canvas>
     <div id="files-panel" class="files-panel hidden">
       <h4>Bestandsoverdracht</h4>
       <button id="send-file-btn" class="btn btn-primary btn-sm">Bestand versturen…</button>
@@ -490,6 +509,28 @@
       <div class="chat-input-row">
         <input id="chat-input" class="input" placeholder="Typ een bericht…" />
         <button id="chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+      </div>
+    </div>
+    <div id="ai-buddy-panel" class="ai-buddy-panel hidden">
+      <div class="notify-panel-header">
+        <h4>AI Buddy</h4>
+        <span id="ai-buddy-status" class="muted small"></span>
+      </div>
+      <div id="ai-buddy-messages" class="chat-messages ai-buddy-messages">
+        <p class="muted small">
+          Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.
+        </p>
+      </div>
+      <div id="ai-buddy-screenshot-preview" class="ai-buddy-screenshot-preview hidden">
+        <img id="ai-buddy-screenshot-img" alt="Screenshot van het scherm op afstand" />
+        <button id="ai-buddy-screenshot-remove" class="btn btn-outline btn-sm" title="Screenshot verwijderen">✕</button>
+      </div>
+      <div class="chat-input-row">
+        <button id="ai-buddy-screenshot-btn" class="btn btn-outline btn-icon-sm" title="Screenshot van scherm op afstand" aria-label="Screenshot maken">
+          <svg class="toolbar-icon"><use href="#icon-window"></use></svg>
+        </button>
+        <input id="ai-buddy-input" class="input" placeholder="Stel een vraag over dit probleem…" />
+        <button id="ai-buddy-send-btn" class="btn btn-primary btn-sm">Versturen</button>
       </div>
     </div>
     <div id="text-panel" class="text-panel hidden">

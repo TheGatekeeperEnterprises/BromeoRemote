@@ -29,6 +29,7 @@ import { Signaling } from "./signaling";
 import { MobileSession } from "./session";
 import { requestNotificationPermission, getPushToken, onPushTokenRefresh, onForegroundPush } from "./push";
 import { ensureNotificationChannels, onNotificationPress, getInitialNotificationPress, openConfirmNotificationSettings } from "./notifications";
+import { getOpenAiApiKey, setOpenAiApiKey, captureRemoteVideoFrame, askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { isAccessibilityServiceEnabled, openAccessibilitySettings } from "./remoteControl";
 import { RemoteInputTranslator } from "./inputTranslator";
 import { getSavedDevices, saveDevice, removeSavedDevice, toggleFavorite, sortSavedDevices } from "./savedDevices";
@@ -53,6 +54,7 @@ import {
   RotateCw,
   Save,
   Settings,
+  Sparkles,
   Star,
   Trash2,
   X,
@@ -221,7 +223,7 @@ export default function App(): React.JSX.Element {
   const [keyboardDraft, setKeyboardDraft] = useState("");
   // Only one of the toolbar's dropdown panels is open at a time (Shortcuts,
   // Quick actions, Settings) — matches TeamViewer's mobile session bar.
-  const [activePanel, setActivePanel] = useState<"shortcuts" | "quickActions" | "settings" | "chat" | "files" | "programs" | null>(null);
+  const [activePanel, setActivePanel] = useState<"shortcuts" | "quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | null>(null);
   // "Control a program" — pick one of the host's open windows, view/control
   // just that window (resized on the host to match this phone's aspect
   // ratio), instead of the whole desktop.
@@ -245,6 +247,60 @@ export default function App(): React.JSX.Element {
   function openChat(): void {
     setHasUnreadChat(false);
     setActivePanel((p) => (p === "chat" ? null : "chat"));
+  }
+
+  // --- AI Buddy (local-only — this device's own OpenAI key, never touches
+  // the signaling server) ---
+  const [aiBuddyLog, setAiBuddyLog] = useState<{ role: "user" | "assistant"; text: string; imageBase64?: string; timestamp: number }[]>([]);
+  const [aiBuddyInput, setAiBuddyInput] = useState("");
+  const [aiBuddyScreenshot, setAiBuddyScreenshot] = useState<string | null>(null);
+  const [aiBuddySending, setAiBuddySending] = useState(false);
+  const [openaiKeyConfigured, setOpenaiKeyConfigured] = useState(false);
+  const [openaiKeyInput, setOpenaiKeyInput] = useState("");
+  const aiBuddyScrollRef = useRef<ScrollView>(null);
+
+  async function saveOpenAiKey(): Promise<void> {
+    const key = openaiKeyInput.trim();
+    await setOpenAiApiKey(key || null);
+    setOpenaiKeyConfigured(!!key);
+    setOpenaiKeyInput("");
+    showToast(key ? "OpenAI-sleutel opgeslagen." : "OpenAI-sleutel verwijderd.");
+  }
+
+  async function takeAiBuddyScreenshot(): Promise<void> {
+    const frame = await captureRemoteVideoFrame(rtcViewRef);
+    if (!frame) {
+      showToast("Kon geen screenshot maken — is het beeld al geladen?");
+      return;
+    }
+    setAiBuddyScreenshot(frame);
+  }
+
+  async function sendAiBuddyMessage(): Promise<void> {
+    const text = aiBuddyInput.trim();
+    if (!text || aiBuddySending) return;
+    if (!(await getOpenAiApiKey())) {
+      showToast("Stel eerst je OpenAI API-sleutel in bij Instellingen.");
+      return;
+    }
+    const imageBase64 = aiBuddyScreenshot ?? undefined;
+    const nextLog = [...aiBuddyLog, { role: "user" as const, text, imageBase64, timestamp: Date.now() }];
+    setAiBuddyLog(nextLog);
+    setAiBuddyInput("");
+    setAiBuddyScreenshot(null);
+    setAiBuddySending(true);
+    try {
+      const history: AiBuddyMessage[] = nextLog.map((m) => ({ role: m.role, text: m.text, imageBase64: m.imageBase64 }));
+      const result = await askAiBuddy(history);
+      setAiBuddyLog((prev) => [
+        ...prev,
+        { role: "assistant", text: result.ok && result.reply ? result.reply : `⚠️ ${result.error ?? "Onbekende fout."}`, timestamp: Date.now() },
+      ]);
+    } catch (err) {
+      setAiBuddyLog((prev) => [...prev, { role: "assistant", text: `⚠️ ${(err as Error).message}`, timestamp: Date.now() }]);
+    } finally {
+      setAiBuddySending(false);
+    }
   }
 
   function applyTheme(next: AppTheme): void {
@@ -396,6 +452,12 @@ export default function App(): React.JSX.Element {
   // the real remote cursor (baked into the video) landed in different spots.
   const videoDimsRef = useRef({ width: 0, height: 0 });
   const videoWrapRef = useRef<View>(null);
+  // Whichever RTCView branch is currently mounted (see the three render
+  // branches below) — needed so AI Buddy's screenshot button can resolve
+  // the native view by tag for PixelCopy capture (see aiBuddy.ts). `any`
+  // matches this codebase's established pattern for react-native-webrtc's
+  // own imprecise typings (see session.ts).
+  const rtcViewRef = useRef<any>(null);
   const keyboardInputRef = useRef<TextInput>(null);
   const lastTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean }>({ x: 0, y: 0, time: 0, moved: false });
 
@@ -686,6 +748,10 @@ export default function App(): React.JSX.Element {
 
   useEffect(() => {
     getSavedDevices().then((devices) => setSavedDevicesState(sortSavedDevices(devices)));
+  }, []);
+
+  useEffect(() => {
+    getOpenAiApiKey().then((key) => setOpenaiKeyConfigured(!!key));
   }, []);
 
   useEffect(() => {
@@ -1005,6 +1071,9 @@ export default function App(): React.JSX.Element {
     setActiveMonitorId(null);
     setWindowList([]);
     setActiveAppWindow(null);
+    setAiBuddyLog([]);
+    setAiBuddyScreenshot(null);
+    setAiBuddySending(false);
   }
 
   function disconnectSession(): void {
@@ -1430,6 +1499,7 @@ export default function App(): React.JSX.Element {
                 if (!width || !height) {
                   return (
                     <RTCView
+                      ref={rtcViewRef}
                       streamURL={remoteStream.toURL()}
                       style={styles.video}
                       objectFit="contain"
@@ -1441,6 +1511,7 @@ export default function App(): React.JSX.Element {
                 if (zoomLive) {
                   return (
                     <RTCView
+                      ref={rtcViewRef}
                       streamURL={remoteStream.toURL()}
                       style={[styles.video, { transform: [{ translateX: panX }, { translateY: panY }, { scale }] }]}
                       objectFit="contain"
@@ -1450,6 +1521,7 @@ export default function App(): React.JSX.Element {
                 }
                 return (
                   <RTCView
+                    ref={rtcViewRef}
                     streamURL={remoteStream.toURL()}
                     style={[
                       styles.videoZoomed,
@@ -1630,6 +1702,14 @@ export default function App(): React.JSX.Element {
                     accessibilityLabel="Programma's"
                   >
                     {toolbarIcon(AppWindow, activePanel === "programs")}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.modeToggleBtnActive]}
+                    onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
+                    accessibilityRole="button"
+                    accessibilityLabel="AI Buddy"
+                  >
+                    {toolbarIcon(Sparkles, activePanel === "aiBuddy")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.toolbarBtn}
@@ -1832,6 +1912,66 @@ export default function App(): React.JSX.Element {
             </View>
           </View>
         </Modal>
+        <Modal visible={activePanel === "aiBuddy"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
+          <View style={styles.chatBackdrop}>
+            <View style={styles.chatCard}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.cardTitle}>AI Buddy</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="AI Buddy sluiten">
+                  {toolbarIcon(X)}
+                </TouchableOpacity>
+              </View>
+              {!openaiKeyConfigured ? (
+                <Text style={styles.fileEmptyText}>Stel eerst je OpenAI API-sleutel in bij Instellingen op het beginscherm.</Text>
+              ) : (
+                <>
+                  <ScrollView
+                    ref={aiBuddyScrollRef}
+                    style={styles.chatMessagesList}
+                    onContentSizeChange={() => aiBuddyScrollRef.current?.scrollToEnd({ animated: true })}
+                  >
+                    {aiBuddyLog.length === 0 && (
+                      <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</Text>
+                    )}
+                    {aiBuddyLog.map((m, i) => (
+                      <View key={i} style={[styles.chatBubble, m.role === "user" ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
+                        {m.imageBase64 && <Image source={{ uri: m.imageBase64 }} style={styles.aiBuddyMessageImage} resizeMode="cover" />}
+                        <Text style={styles.chatBubbleText}>{m.text}</Text>
+                      </View>
+                    ))}
+                    {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
+                  </ScrollView>
+                  {aiBuddyScreenshot && (
+                    <View style={styles.aiBuddyScreenshotPreview}>
+                      <Image source={{ uri: aiBuddyScreenshot }} style={styles.aiBuddyScreenshotPreviewImg} resizeMode="cover" />
+                      <TouchableOpacity style={styles.aiBuddyScreenshotRemove} onPress={() => setAiBuddyScreenshot(null)}>
+                        {toolbarIcon(X)}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <View style={styles.chatInputRow}>
+                    <TouchableOpacity style={styles.toolbarBtn} onPress={takeAiBuddyScreenshot} accessibilityRole="button" accessibilityLabel="Screenshot maken">
+                      {toolbarIcon(Camera)}
+                    </TouchableOpacity>
+                    <TextInput
+                      style={[styles.input, styles.chatInputField]}
+                      value={aiBuddyInput}
+                      onChangeText={setAiBuddyInput}
+                      placeholder="Stel een vraag over dit probleem…"
+                      placeholderTextColor="#8b96b8"
+                      onSubmitEditing={sendAiBuddyMessage}
+                      returnKeyType="send"
+                      editable={!aiBuddySending}
+                    />
+                    <TouchableOpacity style={styles.chatSendBtn} onPress={sendAiBuddyMessage} disabled={aiBuddySending}>
+                      <Text style={styles.primaryBtnText}>Versturen</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
+            </View>
+          </View>
+        </Modal>
         {keyboardVisible && (
           <TextInput
             ref={keyboardInputRef}
@@ -1995,6 +2135,29 @@ export default function App(): React.JSX.Element {
             </View>
           ))}
         </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>AI Buddy</Text>
+          <Text style={styles.muted}>
+            Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen — maak een screenshot van het scherm op
+            afstand en stel een vraag, AI Buddy helpt stap voor stap.
+          </Text>
+          <Text style={styles.label}>OpenAI API-sleutel</Text>
+          <TextInput
+            style={styles.input}
+            value={openaiKeyInput}
+            onChangeText={setOpenaiKeyInput}
+            placeholder="sk-…"
+            placeholderTextColor="#8b96b8"
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity style={styles.primaryBtn} onPress={saveOpenAiKey}>
+            <Text style={styles.primaryBtnText}>Opslaan</Text>
+          </TouchableOpacity>
+          <Text style={styles.muted}>{openaiKeyConfigured ? "Sleutel ingesteld." : "Nog geen sleutel ingesteld."}</Text>
+        </View>
       </ScrollView>
 
       <Modal visible={!!activeConfirm} transparent animationType="fade">
@@ -2130,6 +2293,10 @@ function createStyles(theme: AppTheme) {
     programThumbnail: { width: 48, height: 48, borderRadius: 6, marginRight: 12, backgroundColor: colors.border },
     programThumbnailPlaceholder: { alignItems: "center", justifyContent: "center" },
     programName: { flex: 1, color: colors.text, fontWeight: "700", fontSize: 13 },
+    aiBuddyMessageImage: { width: "100%", height: 140, borderRadius: 8, marginBottom: 6 },
+    aiBuddyScreenshotPreview: { position: "relative", marginTop: 8, borderRadius: 8, overflow: "hidden" },
+    aiBuddyScreenshotPreviewImg: { width: "100%", height: 120 },
+    aiBuddyScreenshotRemove: { position: "absolute", top: 6, right: 6, backgroundColor: colors.card, borderRadius: 14, padding: 4 },
     hostBanner: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     hostBannerText: { color: colors.text, fontSize: 16, fontWeight: "700", textAlign: "center", marginBottom: 20 },
     sessionRoot: { flex: 1, backgroundColor: "#000" },
