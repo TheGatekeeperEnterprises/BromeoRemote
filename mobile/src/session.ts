@@ -64,7 +64,10 @@ export class MobileSession {
   private captureStream: MediaStream | null = null;
 
   constructor(private iceServers: any[], private signaling: Signaling, private peerId: string, private callbacks: SessionCallbacks) {
-    this.pc = new RTCPeerConnection({ iceServers });
+    // relay-only — see client/src/renderer/session.ts for why: ICE switching
+    // to a "better" direct P2P pair mid-session (then finding it doesn't
+    // actually hold up) is what caused sessions to drop ~40s in.
+    this.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" });
 
     this.pc.addEventListener("icecandidate", (event: any) => {
       if (event.candidate) {

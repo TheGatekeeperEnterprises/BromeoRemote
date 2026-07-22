@@ -76,7 +76,17 @@ export class PeerSession {
     private peerId: string,
     private callbacks: SessionCallbacks
   ) {
-    this.pc = new RTCPeerConnection({ iceServers });
+    // relay-only: without this, ICE happily starts on the (working) TURN
+    // relay path but keeps probing in the background for a "better" direct
+    // P2P pair — and switches to it the moment one appears to succeed a
+    // connectivity check, even when that pair doesn't actually hold up
+    // end-to-end (e.g. one peer on the same LAN as our coturn box, routed
+    // through the gateway). That switch tears down the still-working relay
+    // allocation first, so if the "better" pair then fails, the whole
+    // session drops instead of falling back — this is what caused sessions
+    // to die ~40s in. Since this is a single-tenant, self-hosted relay (not
+    // a metered public TURN service), there's no real cost to always using it.
+    this.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
         this.signaling.send({ type: "signal", targetId: this.peerId, payload: { candidate: ev.candidate.toJSON() } });
