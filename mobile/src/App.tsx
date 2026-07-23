@@ -42,7 +42,6 @@ import {
   ChevronDown,
   ChevronUp,
   ClipboardPaste,
-  Command,
   Copy,
   Folder,
   Hand,
@@ -232,7 +231,7 @@ export default function App(): React.JSX.Element {
   const [keyboardDraft, setKeyboardDraft] = useState("");
   // Only one of the toolbar's dropdown panels is open at a time (Shortcuts,
   // Quick actions, Settings) — matches TeamViewer's mobile session bar.
-  const [activePanel, setActivePanel] = useState<"shortcuts" | "quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | null>(null);
+  const [activePanel, setActivePanel] = useState<"quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | null>(null);
   // "Control a program" — pick one of the host's open windows, view/control
   // just that window (resized on the host to match this phone's aspect
   // ratio), instead of the whole desktop.
@@ -1499,7 +1498,11 @@ export default function App(): React.JSX.Element {
 
   if (inSession) {
     return (
-      <SafeAreaView style={styles.sessionRoot}>
+      // Only the top edge — the video is deliberately full-bleed on the
+      // other three (see videoWrap/floatingToolbarWrap below), so letting
+      // SafeAreaView pad bottom/left/right here too would double up with
+      // the insets applied directly to the toolbar and push it too far in.
+      <SafeAreaView style={styles.sessionRoot} edges={["top"]}>
         <StatusBar barStyle="light-content" />
         <View
           ref={videoWrapRef}
@@ -1631,8 +1634,8 @@ export default function App(): React.JSX.Element {
               <ChevronUp size={20} color={colors.muted} strokeWidth={2.4} />
             </TouchableOpacity>
           ) : (
-            <View style={[styles.floatingToolbarWrap, { bottom: insets.bottom }]}>
-              {activePanel === "shortcuts" && (
+            <View style={[styles.floatingToolbarWrap, { paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
+              {activePanel === "quickActions" && (
                 <ScrollView horizontal style={styles.shortcutsBar} contentContainerStyle={styles.shortcutsBarContent} showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["ControlLeft", "KeyC"])}>
                     {shortcutIcon(Copy)}
@@ -1654,10 +1657,6 @@ export default function App(): React.JSX.Element {
                     {shortcutIcon(Save)}
                     <Text style={styles.shortcutBtnText}>Opslaan{"\n"}Ctrl+S</Text>
                   </TouchableOpacity>
-                </ScrollView>
-              )}
-              {activePanel === "quickActions" && (
-                <ScrollView horizontal style={styles.shortcutsBar} contentContainerStyle={styles.shortcutsBarContent} showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity style={styles.shortcutBtn} onPress={lockRemote}>
                     {shortcutIcon(Lock)}
                     <Text style={styles.shortcutBtnText}>Vergrendelen</Text>
@@ -1713,14 +1712,6 @@ export default function App(): React.JSX.Element {
                     accessibilityLabel="Snelle acties"
                   >
                     {toolbarIcon(Zap, "Snel", activePanel === "quickActions")}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "shortcuts" && styles.modeToggleBtnActive]}
-                    onPress={() => setActivePanel((p) => (p === "shortcuts" ? null : "shortcuts"))}
-                    accessibilityRole="button"
-                    accessibilityLabel="Snelkoppelingen"
-                  >
-                    {toolbarIcon(Command, "Sneltoets", activePanel === "shortcuts")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "chat" && styles.modeToggleBtnActive]}
