@@ -36,6 +36,7 @@ import { RemoteInputTranslator } from "./inputTranslator";
 import { getSavedDevices, saveDevice, removeSavedDevice, toggleFavorite, sortSavedDevices } from "./savedDevices";
 import { pick, isErrorWithCode, errorCodes } from "@react-native-documents/picker";
 import ReactNativeBlobUtil from "react-native-blob-util";
+import { TapGestureIcon, LongPressGestureIcon, DragGestureIcon, LongPressDragGestureIcon, PinchGestureIcon } from "./gestureIcons";
 import {
   AppWindow,
   ArrowUpDown,
@@ -47,7 +48,6 @@ import {
   Copy,
   Folder,
   Hand,
-  HelpCircle,
   Keyboard,
   Lock,
   MessageCircle,
@@ -85,11 +85,11 @@ const MOUSE_MODE_GESTURES = [
   { Icon: ZoomIn, title: "Knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
 ] as const;
 const TOUCH_MODE_GESTURES = [
-  { Icon: MousePointerClick, title: "Tikken", desc: "Klikken op die plek" },
-  { Icon: Timer, title: "Lang indrukken", desc: "Rechtsklikken op die plek" },
-  { Icon: ArrowUpDown, title: "Snel slepen", desc: "Scrollen" },
-  { Icon: Move, title: "Lang indrukken + slepen", desc: "Selecteren" },
-  { Icon: ZoomIn, title: "Dubbeltikken of knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
+  { Icon: TapGestureIcon, title: "Tikken", desc: "Klikken op die plek" },
+  { Icon: LongPressGestureIcon, title: "Lang indrukken", desc: "Rechtsklikken op die plek" },
+  { Icon: DragGestureIcon, title: "Snel slepen", desc: "Scrollen" },
+  { Icon: LongPressDragGestureIcon, title: "Lang indrukken + slepen", desc: "Selecteren" },
+  { Icon: PinchGestureIcon, title: "Dubbeltikken of knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
 ] as const;
 
 type AppTheme = "light" | "dark";
@@ -376,9 +376,12 @@ export default function App(): React.JSX.Element {
   // bottom app bars) precisely because icons alone are rarely self-
   // explanatory at a glance, even well-drawn ones.
   function toolbarIcon(Icon: IconComponent, label?: string, active = false, danger = false): React.JSX.Element {
+    // Flat dark-blue icon by default (no background pill) — white only
+    // when its panel is actually open (toolbarBtnActive's filled pill) or
+    // for the permanently-red disconnect button (dangerBtn's own background).
     return (
       <>
-        <Icon size={18} color={active || danger ? "#fff" : colors.toolbarButtonText} strokeWidth={2.35} />
+        <Icon size={18} color={active || danger ? "#fff" : colors.toolbarButton} strokeWidth={2.35} />
         {label && <Text style={[styles.toolbarBtnLabel, (active || danger) && styles.toolbarBtnLabelActive]}>{label}</Text>}
       </>
     );
@@ -1689,36 +1692,24 @@ export default function App(): React.JSX.Element {
                   contentContainerStyle={styles.toolbarActionsContent}
                   showsHorizontalScrollIndicator={false}
                 >
-                  <View style={styles.modeToggle}>
-                    <TouchableOpacity
-                      style={[styles.modeToggleBtn, interactionMode === "touch" && styles.modeToggleBtnActive]}
-                      onPress={() => setInteractionMode("touch")}
-                      accessibilityRole="button"
-                      accessibilityLabel="Tik-modus"
-                      accessibilityState={{ selected: interactionMode === "touch" }}
-                    >
-                      {modeIcon(Hand, "Tik", interactionMode === "touch")}
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.modeToggleBtn, interactionMode === "mouse" && styles.modeToggleBtnActive]}
-                      onPress={() => setInteractionMode("mouse")}
-                      accessibilityRole="button"
-                      accessibilityLabel="Muis-modus"
-                      accessibilityState={{ selected: interactionMode === "mouse" }}
-                    >
-                      {modeIcon(MousePointer2, "Muis", interactionMode === "mouse")}
-                    </TouchableOpacity>
-                  </View>
+                  {/* One button showing whichever mode is currently active —
+                      tapping it opens the Besturing panel, where both the
+                      mode toggle and its gesture instructions live (see
+                      activePanel === "interactionHelp" below). */}
                   <TouchableOpacity
-                    style={styles.toolbarBtn}
+                    style={[styles.toolbarBtn, activePanel === "interactionHelp" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "interactionHelp" ? null : "interactionHelp"))}
                     accessibilityRole="button"
-                    accessibilityLabel="Uitleg besturing"
+                    accessibilityLabel="Besturing"
                   >
-                    {toolbarIcon(HelpCircle, "Uitleg", activePanel === "interactionHelp")}
+                    {toolbarIcon(
+                      interactionMode === "touch" ? Hand : MousePointer2,
+                      interactionMode === "touch" ? "Tik" : "Muis",
+                      activePanel === "interactionHelp"
+                    )}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "quickActions" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "quickActions" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "quickActions" ? null : "quickActions"))}
                     accessibilityRole="button"
                     accessibilityLabel="Snelle acties"
@@ -1726,7 +1717,7 @@ export default function App(): React.JSX.Element {
                     {toolbarIcon(Zap, "Snel", activePanel === "quickActions")}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "chat" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "chat" && styles.toolbarBtnActive]}
                     onPress={openChat}
                     accessibilityRole="button"
                     accessibilityLabel="Chat"
@@ -1735,7 +1726,7 @@ export default function App(): React.JSX.Element {
                     {hasUnreadChat && <View style={styles.unreadDot} />}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "files" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "files" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "files" ? null : "files"))}
                     accessibilityRole="button"
                     accessibilityLabel="Bestanden"
@@ -1743,7 +1734,7 @@ export default function App(): React.JSX.Element {
                     {toolbarIcon(Folder, "Bestand", activePanel === "files")}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "programs" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "programs" && styles.toolbarBtnActive]}
                     onPress={openProgramsPanel}
                     accessibilityRole="button"
                     accessibilityLabel="Programma's"
@@ -1751,7 +1742,7 @@ export default function App(): React.JSX.Element {
                     {toolbarIcon(AppWindow, "Vensters", activePanel === "programs")}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
                     accessibilityRole="button"
                     accessibilityLabel="AI Buddy"
@@ -1767,7 +1758,7 @@ export default function App(): React.JSX.Element {
                     {toolbarIcon(Keyboard, "Bord")}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "settings" && styles.modeToggleBtnActive]}
+                    style={[styles.toolbarBtn, activePanel === "settings" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
                     accessibilityRole="button"
                     accessibilityLabel="Sessie-instellingen"
@@ -2446,8 +2437,12 @@ function createStyles(theme: AppTheme) {
     sessionToolbar: { flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: colors.overlayBg },
     toolbarActions: { flex: 1 },
     toolbarActionsContent: { alignItems: "center", paddingLeft: 8 },
-    toolbarBtn: { backgroundColor: colors.toolbarButton, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
-    toolbarBtnLabel: { fontSize: 9, fontWeight: "600", marginTop: 3, color: colors.toolbarButtonText },
+    // Flat by default — no background pill, just a colored icon+label — a
+    // filled pill only appears for whichever panel is actually open
+    // (toolbarBtnActive) so there's still some indication of open state.
+    toolbarBtn: { borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
+    toolbarBtnActive: { backgroundColor: colors.toolbarButton },
+    toolbarBtnLabel: { fontSize: 9, fontWeight: "600", marginTop: 3, color: colors.toolbarButton },
     toolbarBtnLabelActive: { color: "#fff" },
     dangerBtn: { backgroundColor: colors.danger },
     modeToggle: { flexDirection: "row", backgroundColor: colors.segmentBg, borderRadius: 8, padding: 2 },
