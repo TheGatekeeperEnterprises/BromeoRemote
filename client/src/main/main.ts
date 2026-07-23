@@ -535,6 +535,17 @@ function handleBridgeNotification(notification: NotificationPayload): void {
   mainWindow?.webContents.send("bridge:notification", notification);
 }
 
+// Chromium's "Secure DNS" (DNS-over-HTTPS) queries a hardcoded external
+// resolver directly, bypassing the OS/router DNS resolver entirely — which
+// silently breaks our LAN split-DNS override (turn.bromeoremote.com /
+// remote.bromeoremote.com -> the LAN IP) whenever this app runs on the same
+// network as the signaling/coturn server. Without this, it resolves the
+// public IP instead and hairpins through the router, which is what was
+// causing TURN allocate requests to intermittently fail/time out even
+// though a plain STUN binding (simpler, more tolerant of the hairpin
+// round-trip) usually still got through. Must be set before the app is ready.
+app.commandLine.appendSwitch("disable-features", "DnsOverHttps");
+
 app.whenReady().then(() => {
   setupDisplayMediaHandler();
   createWindow();
