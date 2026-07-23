@@ -335,12 +335,26 @@ export default function App(): React.JSX.Element {
     );
   }
 
-  function toolbarIcon(Icon: IconComponent, active = false, danger = false): React.JSX.Element {
-    return <Icon size={18} color={active || danger ? "#fff" : colors.toolbarButtonText} strokeWidth={2.35} />;
+  // Icon-only toolbar buttons read as unclear/generic — pairing every icon
+  // with a short label is standard practice (iOS tab bars, Material Design
+  // bottom app bars) precisely because icons alone are rarely self-
+  // explanatory at a glance, even well-drawn ones.
+  function toolbarIcon(Icon: IconComponent, label?: string, active = false, danger = false): React.JSX.Element {
+    return (
+      <>
+        <Icon size={18} color={active || danger ? "#fff" : colors.toolbarButtonText} strokeWidth={2.35} />
+        {label && <Text style={[styles.toolbarBtnLabel, (active || danger) && styles.toolbarBtnLabelActive]}>{label}</Text>}
+      </>
+    );
   }
 
-  function modeIcon(Icon: IconComponent, active: boolean): React.JSX.Element {
-    return <Icon size={18} color={active ? "#fff" : colors.segmentText} strokeWidth={2.25} />;
+  function modeIcon(Icon: IconComponent, label: string, active: boolean): React.JSX.Element {
+    return (
+      <>
+        <Icon size={18} color={active ? "#fff" : colors.segmentText} strokeWidth={2.25} />
+        <Text style={[styles.modeToggleBtnLabel, active && styles.modeToggleBtnLabelActive]}>{label}</Text>
+      </>
+    );
   }
 
   function shortcutIcon(Icon: IconComponent): React.JSX.Element {
@@ -1680,7 +1694,7 @@ export default function App(): React.JSX.Element {
                       accessibilityLabel="Tik-modus"
                       accessibilityState={{ selected: interactionMode === "touch" }}
                     >
-                      {modeIcon(Hand, interactionMode === "touch")}
+                      {modeIcon(Hand, "Tik", interactionMode === "touch")}
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[styles.modeToggleBtn, interactionMode === "mouse" && styles.modeToggleBtnActive]}
@@ -1689,7 +1703,7 @@ export default function App(): React.JSX.Element {
                       accessibilityLabel="Muis-modus"
                       accessibilityState={{ selected: interactionMode === "mouse" }}
                     >
-                      {modeIcon(MousePointer2, interactionMode === "mouse")}
+                      {modeIcon(MousePointer2, "Muis", interactionMode === "mouse")}
                     </TouchableOpacity>
                   </View>
                   <TouchableOpacity
@@ -1698,7 +1712,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Snelle acties"
                   >
-                    {toolbarIcon(Zap, activePanel === "quickActions")}
+                    {toolbarIcon(Zap, "Snel", activePanel === "quickActions")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "shortcuts" && styles.modeToggleBtnActive]}
@@ -1706,7 +1720,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Snelkoppelingen"
                   >
-                    {toolbarIcon(Command, activePanel === "shortcuts")}
+                    {toolbarIcon(Command, "Sneltoets", activePanel === "shortcuts")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "chat" && styles.modeToggleBtnActive]}
@@ -1714,7 +1728,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Chat"
                   >
-                    {toolbarIcon(MessageCircle, activePanel === "chat")}
+                    {toolbarIcon(MessageCircle, "Chat", activePanel === "chat")}
                     {hasUnreadChat && <View style={styles.unreadDot} />}
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1723,7 +1737,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Bestanden"
                   >
-                    {toolbarIcon(Folder, activePanel === "files")}
+                    {toolbarIcon(Folder, "Bestand", activePanel === "files")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "programs" && styles.modeToggleBtnActive]}
@@ -1731,7 +1745,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Programma's"
                   >
-                    {toolbarIcon(AppWindow, activePanel === "programs")}
+                    {toolbarIcon(AppWindow, "Vensters", activePanel === "programs")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.modeToggleBtnActive]}
@@ -1739,7 +1753,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="AI Buddy"
                   >
-                    {toolbarIcon(Sparkles, activePanel === "aiBuddy")}
+                    {toolbarIcon(Sparkles, "AI Buddy", activePanel === "aiBuddy")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.toolbarBtn}
@@ -1747,7 +1761,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Toetsenbord"
                   >
-                    {toolbarIcon(Keyboard)}
+                    {toolbarIcon(Keyboard, "Bord")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "settings" && styles.modeToggleBtnActive]}
@@ -1755,7 +1769,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Sessie-instellingen"
                   >
-                    {toolbarIcon(Settings, activePanel === "settings")}
+                    {toolbarIcon(Settings, "Opties", activePanel === "settings")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, styles.dangerBtn]}
@@ -1763,7 +1777,7 @@ export default function App(): React.JSX.Element {
                     accessibilityRole="button"
                     accessibilityLabel="Verbinding verbreken"
                   >
-                    {toolbarIcon(Power, false, true)}
+                    {toolbarIcon(Power, "Stop", false, true)}
                   </TouchableOpacity>
                 </ScrollView>
                 <TouchableOpacity
@@ -2337,11 +2351,15 @@ function createStyles(theme: AppTheme) {
     sessionToolbar: { flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: colors.overlayBg },
     toolbarActions: { flex: 1 },
     toolbarActionsContent: { alignItems: "center", paddingLeft: 8 },
-    toolbarBtn: { backgroundColor: colors.toolbarButton, borderRadius: 8, padding: 8, marginLeft: 8, minWidth: 36, alignItems: "center" },
+    toolbarBtn: { backgroundColor: colors.toolbarButton, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
+    toolbarBtnLabel: { fontSize: 9, fontWeight: "600", marginTop: 3, color: colors.toolbarButtonText },
+    toolbarBtnLabelActive: { color: "#fff" },
     dangerBtn: { backgroundColor: colors.danger },
     modeToggle: { flexDirection: "row", backgroundColor: colors.segmentBg, borderRadius: 8, padding: 2 },
-    modeToggleBtn: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+    modeToggleBtn: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, alignItems: "center" },
     modeToggleBtnActive: { backgroundColor: colors.primary },
+    modeToggleBtnLabel: { fontSize: 9, fontWeight: "600", marginTop: 2, color: colors.segmentText },
+    modeToggleBtnLabelActive: { color: "#fff" },
     collapseBtn: { paddingHorizontal: 10, paddingVertical: 4, marginLeft: 4 },
     collapseBtnText: { color: colors.muted, fontSize: 16, fontWeight: "700" },
     expandBtn: {
