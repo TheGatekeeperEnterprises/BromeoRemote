@@ -76,17 +76,19 @@ export class PeerSession {
     private peerId: string,
     private callbacks: SessionCallbacks
   ) {
-    // relay-only: without this, ICE happily starts on the (working) TURN
-    // relay path but keeps probing in the background for a "better" direct
-    // P2P pair — and switches to it the moment one appears to succeed a
-    // connectivity check, even when that pair doesn't actually hold up
-    // end-to-end (e.g. one peer on the same LAN as our coturn box, routed
-    // through the gateway). That switch tears down the still-working relay
-    // allocation first, so if the "better" pair then fails, the whole
-    // session drops instead of falling back — this is what caused sessions
-    // to die ~40s in. Since this is a single-tenant, self-hosted relay (not
-    // a metered public TURN service), there's no real cost to always using it.
-    this.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" });
+    // Deliberately NOT iceTransportPolicy:"relay" here (mobile does use it —
+    // see mobile/src/session.ts). We tried forcing relay-only on desktop to
+    // fix a ~40s mid-session drop, but that investigation (see
+    // docs/WEBRTC-TURN-DEBUGGING.md) found the drop almost certainly wasn't
+    // about relay-vs-direct switching at all — and forcing relay-only trades
+    // an intermittent drop for a *hard, total* connection failure on any
+    // machine where the local Chromium build can't complete a TURN allocate
+    // (confirmed to happen, cause unknown, isolated to one specific Windows
+    // install during that investigation). Default policy — allow any
+    // candidate type — is the safer default for a wide range of customer
+    // machines; revisit with a more targeted fix if the original drop
+    // resurfaces for real users.
+    this.pc = new RTCPeerConnection({ iceServers });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
         console.log("[ice] local candidate:", ev.candidate.type, ev.candidate.protocol, ev.candidate.candidate);

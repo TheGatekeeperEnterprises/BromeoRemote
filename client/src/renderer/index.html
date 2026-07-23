@@ -2,7 +2,11 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:; media-src 'self' blob:;" />
+  <!-- connect-src must explicitly allow stun:/turn: — Chromium enforces CSP
+       against RTCPeerConnection's ICE server URLs too, not just fetch/WS.
+       Without these, every STUN/TURN request is silently blocked before it
+       ever leaves the process, with no candidates gathered at all. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss: stun: turn:; media-src 'self' blob:;" />
   <title>BromeoRemote</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
