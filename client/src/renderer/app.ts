@@ -223,6 +223,10 @@ let activeConfirm: NotifyHistoryEntry | null = null;
 let unseenNotifyCount = 0;
 let savedDevices: SavedDevice[] = [];
 let lastConnectAttempt: { targetId: string; passwordHash: string; viewOnly: boolean; permissions: SessionPermissions } | null = null;
+// Gates auto-reconnect to sessions that actually connected at least once —
+// an initial connection attempt that never got off the ground (bad
+// password, offline target, ...) shouldn't trigger a retry loop.
+let sessionReachedConnectedOnce = false;
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
 let recordingTimerHandle: ReturnType<typeof setInterval> | null = null;
@@ -1231,7 +1235,7 @@ function scheduleAutoReconnect(targetId: string, passwordHash: string, viewOnly:
   const intervalMs = 15_000;
   const maxAttempts = 20; // ~5 minutes
   let attempt = 0;
-  toast(`Apparaat wordt herstart. BromeoRemote probeert automatisch opnieuw te verbinden met ${formatId(targetId)}…`);
+  toast(`Verbinding verbroken. BromeoRemote probeert automatisch opnieuw te verbinden met ${formatId(targetId)}…`);
   const tryOnce = () => {
     attempt++;
     if (currentSession || attempt > maxAttempts) return;
@@ -1816,6 +1820,7 @@ function handleConnectResponse(fromId: string, accept: boolean, reason?: string)
 function startViewerSession(peerId: string, viewOnly: boolean, permissions = defaultPermissions(viewOnly)): void {
   currentRole = "viewer";
   currentPeerId = peerId;
+  sessionReachedConnectedOnce = false;
   sessionPermissions = normalizePermissions(permissions, viewOnly);
   sessionViewOnly = !sessionPermissions.control;
   sessionStartedAt = Date.now();
@@ -1858,8 +1863,19 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     },
     onConnectionState: (state) => {
       updateSessionState(state);
+      if (state === "connected") sessionReachedConnectedOnce = true;
       if (["disconnected", "failed", "closed"].includes(state)) {
-        const reconnectInfo = restartRequestedFor === peerId ? lastConnectAttempt : null;
+        // currentPeerId is already null by the time a *deliberate* hangup
+        // (disconnect button, idle timeout, peer-initiated bye, ...) reaches
+        // here, since endSession() clears it before pc.close() — so this
+        // only fires for a genuine, unexpected drop of a session that was
+        // actually connected. explicit restart-and-reconnect keeps its own
+        // path via restartRequestedFor; this covers everything else (e.g.
+        // the NAT-timeout-driven drop a direct P2P path can hit — see
+        // docs/WEBRTC-TURN-DEBUGGING.md).
+        const surpriseDrop = currentPeerId === peerId && sessionReachedConnectedOnce;
+        const reconnectInfo =
+          restartRequestedFor === peerId ? lastConnectAttempt : surpriseDrop && lastConnectAttempt?.targetId === peerId ? lastConnectAttempt : null;
         restartRequestedFor = null;
         endSession();
         if (reconnectInfo) scheduleAutoReconnect(reconnectInfo.targetId, reconnectInfo.passwordHash, reconnectInfo.viewOnly, reconnectInfo.permissions);

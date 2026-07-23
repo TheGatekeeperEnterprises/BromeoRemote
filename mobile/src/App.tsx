@@ -186,6 +186,9 @@ export default function App(): React.JSX.Element {
   const lastConnectRef = useRef<{ targetId: string; passwordHash: string } | null>(null);
   const restartRequestedForRef = useRef<string | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
+  // Gates auto-reconnect to sessions that actually connected at least once —
+  // an initial attempt that never got off the ground shouldn't retry-loop.
+  const sessionReachedConnectedOnceRef = useRef(false);
   const filesTransferredCountRef = useRef(0);
   const [totpRequired, setTotpRequired] = useState<"totp-required" | "bad-totp" | null>(null);
   const [totpCode, setTotpCode] = useState("");
@@ -912,7 +915,7 @@ export default function App(): React.JSX.Element {
     const intervalMs = 15_000;
     const maxAttempts = 20;
     let attempt = 0;
-    showToast(`Apparaat wordt herstart. Opnieuw verbinden met ${formatId(reconnectId)}…`);
+    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}…`);
     const tryOnce = () => {
       attempt++;
       if (sessionRef.current || attempt > maxAttempts) return;
@@ -949,6 +952,7 @@ export default function App(): React.JSX.Element {
     setVirtualCursor({ xPct: 0.5, yPct: 0.5 });
     sessionStartedAtRef.current = Date.now();
     filesTransferredCountRef.current = 0;
+    sessionReachedConnectedOnceRef.current = false;
     const session = new MobileSession(DEFAULT_ICE_SERVERS, signaling, peerId, {
       onRemoteStream: (stream) => {
         setRemoteStream(stream);
@@ -956,9 +960,23 @@ export default function App(): React.JSX.Element {
         setInSession(true);
       },
       onConnectionState: (state) => {
+        if (state === "connected") sessionReachedConnectedOnceRef.current = true;
         if (["disconnected", "failed", "closed"].includes(state)) {
           console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
-          const reconnect = restartRequestedForRef.current === peerId ? lastConnectRef.current : null;
+          // sessionStartedAtRef is already null by the time a *deliberate*
+          // hangup (disconnect button, peer-initiated bye, ...) reaches
+          // here, since endSession() clears it before session.close() —
+          // so surpriseDrop only true for a genuine unexpected drop of a
+          // session that actually connected (e.g. the NAT-timeout-driven
+          // drop a direct P2P path can hit — see
+          // docs/WEBRTC-TURN-DEBUGGING.md).
+          const surpriseDrop = sessionStartedAtRef.current != null && sessionReachedConnectedOnceRef.current;
+          const reconnect =
+            restartRequestedForRef.current === peerId
+              ? lastConnectRef.current
+              : surpriseDrop && lastConnectRef.current?.targetId === peerId
+                ? lastConnectRef.current
+                : null;
           restartRequestedForRef.current = null;
           endSession();
           if (reconnect) {
