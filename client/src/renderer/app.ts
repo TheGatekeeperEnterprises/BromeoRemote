@@ -242,6 +242,7 @@ let restartRequestedFor: string | null = null;
 let curtainModeEnabled = false;
 let monitorIsOff = false;
 let inputBlocked = false;
+let wallpaperHidden = false;
 let lockOnSessionEnd = false;
 let trustedOnlyConnections = false;
 let currentPeerId: string | null = null;
@@ -1714,6 +1715,16 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
             ok: cmd.enabled ? applied : true,
           });
         }
+      } else if (cmd.kind === "hide-wallpaper") {
+        if (sessionPermissions.control) {
+          const applied = await window.bromeo.hideWallpaper(cmd.enabled);
+          wallpaperHidden = cmd.enabled ? applied : false;
+          currentSession?.sendSystemCommand({
+            kind: "hide-wallpaper-status",
+            enabled: wallpaperHidden,
+            ok: cmd.enabled ? applied : true,
+          });
+        }
       } else if (cmd.kind === "ctrl-alt-del-request") {
         if (sessionPermissions.control) {
           const ok = await window.bromeo.sendCtrlAltDel();
@@ -1980,6 +1991,12 @@ function endSession(): void {
   if (inputBlocked) {
     window.bromeo.blockInput(false);
     inputBlocked = false;
+  }
+  // Same safety net as inputBlocked above — never leave the wallpaper
+  // hidden once the session that hid it ends.
+  if (wallpaperHidden) {
+    window.bromeo.hideWallpaper(false);
+    wallpaperHidden = false;
   }
   if (currentRole === "host" && lockOnSessionEnd && !sessionViewOnly) {
     window.bromeo.lockComputer();

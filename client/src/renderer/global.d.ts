@@ -58,6 +58,7 @@ export interface BromeoBridge {
   restartComputer(): Promise<boolean>;
   lockComputer(): Promise<boolean>;
   blockInput(enabled: boolean): Promise<boolean>;
+  hideWallpaper(enabled: boolean): Promise<boolean>;
   sasStatus(): Promise<boolean>;
   sasInstall(): Promise<boolean>;
   sasUninstall(): Promise<boolean>;

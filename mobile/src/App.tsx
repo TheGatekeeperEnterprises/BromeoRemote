@@ -15,6 +15,7 @@ import {
   Alert,
   Switch,
   Dimensions,
+  Keyboard as RNKeyboard,
 } from "react-native";
 // react-native's own SafeAreaView is effectively iOS-only in practice (a
 // no-op on Android) — this one actually insets for the status bar/notch on
@@ -37,6 +38,7 @@ import { pick, isErrorWithCode, errorCodes } from "@react-native-documents/picke
 import ReactNativeBlobUtil from "react-native-blob-util";
 import {
   AppWindow,
+  ArrowUpDown,
   Ban,
   Camera,
   ChevronDown,
@@ -45,19 +47,24 @@ import {
   Copy,
   Folder,
   Hand,
+  HelpCircle,
   Keyboard,
   Lock,
   MessageCircle,
+  Move,
   MousePointer2,
+  MousePointerClick,
   Power,
   RotateCw,
   Save,
   Settings,
   Sparkles,
   Star,
+  Timer,
   Trash2,
   X,
   Zap,
+  ZoomIn,
 } from "lucide-react-native";
 
 const logo2 = require("./assets/logo2.png");
@@ -66,6 +73,24 @@ const DEVICE_ID_KEY = "bromeoremote_device_id";
 const QUALITY_LEVEL_KEY = "bromeoremote_quality_level";
 const SHOW_CURSOR_KEY = "bromeoremote_show_remote_cursor";
 const THEME_KEY = "bromeoremote_theme";
+
+// Mirrors the actual gesture handling in the panResponder below exactly —
+// keep in sync if that logic changes.
+const MOUSE_MODE_GESTURES = [
+  { Icon: MousePointerClick, title: "Tikken", desc: "Klikken (links)" },
+  { Icon: Timer, title: "Lang indrukken", desc: "Rechtsklikken" },
+  { Icon: Move, title: "Slepen", desc: "Muis verplaatsen" },
+  { Icon: MousePointerClick, title: "Dubbeltikken + slepen", desc: "Klik-en-sleep om te selecteren" },
+  { Icon: ArrowUpDown, title: "3 vingers slepen", desc: "Scrollen" },
+  { Icon: ZoomIn, title: "Knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
+] as const;
+const TOUCH_MODE_GESTURES = [
+  { Icon: MousePointerClick, title: "Tikken", desc: "Klikken op die plek" },
+  { Icon: Timer, title: "Lang indrukken", desc: "Rechtsklikken op die plek" },
+  { Icon: ArrowUpDown, title: "Snel slepen", desc: "Scrollen" },
+  { Icon: Move, title: "Lang indrukken + slepen", desc: "Selecteren" },
+  { Icon: ZoomIn, title: "Dubbeltikken of knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
+] as const;
 
 type AppTheme = "light" | "dark";
 type IconComponent = React.ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
@@ -219,6 +244,18 @@ export default function App(): React.JSX.Element {
     setCurrentRoleState(role);
   }
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  // Tracks the actual OS keyboard height so the video area can shift up
+  // above it (see the keyboardHeight usage below) instead of the keyboard
+  // simply covering whatever was at the bottom of the screen.
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showSub = RNKeyboard.addListener("keyboardDidShow", (e) => setKeyboardHeight(e.endCoordinates.height));
+    const hideSub = RNKeyboard.addListener("keyboardDidHide", () => setKeyboardHeight(0));
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
   // The hidden keyboard-bridge TextInput's own controlled value — always
   // reset to "" right after each keystroke is forwarded. Previously this
   // field was uncontrolled and cleared via an imperative .clear() call,
@@ -231,7 +268,7 @@ export default function App(): React.JSX.Element {
   const [keyboardDraft, setKeyboardDraft] = useState("");
   // Only one of the toolbar's dropdown panels is open at a time (Shortcuts,
   // Quick actions, Settings) — matches TeamViewer's mobile session bar.
-  const [activePanel, setActivePanel] = useState<"quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | null>(null);
+  const [activePanel, setActivePanel] = useState<"quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | "interactionHelp" | null>(null);
   // "Control a program" — pick one of the host's open windows, view/control
   // just that window (resized on the host to match this phone's aspect
   // ratio), instead of the whole desktop.
@@ -356,9 +393,6 @@ export default function App(): React.JSX.Element {
     );
   }
 
-  function shortcutIcon(Icon: IconComponent): React.JSX.Element {
-    return <Icon size={18} color={colors.toolbarButtonText} strokeWidth={2.3} />;
-  }
 
   interface FileTransfer {
     id: string;
@@ -428,6 +462,7 @@ export default function App(): React.JSX.Element {
     AsyncStorage.setItem(SHOW_CURSOR_KEY, next ? "1" : "0").catch(() => undefined);
   }
   const [inputBlocked, setInputBlocked] = useState(false);
+  const [wallpaperHidden, setWallpaperHidden] = useState(false);
   const [qualityLevel, setQualityLevelState] = useState<QualityLevel>("auto");
   function setQualityLevel(level: QualityLevel): void {
     setQualityLevelState(level);
@@ -1024,6 +1059,9 @@ export default function App(): React.JSX.Element {
           setInputBlocked(cmd.enabled);
           if (cmd.ok) showToast(cmd.enabled ? "Externe invoer geblokkeerd." : "Externe invoer niet meer geblokkeerd.");
           else Alert.alert("Mislukt", "Blokkeren van externe invoer op de host is mislukt.");
+        } else if (cmd.kind === "hide-wallpaper-status") {
+          setWallpaperHidden(cmd.enabled);
+          if (!cmd.ok) Alert.alert("Mislukt", "Achtergrond verbergen op de host is mislukt (alleen op Windows).");
         } else if (cmd.kind === "ctrl-alt-del-status") {
           if (cmd.ok) showToast("Ctrl+Alt+Del verzonden.");
           else Alert.alert("Mislukt", cmd.installed ? "Versturen van Ctrl+Alt+Del is mislukt." : "De host heeft Ctrl+Alt+Del op afstand niet ingeschakeld.");
@@ -1107,6 +1145,7 @@ export default function App(): React.JSX.Element {
     // regardless of what we do here — this just keeps this UI's toggle from
     // showing a stale "blocked" state at the start of the next session.
     setInputBlocked(false);
+    setWallpaperHidden(false);
     setChatMessages([]);
     setHasUnreadChat(false);
     setFileTransfers([]);
@@ -1451,6 +1490,11 @@ export default function App(): React.JSX.Element {
     sessionRef.current?.sendSystemCommand({ kind: "block-input", enabled: enabling });
     setInputBlocked(enabling);
   }
+  function toggleHideWallpaper(): void {
+    const enabling = !wallpaperHidden;
+    sessionRef.current?.sendSystemCommand({ kind: "hide-wallpaper", enabled: enabling });
+    setWallpaperHidden(enabling);
+  }
   function restartRemote(): void {
     Alert.alert(
       "Computer herstarten?",
@@ -1502,7 +1546,7 @@ export default function App(): React.JSX.Element {
       // other three (see videoWrap/floatingToolbarWrap below), so letting
       // SafeAreaView pad bottom/left/right here too would double up with
       // the insets applied directly to the toolbar and push it too far in.
-      <SafeAreaView style={styles.sessionRoot} edges={["top"]}>
+      <SafeAreaView style={[styles.sessionRoot, { marginBottom: keyboardHeight }]} edges={["top"]}>
         <StatusBar barStyle="light-content" />
         <View
           ref={videoWrapRef}
@@ -1635,46 +1679,6 @@ export default function App(): React.JSX.Element {
             </TouchableOpacity>
           ) : (
             <View style={[styles.floatingToolbarWrap, { paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
-              {activePanel === "quickActions" && (
-                <ScrollView horizontal style={styles.shortcutsBar} contentContainerStyle={styles.shortcutsBarContent} showsHorizontalScrollIndicator={false}>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["ControlLeft", "KeyC"])}>
-                    {shortcutIcon(Copy)}
-                    <Text style={styles.shortcutBtnText}>Kopiëren{"\n"}Ctrl+C</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["ControlLeft", "KeyV"])}>
-                    {shortcutIcon(ClipboardPaste)}
-                    <Text style={styles.shortcutBtnText}>Plakken{"\n"}Ctrl+V</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["PrintScreen"])}>
-                    {shortcutIcon(Camera)}
-                    <Text style={styles.shortcutBtnText}>Schermafbeelding{"\n"}PrtScn</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["AltLeft", "Tab"])}>
-                    {shortcutIcon(AppWindow)}
-                    <Text style={styles.shortcutBtnText}>Wissel venster{"\n"}Alt+Tab</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["ControlLeft", "KeyS"])}>
-                    {shortcutIcon(Save)}
-                    <Text style={styles.shortcutBtnText}>Opslaan{"\n"}Ctrl+S</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={lockRemote}>
-                    {shortcutIcon(Lock)}
-                    <Text style={styles.shortcutBtnText}>Vergrendelen</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.shortcutBtn} onPress={sendCtrlAltDel}>
-                    {shortcutIcon(Keyboard)}
-                    <Text style={styles.shortcutBtnText}>Ctrl+Alt+Del</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.shortcutBtn, inputBlocked && styles.dangerBtn]} onPress={toggleBlockInput}>
-                    {shortcutIcon(Ban)}
-                    <Text style={styles.shortcutBtnText}>{inputBlocked ? "Invoer geblokkeerd" : "Invoer blokkeren"}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={[styles.shortcutBtn, styles.dangerBtn]} onPress={restartRemote}>
-                    {shortcutIcon(RotateCw)}
-                    <Text style={styles.shortcutBtnText}>Herstarten</Text>
-                  </TouchableOpacity>
-                </ScrollView>
-              )}
               <View style={styles.sessionToolbar}>
                 {/* Horizontally scrollable so every control (including disconnect)
                     stays reachable even on narrow screens where this cluster would
@@ -1705,6 +1709,14 @@ export default function App(): React.JSX.Element {
                       {modeIcon(MousePointer2, "Muis", interactionMode === "mouse")}
                     </TouchableOpacity>
                   </View>
+                  <TouchableOpacity
+                    style={styles.toolbarBtn}
+                    onPress={() => setActivePanel((p) => (p === "interactionHelp" ? null : "interactionHelp"))}
+                    accessibilityRole="button"
+                    accessibilityLabel="Uitleg besturing"
+                  >
+                    {toolbarIcon(HelpCircle, "Uitleg", activePanel === "interactionHelp")}
+                  </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "quickActions" && styles.modeToggleBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "quickActions" ? null : "quickActions"))}
@@ -1823,6 +1835,15 @@ export default function App(): React.JSX.Element {
                   thumbColor="#fff"
                 />
               </View>
+              <View style={styles.settingsRow}>
+                <Text style={styles.settingsLabel}>Achtergrond verbergen</Text>
+                <Switch
+                  value={wallpaperHidden}
+                  onValueChange={toggleHideWallpaper}
+                  trackColor={{ false: colors.switchOff, true: colors.primary }}
+                  thumbColor="#fff"
+                />
+              </View>
               {monitors.length > 1 && (
                 <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Scherm</Text>
@@ -1844,6 +1865,89 @@ export default function App(): React.JSX.Element {
               <TouchableOpacity style={styles.primaryBtn} onPress={() => setActivePanel(null)}>
                 <Text style={styles.primaryBtnText}>Sluiten</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal visible={activePanel === "interactionHelp"} transparent animationType="fade" onRequestClose={() => setActivePanel(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalCard}>
+              <Text style={styles.cardTitle}>Besturing</Text>
+              <View style={styles.modeToggle}>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, styles.interactionHelpToggleBtn, interactionMode === "touch" && styles.modeToggleBtnActive]}
+                  onPress={() => setInteractionMode("touch")}
+                >
+                  {modeIcon(Hand, "Tik-modus", interactionMode === "touch")}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, styles.interactionHelpToggleBtn, interactionMode === "mouse" && styles.modeToggleBtnActive]}
+                  onPress={() => setInteractionMode("mouse")}
+                >
+                  {modeIcon(MousePointer2, "Muis-modus", interactionMode === "mouse")}
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.interactionHelpIntro}>
+                {interactionMode === "mouse"
+                  ? "Gebruik je scherm als touchpad om de muis op afstand te besturen."
+                  : "Tik direct op de plek op het scherm waar je wilt klikken."}
+              </Text>
+              <View style={styles.interactionHelpGrid}>
+                {(interactionMode === "mouse" ? MOUSE_MODE_GESTURES : TOUCH_MODE_GESTURES).map((g) => (
+                  <View key={g.title} style={styles.interactionHelpItem}>
+                    <View style={styles.interactionHelpIconWrap}>
+                      <g.Icon size={22} color={colors.primary} strokeWidth={2} />
+                    </View>
+                    <Text style={styles.interactionHelpItemTitle}>{g.title}</Text>
+                    <Text style={styles.interactionHelpItemDesc}>{g.desc}</Text>
+                  </View>
+                ))}
+              </View>
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => setActivePanel(null)}>
+                <Text style={styles.primaryBtnText}>Sluiten</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+        <Modal visible={activePanel === "quickActions"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
+          <View style={styles.chatBackdrop}>
+            <View style={styles.chatCard}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.cardTitle}>Snelkoppelingen</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Sluiten">
+                  {toolbarIcon(X)}
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {(
+                  [
+                    { Icon: Copy, title: "Kopiëren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
+                    { Icon: ClipboardPaste, title: "Plakken", subtitle: "Ctrl+V", onPress: () => sendShortcut(["ControlLeft", "KeyV"]), danger: false },
+                    { Icon: Camera, title: "Schermafbeelding", subtitle: "PrtScn", onPress: () => sendShortcut(["PrintScreen"]), danger: false },
+                    { Icon: AppWindow, title: "Wissel venster", subtitle: "Alt+Tab", onPress: () => sendShortcut(["AltLeft", "Tab"]), danger: false },
+                    { Icon: Save, title: "Opslaan", subtitle: "Ctrl+S", onPress: () => sendShortcut(["ControlLeft", "KeyS"]), danger: false },
+                    { Icon: Lock, title: "Vergrendelen", subtitle: undefined, onPress: lockRemote, danger: false },
+                    { Icon: Keyboard, title: "Ctrl+Alt+Del", subtitle: undefined, onPress: sendCtrlAltDel, danger: false },
+                    {
+                      Icon: Ban,
+                      title: inputBlocked ? "Invoer geblokkeerd" : "Invoer blokkeren",
+                      subtitle: undefined,
+                      onPress: toggleBlockInput,
+                      danger: inputBlocked,
+                    },
+                    { Icon: RotateCw, title: "Herstarten", subtitle: undefined, onPress: restartRemote, danger: true },
+                  ] as const
+                ).map((item) => (
+                  <TouchableOpacity key={item.title} style={styles.quickActionRow} onPress={item.onPress}>
+                    <View style={[styles.interactionHelpIconWrap, item.danger && styles.quickActionIconWrapDanger]}>
+                      <item.Icon size={20} color={item.danger ? colors.danger : colors.primary} strokeWidth={2} />
+                    </View>
+                    <View style={styles.quickActionTextWrap}>
+                      <Text style={styles.quickActionTitle}>{item.title}</Text>
+                      {item.subtitle && <Text style={styles.quickActionSubtitle}>{item.subtitle}</Text>}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           </View>
         </Modal>
@@ -2393,14 +2497,30 @@ function createStyles(theme: AppTheme) {
     },
     appModeBarText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "600", marginRight: 8 },
     appModeCloseBtn: { backgroundColor: colors.danger, borderRadius: 14, width: 28, height: 28, alignItems: "center", justifyContent: "center" },
-    shortcutsBar: { backgroundColor: colors.overlayBg, borderTopWidth: 1, borderTopColor: colors.overlayBorder, maxHeight: 56 },
-    shortcutsBarContent: { paddingHorizontal: 8, paddingVertical: 6, alignItems: "center" },
-    shortcutBtn: { backgroundColor: colors.toolbarButton, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginHorizontal: 4 },
-    shortcutBtnText: { color: colors.toolbarButtonText, fontSize: 11, fontWeight: "700", textAlign: "center" },
     settingsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10 },
     settingsQualityText: { color: colors.segmentText, fontSize: 12, fontWeight: "700", paddingHorizontal: 4 },
     settingsQualityTextActive: { color: "#fff" },
     monitorScroll: { maxWidth: 180 },
+    interactionHelpToggleBtn: { paddingHorizontal: 16, paddingVertical: 8 },
+    interactionHelpIntro: { color: colors.muted, fontSize: 13, marginTop: 12, marginBottom: 4, lineHeight: 18 },
+    interactionHelpGrid: { flexDirection: "row", flexWrap: "wrap", marginTop: 8, marginHorizontal: -6 },
+    interactionHelpItem: { width: "50%", paddingHorizontal: 6, paddingVertical: 10, alignItems: "center" },
+    interactionHelpIconWrap: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: colors.field,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 6,
+    },
+    interactionHelpItemTitle: { color: colors.text, fontSize: 13, fontWeight: "700", textAlign: "center" },
+    interactionHelpItemDesc: { color: colors.muted, fontSize: 11, textAlign: "center", marginTop: 2 },
+    quickActionRow: { flexDirection: "row", alignItems: "center", paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+    quickActionIconWrapDanger: { backgroundColor: "rgba(229,72,77,0.12)" },
+    quickActionTextWrap: { marginLeft: 12 },
+    quickActionTitle: { color: colors.text, fontSize: 15, fontWeight: "600" },
+    quickActionSubtitle: { color: colors.muted, fontSize: 12, marginTop: 2 },
     settingsLabel: { color: colors.text, fontSize: 14 },
     settingsValueText: { color: colors.muted, fontSize: 12, fontFamily: "monospace", flexShrink: 1, textAlign: "right", marginLeft: 10 },
     videoWrap: { flex: 1, backgroundColor: "#000", overflow: "hidden" },

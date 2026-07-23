@@ -1,4 +1,7 @@
-import { exec } from "child_process";
+import { exec, execSync } from "child_process";
+import { writeFileSync } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
 import koffi from "koffi";
 
 // Only verified on Windows (this project's tested platform so far) — the
@@ -88,6 +91,58 @@ export function resizeAndFocusWindow(hwnd: number, x: number, y: number, width: 
     windowPosFns.showWindow(hwndPtr, SW_RESTORE);
     windowPosFns.setWindowPos(hwndPtr, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW);
     windowPosFns.setForegroundWindow(hwndPtr);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Hides just the desktop wallpaper *image* (SPI_SETDESKWALLPAPER with an
+// empty path shows the plain background color instead) — distinct from
+// curtain mode, which blanks the whole local screen. Windows-only. The
+// Add-Type/P-Invoke block is written to a temp .ps1 and run with -File
+// rather than inlined via -Command, since escaping a multi-line C# snippet
+// through both this string and a shell would be far more fragile.
+let savedWallpaperPath: string | null = null;
+const SET_WALLPAPER_SCRIPT = `
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class BromeoWallpaper {
+    [DllImport("user32.dll", CharSet = CharSet.Auto)]
+    public static extern int SystemParametersInfo(int uAction, int uParam, string lpvParam, int fuWinIni);
+}
+"@
+[BromeoWallpaper]::SystemParametersInfo(20, 0, $args[0], 3) | Out-Null
+`;
+
+function runSetWallpaperScript(path: string): void {
+  const scriptPath = join(tmpdir(), "bromeoremote-set-wallpaper.ps1");
+  writeFileSync(scriptPath, SET_WALLPAPER_SCRIPT, "utf8");
+  exec(`powershell -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}" "${path}"`);
+}
+
+export function hideWallpaper(): boolean {
+  if (process.platform !== "win32") return false;
+  try {
+    if (savedWallpaperPath == null) {
+      savedWallpaperPath = execSync(
+        `powershell -NoProfile -Command "(Get-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name Wallpaper).Wallpaper"`,
+        { encoding: "utf8" }
+      ).trim();
+    }
+    runSetWallpaperScript(""); // empty path -> plain background color, no image
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function restoreWallpaper(): boolean {
+  if (process.platform !== "win32" || savedWallpaperPath == null) return false;
+  try {
+    runSetWallpaperScript(savedWallpaperPath);
+    savedWallpaperPath = null;
     return true;
   } catch {
     return false;

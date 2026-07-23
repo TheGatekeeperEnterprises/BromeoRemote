@@ -99,6 +99,12 @@ export type SystemCommand =
   | { kind: "quality-request"; level: QualityLevel }
   | { kind: "block-input"; enabled: boolean }
   | { kind: "block-input-status"; enabled: boolean; ok: boolean }
+  // Hides just the desktop wallpaper image (blank background color instead)
+  // while the session is active — distinct from curtain mode, which blanks
+  // the whole local screen. Windows-only (see hideWallpaper in
+  // client/src/main/system.ts).
+  | { kind: "hide-wallpaper"; enabled: boolean }
+  | { kind: "hide-wallpaper-status"; enabled: boolean; ok: boolean }
   | { kind: "ctrl-alt-del-request" }
   | { kind: "ctrl-alt-del-status"; ok: boolean; installed: boolean }
   | { kind: "monitor-list"; monitors: MonitorInfo[] }
