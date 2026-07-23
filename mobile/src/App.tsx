@@ -19,7 +19,7 @@ import {
 // react-native's own SafeAreaView is effectively iOS-only in practice (a
 // no-op on Android) — this one actually insets for the status bar/notch on
 // both platforms, via the SafeAreaProvider wrapping <App/> in index.js.
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RTCView, MediaStream, mediaDevices } from "react-native-webrtc";
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "./shared/config";
@@ -155,6 +155,12 @@ function randomPassword(length = 6): string {
 }
 
 export default function App(): React.JSX.Element {
+  // SafeAreaView only pads elements laid out in normal flow — the session
+  // toolbar deliberately floats over the video with position:"absolute" (see
+  // floatingToolbarWrap), which bypasses that padding entirely and let it
+  // sit right under the phone's own gesture/button navigation area. Applied
+  // directly to that container's `bottom` below.
+  const insets = useSafeAreaInsets();
   const [theme, setThemeState] = useState<AppTheme>("light");
   const colors = themeColors[theme];
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -1603,7 +1609,7 @@ export default function App(): React.JSX.Element {
               z-index/order unless the overlay shares its stacking context. */}
           {toolbarCollapsed ? (
             <TouchableOpacity
-              style={styles.expandBtn}
+              style={[styles.expandBtn, { bottom: 8 + insets.bottom }]}
               onPress={() => setToolbarCollapsed(false)}
               accessibilityRole="button"
               accessibilityLabel="Werkbalk uitklappen"
@@ -1611,7 +1617,7 @@ export default function App(): React.JSX.Element {
               <ChevronUp size={20} color={colors.muted} strokeWidth={2.4} />
             </TouchableOpacity>
           ) : (
-            <View style={styles.floatingToolbarWrap}>
+            <View style={[styles.floatingToolbarWrap, { bottom: insets.bottom }]}>
               {activePanel === "shortcuts" && (
                 <ScrollView horizontal style={styles.shortcutsBar} contentContainerStyle={styles.shortcutsBarContent} showsHorizontalScrollIndicator={false}>
                   <TouchableOpacity style={styles.shortcutBtn} onPress={() => sendShortcut(["ControlLeft", "KeyC"])}>
