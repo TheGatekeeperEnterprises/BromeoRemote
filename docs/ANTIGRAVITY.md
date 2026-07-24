@@ -48,7 +48,7 @@ Antigravity ondersteunt hooks op vaste lifecycle-checkpoints, waaronder `PreTool
           "hooks": [
             {
               "type": "command",
-              "command": "node ./bromeoremote-hook.js",
+              "command": "node ./scripts/bromeoremote-hook.js",
               "timeout": 130
             }
           ]
@@ -59,43 +59,78 @@ Antigravity ondersteunt hooks op vaste lifecycle-checkpoints, waaronder `PreTool
 }
 ```
 
-`matcher: "run_command"` betekent: alleen bevestiging vragen voordat Antigravity een shell-commando uitvoert (het risicovolste geval) — niet bij elke los bestand lezen. Pas de matcher aan als je ook bij andere tools bevestiging wilt (zie Antigravity's eigen documentatie voor de volledige lijst toolnamen). `timeout: 130` (seconden) moet ruimer zijn dan de `timeoutMs` die de hook hieronder naar BromeoRemote stuurt (120000ms = 120s), anders killt Antigravity de hook voordat jij hebt kunnen reageren.
+`matcher: "run_command"` betekent: alleen bevestiging vragen voordat Antigravity een shell-commando uitvoert (het risicovolste geval) — niet bij elke los bestand lezen. Pas de matcher aan als je ook bij andere tools bevestiging wilt. `timeout: 130` (seconden) moet ruimer zijn dan de `timeoutMs` die de hook naar BromeoRemote stuurt (120000ms = 120s).
 
-En een klein script ernaast, `bromeoremote-hook.js`:
+Het script staat direct klaar in de repository op `scripts/bromeoremote-hook.js`:
 
 ```js
-// bromeoremote-hook.js — vraagt BromeoRemote om bevestiging en geeft het
+// scripts/bromeoremote-hook.js — vraagt BromeoRemote om bevestiging en geeft het
 // antwoord door aan Antigravity.
 // Input (stdin JSON):  { toolCall: { name, args }, stepIdx, conversationId,
 //   workspacePaths, transcriptPath, artifactDirectoryPath }
 // Output (stdout JSON): { decision: "allow"|"deny"|"ask"|"force_ask", reason? }
-const payload = JSON.parse(require("fs").readFileSync(0, "utf8"));
-const toolName = payload.toolCall?.name ?? "onbekende actie";
-const args = payload.toolCall?.args ?? {};
+const fs = require("fs");
+const http = require("http");
 
-(async () => {
-  try {
-    const res = await fetch("http://localhost:8973/confirm", {
+function postConfirm(bodyData) {
+  return new Promise((resolve, reject) => {
+    const dataString = JSON.stringify(bodyData);
+    const req = http.request({
+      hostname: "127.0.0.1",
+      port: 8973,
+      path: "/confirm",
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        source: "Google Antigravity",
-        title: "Bevestiging nodig",
-        message: `Antigravity wil uitvoeren: ${toolName}`,
-        command: args.command ?? JSON.stringify(args),
-        cwd: (payload.workspacePaths ?? [])[0],
-        riskLevel: toolName === "run_command" ? "medium" : "low",
-        timeoutMs: 120000,
-      }),
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": Buffer.byteLength(dataString)
+      },
+      timeout: 125000
+    }, (res) => {
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", chunk => body += chunk);
+      res.on("end", () => {
+        try { resolve(JSON.parse(body)); }
+        catch (err) { reject(new Error("Ongeldige JSON-reactie van BromeoRemote bridge")); }
+      });
     });
-    const { decision } = await res.json();
-    console.log(JSON.stringify({ decision: decision === "allow" ? "allow" : "deny" }));
+    req.on("error", reject);
+    req.on("timeout", () => { req.destroy(); reject(new Error("BromeoRemote bridge time-out")); });
+    req.write(dataString);
+    req.end();
+  });
+}
+
+async function main() {
+  let payload;
+  try {
+    payload = JSON.parse(fs.readFileSync(0, "utf8"));
   } catch (err) {
-    // BromeoRemote-brug onbereikbaar (app niet open) — fail naar "ask" zodat
-    // Antigravity's eigen normale prompt het overneemt, niet stilzwijgend toestaan.
+    console.log(JSON.stringify({ decision: "ask", reason: `Hook input parse error: ${err.message}` }));
+    return;
+  }
+
+  const toolName = payload.toolCall?.name ?? "onbekende actie";
+  const args = payload.toolCall?.args ?? {};
+  const command = args.CommandLine ?? args.command ?? args.TargetFile ?? (typeof args === "object" ? JSON.stringify(args) : String(args));
+  const cwd = args.Cwd ?? (payload.workspacePaths ?? [])[0] ?? process.cwd();
+  const riskLevel = (toolName === "run_command" || toolName === "unsandboxed") ? "high" : "medium";
+
+  try {
+    const data = await postConfirm({
+      source: "Google Antigravity",
+      title: `Bevestiging voor ${toolName}`,
+      message: `Antigravity vraagt toestemming voor actie '${toolName}'`,
+      command, cwd, riskLevel, timeoutMs: 120000
+    });
+    const decision = data && data.decision === "allow" ? "allow" : "deny";
+    console.log(JSON.stringify({ decision }));
+  } catch (err) {
     console.log(JSON.stringify({ decision: "ask", reason: `BromeoRemote-brug onbereikbaar: ${err.message}` }));
   }
-})();
+}
+
+main();
 ```
 
 Zodra Antigravity nu een `PreToolUse`-checkpoint voor `run_command` raakt: jij krijgt een melding (lokaal én op je doorstuur-apparaat), en Antigravity wacht tot jij "Bevestigen" of "Weigeren" tikt — vanaf de bank, de trein, waar dan ook.
