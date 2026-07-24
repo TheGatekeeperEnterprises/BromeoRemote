@@ -1,6 +1,6 @@
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "../shared/config.js";
 import type { ServerMessage } from "../shared/protocol.js";
-import type { InputEvent, MonitorInfo, NotificationPayload, QualityLevel, SavedDevice, SessionPermissions, UpdateStatus } from "../shared/protocol.js";
+import type { CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, QualityLevel, SavedDevice, SessionPermissions, UpdateStatus } from "../shared/protocol.js";
 import type { MiniControllerState } from "./global";
 import { sha256Hex } from "./crypto.js";
 import { Signaling } from "./signaling.js";
@@ -27,13 +27,18 @@ interface SessionHistoryEntry {
 }
 
 // "auto" (null) leaves WebRTC's own congestion control uncapped — high/low
-// are hard ceilings for constrained connections, not floors.
-const QUALITY_BITRATE_KBPS: Record<QualityLevel, number | null> = { auto: null, high: 8000, low: 800 };
-// No resolution cap — capture native. Now that the mobile viewer's zoomed
-// render actually uses the real decoded detail instead of stretching a
-// smaller frame (see App.tsx's RTCView layout-size fix), and pinch-zoom has
-// no upper bound either, native resolution is what makes deep zoom actually
-// reveal more real detail instead of hitting a resolution ceiling.
+// are hard ceilings for constrained connections, not floors. "high" is
+// deliberately generous (not just "better than low") — screen content
+// (sharp text/UI edges) needs meaningfully more bitrate per pixel than
+// natural video to stay crisp at native desktop resolution, especially on
+// a 4K+ capture, and this is still just a ceiling: the real bitrate used
+// adapts down to whatever the connection can actually sustain regardless.
+const QUALITY_BITRATE_KBPS: Record<QualityLevel, number | null> = { auto: null, high: 20000, low: 800 };
+// No resolution cap — capture native. The mobile viewer's own pinch-zoom is
+// capped at the point where a source pixel already maps to a device pixel
+// (see getMaxZoomScale in mobile/src/App.tsx) — capturing at native
+// resolution is what makes that cap actually reach real, useful detail
+// instead of hitting a resolution ceiling before the zoom cap does.
 const CAPTURE_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
   frameRate: 30,
 };
@@ -87,6 +92,8 @@ const el = {
   connectStatus: $<HTMLParagraphElement>("connect-status"),
   savedDevicesFilter: $<HTMLInputElement>("saved-devices-filter"),
   savedDevicesList: $<HTMLDivElement>("saved-devices-list"),
+  sessionHistorySummary: $<HTMLParagraphElement>("session-history-summary"),
+  toggleSessionHistory: $<HTMLButtonElement>("toggle-session-history"),
   sessionHistoryList: $<HTMLDivElement>("session-history-list"),
   clearSessionHistory: $<HTMLButtonElement>("clear-session-history"),
   rememberDevice: $<HTMLInputElement>("remember-device"),
@@ -122,6 +129,7 @@ const el = {
   videoWrap: document.querySelector<HTMLDivElement>(".video-wrap")!,
   fitModeSelect: $<HTMLSelectElement>("fit-mode-select"),
   qualitySelect: $<HTMLSelectElement>("quality-select"),
+  failsafeSelect: $<HTMLSelectElement>("failsafe-select"),
   idleTimeoutSelect: $<HTMLSelectElement>("idle-timeout-select"),
   recordingModeSelect: $<HTMLSelectElement>("recording-mode-select"),
   sessionHint: $<HTMLDivElement>("session-hint"),
@@ -222,6 +230,7 @@ let confirmQueue: NotifyHistoryEntry[] = [];
 let activeConfirm: NotifyHistoryEntry | null = null;
 let unseenNotifyCount = 0;
 let savedDevices: SavedDevice[] = [];
+let sessionHistoryExpanded = false;
 let lastConnectAttempt: { targetId: string; passwordHash: string; viewOnly: boolean; permissions: SessionPermissions } | null = null;
 // Gates auto-reconnect to sessions that actually connected at least once —
 // an initial connection attempt that never got off the ground (bad
@@ -244,6 +253,13 @@ let monitorIsOff = false;
 let inputBlocked = false;
 let wallpaperHidden = false;
 let lockOnSessionEnd = false;
+// Polls the host's actual OS cursor shape while a session is connected, and
+// tells the viewer whenever it changes (see the "cursor-shape" SystemCommand)
+// so its overlay can match — link hover = hand, text field = I-beam, etc.,
+// like a real remote-desktop client. Only sends on change, not every poll.
+let cursorShapePollTimer: ReturnType<typeof setInterval> | null = null;
+let lastSentCursorShape: CursorShapeName | null = null;
+const CURSOR_SHAPE_POLL_INTERVAL_MS = 120;
 let trustedOnlyConnections = false;
 let currentPeerId: string | null = null;
 let sessionPermissions: SessionPermissions = defaultPermissions(false);
@@ -287,6 +303,7 @@ async function init(): Promise<void> {
   updateThemeIcon(cfg.theme);
   applyRemoteFitMode((localStorage.getItem("bromeo:remote-fit-mode") as RemoteFitMode | null) ?? "fit");
   applyQualityLevel((localStorage.getItem("bromeo:quality-level") as QualityLevel | null) ?? "auto", false);
+  applyFailsafeSetting(localStorage.getItem("bromeo:failsafe-reconnect") !== "0", false);
   applyIdleTimeout(localStorage.getItem(IDLE_TIMEOUT_KEY) ?? "0", false);
   applyRecordingMode(localStorage.getItem(RECORDING_MODE_KEY), false);
   notifyForwardId = cfg.notifyForwardId;
@@ -513,6 +530,18 @@ function applyQualityLevel(level: QualityLevel, notifyPeer = true): void {
 
 function qualityLabel(level: QualityLevel): string {
   return { auto: "automatisch", high: "hoog", low: "laag" }[level];
+}
+
+// See docs/47seconds.md and PeerSession's failsafeEnabled comment — this is
+// the mitigation for the mid-session TURN-relay drop, not a fix for its
+// root cause, exposed here as an opt-out for anyone who'd rather see a real
+// disconnect than repeated background reconnect attempts.
+function applyFailsafeSetting(enabled: boolean, notifyPeer = true): void {
+  el.failsafeSelect.value = enabled ? "on" : "off";
+  localStorage.setItem("bromeo:failsafe-reconnect", enabled ? "1" : "0");
+  if (notifyPeer && currentRole === "viewer" && currentSession) {
+    currentSession.setFailsafeEnabled(enabled);
+  }
 }
 
 function parseIdleTimeout(value: string | number | null): IdleTimeoutMinutes {
@@ -894,8 +923,13 @@ function wireUi(): void {
   el.savedDevicesFilter.oninput = () => renderSavedDevices();
   el.clearSessionHistory.onclick = () => {
     setSessionHistory([]);
+    sessionHistoryExpanded = false;
     renderSessionHistory();
     toast("Sessiegeschiedenis gewist.");
+  };
+  el.toggleSessionHistory.onclick = () => {
+    sessionHistoryExpanded = !sessionHistoryExpanded;
+    renderSessionHistory();
   };
   el.targetId.oninput = () => {
     el.targetId.value = formatIdInput(el.targetId.value);
@@ -1081,6 +1115,11 @@ function wireUi(): void {
   el.qualitySelect.onchange = () => {
     applyQualityLevel(el.qualitySelect.value as QualityLevel);
     toast(`Kwaliteit ingesteld op ${qualityLabel(el.qualitySelect.value as QualityLevel)}.`);
+  };
+  el.failsafeSelect.onchange = () => {
+    const enabled = el.failsafeSelect.value === "on";
+    applyFailsafeSetting(enabled);
+    toast(enabled ? "Verbindingsfailsafe ingeschakeld." : "Verbindingsfailsafe uitgeschakeld.");
   };
   el.idleTimeoutSelect.onchange = () => applyIdleTimeout(el.idleTimeoutSelect.value);
   el.recordingModeSelect.onchange = () => applyRecordingMode(el.recordingModeSelect.value);
@@ -1368,10 +1407,34 @@ function setSessionHistory(history: SessionHistoryEntry[]): void {
 function renderSessionHistory(): void {
   const history = getSessionHistory();
   if (history.length === 0) {
+    el.sessionHistorySummary.textContent = "Nog geen sessies opgeslagen.";
     el.sessionHistoryList.innerHTML = '<p class="muted small">Nog geen sessies.</p>';
+    el.sessionHistoryList.classList.add("hidden");
+    el.toggleSessionHistory.textContent = "Tonen";
+    el.toggleSessionHistory.disabled = true;
+    el.clearSessionHistory.disabled = true;
     return;
   }
-  el.sessionHistoryList.innerHTML = history
+  const latest = history[0];
+  const latestStarted = new Date(latest.startedAt).toLocaleString("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const latestDirection = latest.role === "viewer" ? "laatste uitgaand" : "laatste inkomend";
+  el.sessionHistorySummary.textContent = `${history.length} sessie${history.length === 1 ? "" : "s"} opgeslagen, ${latestDirection} ${latestStarted} met ${formatId(latest.peerId)}.`;
+  el.toggleSessionHistory.disabled = false;
+  el.clearSessionHistory.disabled = false;
+  el.toggleSessionHistory.textContent = sessionHistoryExpanded ? "Verbergen" : "Tonen";
+  el.sessionHistoryList.classList.toggle("hidden", !sessionHistoryExpanded);
+  if (!sessionHistoryExpanded) {
+    el.sessionHistoryList.innerHTML = "";
+    return;
+  }
+
+  const visibleHistory = history.slice(0, 5);
+  const rows = visibleHistory
     .map((entry) => {
       const started = new Date(entry.startedAt).toLocaleString("nl-NL", {
         day: "2-digit",
@@ -1394,6 +1457,10 @@ function renderSessionHistory(): void {
       </div>`;
     })
     .join("");
+  const overflowNote = history.length > visibleHistory.length
+    ? `<p class="muted small session-history-overflow">Laatste ${visibleHistory.length} van ${history.length} sessies getoond.</p>`
+    : "";
+  el.sessionHistoryList.innerHTML = rows + overflowNote;
 }
 
 function saveSessionHistoryEntry(entry: SessionHistoryEntry): void {
@@ -1704,7 +1771,14 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
           ok: sessionPermissions.control,
         });
       } else if (cmd.kind === "quality-request") {
-        await currentSession?.setVideoBitrate(QUALITY_BITRATE_KBPS[cmd.level]);
+        // "auto" hands the bitrate cap to the continuous network-adaptive
+        // engine (see setAdaptiveQuality/updateAdaptiveBitrate in
+        // session.ts) instead of just uncapping it forever; "high"/"low"
+        // are still fixed manual overrides.
+        currentSession?.setAdaptiveQuality(cmd.level === "auto");
+        if (cmd.level !== "auto") await currentSession?.setVideoBitrate(QUALITY_BITRATE_KBPS[cmd.level]);
+      } else if (cmd.kind === "zoom-state") {
+        currentSession?.setZoomedIn(cmd.zoomedIn);
       } else if (cmd.kind === "block-input") {
         if (sessionPermissions.control) {
           const applied = await window.bromeo.blockInput(cmd.enabled);
@@ -1780,6 +1854,26 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
   });
 }
 
+// Not started for view-only sessions — there's no point mirroring cursor
+// shape when the viewer can't act on hover context anyway, and it's one
+// less native poll running for no benefit.
+function startCursorShapePoll(): void {
+  stopCursorShapePoll();
+  lastSentCursorShape = null;
+  cursorShapePollTimer = setInterval(async () => {
+    const shape = await window.bromeo.getCursorShape();
+    if (shape === lastSentCursorShape) return;
+    lastSentCursorShape = shape;
+    currentSession?.sendSystemCommand({ kind: "cursor-shape", shape });
+  }, CURSOR_SHAPE_POLL_INTERVAL_MS);
+}
+
+function stopCursorShapePoll(): void {
+  if (cursorShapePollTimer) clearInterval(cursorShapePollTimer);
+  cursorShapePollTimer = null;
+  lastSentCursorShape = null;
+}
+
 function onHostConnectionState(peerId: string, state: RTCPeerConnectionState): void {
   if (state === "connected") {
     const action = sessionViewOnly ? "kijkt mee met" : "bekijkt en bestuurt";
@@ -1796,7 +1890,10 @@ function onHostConnectionState(peerId: string, state: RTCPeerConnectionState): v
     }
     const miniState = miniControllerState(peerId);
     if (miniState) window.bromeo.showMiniController(miniState);
-  } else if (["disconnected", "failed", "closed"].includes(state)) {
+    if (!sessionViewOnly) startCursorShapePoll();
+  } else if (state === "disconnected") {
+    el.sharingText.textContent = `${formatId(peerId)} verbinding wordt hersteld...`;
+  } else if (["failed", "closed"].includes(state)) {
     endSession();
   }
 }
@@ -1875,7 +1972,11 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     onConnectionState: (state) => {
       updateSessionState(state);
       if (state === "connected") sessionReachedConnectedOnce = true;
-      if (["disconnected", "failed", "closed"].includes(state)) {
+      if (state === "disconnected") {
+        el.sessionStats.textContent = "Verbinding wordt hersteld";
+        return;
+      }
+      if (["failed", "closed"].includes(state)) {
         // currentPeerId is already null by the time a *deliberate* hangup
         // (disconnect button, idle timeout, peer-initiated bye, ...) reaches
         // here, since endSession() clears it before pc.close() — so this
@@ -1939,6 +2040,7 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
   });
   currentSession.startAsViewer();
   applyQualityLevel(el.qualitySelect.value as QualityLevel);
+  applyFailsafeSetting(el.failsafeSelect.value === "on");
   el.connectStatus.textContent = "Verbonden.";
 }
 
@@ -1950,7 +2052,8 @@ function handleSignal(fromId: string, payload: unknown): void {
     return;
   }
   if (p.sdp?.type === "offer" && currentRole === "host") {
-    captureAndAnswer(p.sdp);
+    if (currentSession.hasCaptureStream()) currentSession.answerOffer(p.sdp);
+    else captureAndAnswer(p.sdp);
   } else if (p.sdp?.type === "answer" && currentRole === "viewer") {
     currentSession.applyAnswer(p.sdp);
   }
@@ -1978,6 +2081,7 @@ function endSession(): void {
   showSessionSummary();
   stopSessionClock();
   stopIdleTimer();
+  stopCursorShapePoll();
   clearIncomingTimeout();
   pendingIncoming = null;
   el.incomingModal.classList.add("hidden");

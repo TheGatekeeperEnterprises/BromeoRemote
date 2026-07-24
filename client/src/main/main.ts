@@ -5,7 +5,7 @@ import { store, hashPassword, randomPassword } from "./store";
 import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
 import { sendMagicPacket } from "./wol";
-import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, hideWallpaper, restoreWallpaper } from "./system";
+import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, hideWallpaper, restoreWallpaper, getCursorShape } from "./system";
 import { askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { installSas, isSasInstalled, sendCtrlAltDel, uninstallSas } from "./sasControl";
 import { setMonitorPower } from "./display";
@@ -405,6 +405,7 @@ ipcMain.handle("bromeo:lock-computer", () => {
 
 ipcMain.handle("bromeo:block-input", (_e, enabled: boolean) => setBlockInput(enabled));
 ipcMain.handle("bromeo:hide-wallpaper", (_e, enabled: boolean) => (enabled ? hideWallpaper() : restoreWallpaper()));
+ipcMain.handle("bromeo:get-cursor-shape", () => getCursorShape());
 
 ipcMain.handle("bromeo:sas-status", () => isSasInstalled());
 ipcMain.handle("bromeo:sas-install", () => installSas());

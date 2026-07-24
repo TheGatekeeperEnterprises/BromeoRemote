@@ -101,12 +101,17 @@ Zonder dit werken meldingen prima zolang de app open/actief is (via de bestaande
 
 **2. Service-account key voor de signaling server** (dit is wat de server gebruikt om daadwerkelijk een push te *versturen*):
 1. In de Firebase console: Project instellingen → Service accounts → "Genereer nieuwe privésleutel". Dit downloadt een JSON-bestand.
-2. Zet dat bestand ergens veilig op de machine waar de signaling server draait (**niet in de git-repo** — het is een geheime sleutel).
-3. Start de server met de omgevingsvariabele erop gezet:
+2. Zet die sleutel op de server op **een van deze twee manieren**:
+   - **`FIREBASE_SERVICE_ACCOUNT_JSON`** (aanbevolen voor Coolify/containers): plak de *inhoud* van het gedownloade bestand rechtstreeks als omgevingsvariabele — of, als het platform problemen geeft met meerdere regels/aanhalingstekens in één env-var, base64 het bestand eerst (`base64 -w0 serviceAccountKey.json`) en plak dát in plaats daarvan; beide vormen werken. Geen bestand, geen persistent volume nodig — alleen een env var in Coolify's UI.
+   - **`FIREBASE_SERVICE_ACCOUNT_PATH`** (voor een normale server zonder containers): zet het bestand ergens veilig op de machine (**niet in de git-repo**) en verwijs ernaar met het volledige pad.
    ```bash
-   FIREBASE_SERVICE_ACCOUNT_PATH=/pad/naar/serviceAccountKey.json npm run dev   # of npm start
+   # Optie A (env var, geen bestand nodig)
+   FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account", ...}' npm start
+   # Optie B (bestand op schijf)
+   FIREBASE_SERVICE_ACCOUNT_PATH=/pad/naar/serviceAccountKey.json npm start
    ```
-   Zonder deze variabele blijft de server gewoon werken (WebSocket-meldingen ongewijzigd) — hij logt alleen eenmalig dat push uitstaat.
+   Zonder een van beide blijft de server gewoon werken (WebSocket-meldingen ongewijzigd) — hij logt alleen eenmalig dat push uitstaat. Wordt er ooit gemeld dat pushmeldingen niet aankomen terwijl de telefoon-app dicht/op de achtergrond stond: dit is de eerste plek om te controleren — check of de env var daadwerkelijk op de *daadwerkelijk draaiende* server-instantie staat, niet alleen dat het sleutelbestand ergens lokaal gedownload is.
+3. **Optioneel maar aanbevolen**: zet ook `PUSH_TOKENS_PATH` (bv. `/data/push-tokens.json`, gemount als persistent volume in Coolify) zodat geregistreerde FCM-tokens een gewone procesherstart overleven — zonder deze variabele valt de server terug op `./data/push-tokens.json` relatief aan waar het proces draait, wat een volledige container-redeploy (in tegenstelling tot alleen een proces-crash/herstart) nog steeds wist tenzij dat pad zelf al op een persistent volume staat.
 
 **3. Mobiele app opnieuw bouwen** met het echte `google-services.json` erin (zie §1 hierboven, `assembleDebug`/`assembleRelease`).
 

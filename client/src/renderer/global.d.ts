@@ -1,4 +1,4 @@
-import type { AiBuddyMessage, AiBuddyResult, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
+import type { AiBuddyMessage, AiBuddyResult, CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
 
 export interface BromeoConfig {
   deviceId: string;
@@ -59,6 +59,7 @@ export interface BromeoBridge {
   lockComputer(): Promise<boolean>;
   blockInput(enabled: boolean): Promise<boolean>;
   hideWallpaper(enabled: boolean): Promise<boolean>;
+  getCursorShape(): Promise<CursorShapeName>;
   sasStatus(): Promise<boolean>;
   sasInstall(): Promise<boolean>;
   sasUninstall(): Promise<boolean>;

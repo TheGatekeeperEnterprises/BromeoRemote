@@ -125,7 +125,7 @@
     </div>
   </header>
 
-  <main id="home" class="home">
+  <main id="home" class="home home--compact">
     <section class="overview-panel">
       <div>
         <p class="eyebrow">BromeoRemote desktop</p>
@@ -148,209 +148,269 @@
       </div>
     </section>
 
-    <section class="card">
-      <h2><span class="card-icon">PC</span>Dit apparaat</h2>
-      <p class="muted">Geef deze gegevens door aan iemand die je op afstand wil helpen.</p>
-      <div class="field">
-        <label>Apparaatnaam</label>
+    <section class="card device-card">
+      <div class="card-title-row">
+        <h2><span class="card-icon">PC</span>Dit apparaat</h2>
+        <span class="info-tip" tabindex="0" aria-label="Uitleg over dit apparaat">i<span class="info-tooltip">Deel je ID en sessiecode met iemand die je mag helpen. De sessiecode wijzigt bij elke herstart.</span></span>
+      </div>
+
+      <div class="field compact-field">
+        <label>
+          Apparaatnaam
+          <span class="info-tip" tabindex="0" aria-label="Uitleg apparaatnaam">i<span class="info-tooltip">Deze naam ziet de andere kant bij verbindingsaanvragen en opgeslagen apparaten.</span></span>
+        </label>
         <div class="value-row">
           <input id="device-label" class="input" placeholder="Bijv. Kantoor-pc" maxlength="60" />
           <button id="device-label-save" class="btn btn-outline btn-sm">Opslaan</button>
         </div>
-        <p class="muted small">Deze naam wordt getoond bij inkomende verbindingsaanvragen.</p>
       </div>
-      <div class="field">
-        <label>Jouw BromeoRemote-ID</label>
-        <div class="value-row">
-          <span id="my-id" class="value-mono">—</span>
-          <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
+
+      <div class="identity-grid">
+        <div class="field compact-field">
+          <label>Jouw BromeoRemote-ID</label>
+          <div class="value-row">
+            <span id="my-id" class="value-mono">—</span>
+            <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
+          </div>
+        </div>
+        <div class="field compact-field">
+          <label>
+            Sessiewachtwoord
+            <span class="info-tip" tabindex="0" aria-label="Uitleg sessiewachtwoord">i<span class="info-tooltip">Tijdelijke code voor snelle hulp. Gebruik onbeheerde toegang voor vaste werkplekken.</span></span>
+          </label>
+          <div class="value-row">
+            <span id="my-password" class="value-mono">—</span>
+            <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
+          </div>
         </div>
       </div>
-      <div class="field">
-        <label>Sessiewachtwoord (verandert bij elke herstart)</label>
-        <div class="value-row">
-          <span id="my-password" class="value-mono">—</span>
-          <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
-        </div>
-      </div>
+
       <div class="quick-actions">
         <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging kopiëren</button>
         <button id="regenerate-password" class="btn btn-outline btn-sm">Nieuw sessiewachtwoord</button>
       </div>
-      <hr />
-      <div class="field row-between">
-        <div>
-          <label>Onbeheerde toegang</label>
-          <p class="muted small">Sta verbindingen toe zonder dat je hoeft te bevestigen (vast wachtwoord).</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="unattended-toggle" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div id="unattended-form" class="field hidden">
-        <label>Vast wachtwoord voor onbeheerde toegang</label>
-        <div class="value-row">
-          <input id="unattended-password" type="password" class="input" placeholder="Kies een sterk wachtwoord" />
-          <button id="unattended-save" class="btn btn-primary btn-sm">Opslaan</button>
-        </div>
-        <div id="unattended-strength" class="password-strength hidden">
-          <span class="password-strength-track"><span></span></span>
-          <strong>Voer een wachtwoord in</strong>
-        </div>
-      </div>
-      <hr />
-      <div class="field row-between">
-        <div>
-          <label>Privacyscherm (curtain mode)</label>
-          <p class="muted small">Schakelt je fysieke beeldscherm uit zodra iemand verbindt en bestuurt — voorkomt meekijken door iemand naast je. Schermdeling zelf blijft gewoon werken. Blokkeert geen lokale muis/toetsenbord: die wekken het scherm weer.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="curtain-toggle" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <hr />
-      <div class="field row-between">
-        <div>
-          <label>Alleen vertrouwde apparaten toestaan</label>
-          <p class="muted small">Weiger inkomende verbindingen van BromeoRemote-ID's die niet bij je opgeslagen apparaten staan. Handig voor vaste werkplekken en onbeheerde toegang.</p>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="trusted-only-toggle" />
-          <span class="slider"></span>
-        </label>
-      </div>
-      <hr />
-      <div class="field">
-        <label>Twee-factor-authenticatie (2FA)</label>
-        <p class="muted small">Extra beveiliging bovenop onbeheerde toegang: naast het vaste wachtwoord is ook een 6-cijferige code uit je authenticator-app (Google Authenticator, Authy, …) nodig.</p>
 
-        <div id="totp-disabled-state">
-          <button id="totp-start-setup" class="btn btn-outline btn-sm">2FA inschakelen</button>
-        </div>
+      <details class="settings-accordion">
+        <summary>
+          <span>Toegang en beveiliging</span>
+          <span class="summary-hint">Onbeheerd, privacy, 2FA en Ctrl+Alt+Del</span>
+        </summary>
 
-        <div id="totp-setup" class="hidden">
-          <p class="muted small">Voeg deze sleutel handmatig toe in je authenticator-app als "BromeoRemote", en bevestig daarna met de code die de app toont:</p>
+        <div class="setting-row">
+          <div class="setting-copy">
+            <label>
+              Onbeheerde toegang
+              <span class="info-tip" tabindex="0" aria-label="Uitleg onbeheerde toegang">i<span class="info-tooltip">Laat vertrouwde personen verbinden met een vast wachtwoord, zonder dat jij elke sessie hoeft te bevestigen.</span></span>
+            </label>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="unattended-toggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div id="unattended-form" class="field compact-field hidden">
+          <label>Vast wachtwoord</label>
           <div class="value-row">
-            <span id="totp-secret" class="value-mono totp-secret"></span>
-            <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
+            <input id="unattended-password" type="password" class="input" placeholder="Kies een sterk wachtwoord" />
+            <button id="unattended-save" class="btn btn-primary btn-sm">Opslaan</button>
           </div>
-          <div class="value-row totp-verify-row">
-            <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
-            <button id="totp-confirm" class="btn btn-primary btn-sm">Bevestigen</button>
+          <div id="unattended-strength" class="password-strength hidden">
+            <span class="password-strength-track"><span></span></span>
+            <strong>Voer een wachtwoord in</strong>
           </div>
         </div>
 
-        <div id="totp-enabled-state" class="row-between hidden">
-          <p class="muted small totp-enabled-text">2FA is ingeschakeld voor onbeheerde toegang.</p>
-          <button id="totp-disable" class="btn btn-outline btn-sm">Uitschakelen</button>
+        <div class="setting-row">
+          <div class="setting-copy">
+            <label>
+              Privacyscherm
+              <span class="info-tip" tabindex="0" aria-label="Uitleg privacyscherm">i<span class="info-tooltip">Schakelt het fysieke scherm uit bij bediening op afstand. Schermdeling blijft werken; lokale invoer kan het scherm weer wekken.</span></span>
+            </label>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="curtain-toggle" />
+            <span class="slider"></span>
+          </label>
         </div>
-      </div>
-      <hr />
-      <div class="field">
-        <label>Ctrl+Alt+Del op afstand ontvangen (experimenteel)</label>
-        <p class="muted small">Laat iemand die dit apparaat bestuurt Ctrl+Alt+Del versturen (bv. om een vergrendeld scherm te ontgrendelen). Windows staat dit normaal niet toe voor gewone apps — dit registreert een SYSTEM-taak in Taakplanner die alleen op aanvraag draait (nooit bij opstarten), plus de bijbehorende beveiligingsinstelling. Vereist eenmalig een beheerdersbevestiging (UAC). <strong>Experimenteel:</strong> op een echte Windows 11-machine registreert dit correct, maar het daadwerkelijke Ctrl+Alt+Del-scherm verscheen niet — mogelijk werkt dit mechanisme niet (meer) op recente Windows-versies.</p>
-        <div id="sas-disabled-state">
-          <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelen…</button>
+
+        <div class="setting-row">
+          <div class="setting-copy">
+            <label>
+              Alleen vertrouwde apparaten
+              <span class="info-tip" tabindex="0" aria-label="Uitleg vertrouwde apparaten">i<span class="info-tooltip">Weiger inkomende verbindingen van onbekende BromeoRemote-ID's. Handig voor vaste supportplekken.</span></span>
+            </label>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="trusted-only-toggle" />
+            <span class="slider"></span>
+          </label>
         </div>
-        <div id="sas-enabled-state" class="row-between hidden">
-          <p class="muted small">Ingeschakeld.</p>
-          <button id="sas-uninstall-btn" class="btn btn-outline btn-sm">Uitschakelen</button>
+
+        <div class="setting-block">
+          <label>
+            Twee-factor-authenticatie (2FA)
+            <span class="info-tip" tabindex="0" aria-label="Uitleg 2FA">i<span class="info-tooltip">Extra beveiliging voor onbeheerde toegang met een 6-cijferige code uit je authenticator-app.</span></span>
+          </label>
+          <div id="totp-disabled-state">
+            <button id="totp-start-setup" class="btn btn-outline btn-sm">2FA inschakelen</button>
+          </div>
+          <div id="totp-setup" class="hidden">
+            <p class="muted small">Voeg deze sleutel handmatig toe in je authenticator-app als "BromeoRemote".</p>
+            <div class="value-row">
+              <span id="totp-secret" class="value-mono totp-secret"></span>
+              <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
+            </div>
+            <div class="value-row totp-verify-row">
+              <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
+              <button id="totp-confirm" class="btn btn-primary btn-sm">Bevestigen</button>
+            </div>
+          </div>
+          <div id="totp-enabled-state" class="row-between hidden">
+            <p class="muted small totp-enabled-text">2FA is ingeschakeld.</p>
+            <button id="totp-disable" class="btn btn-outline btn-sm">Uitschakelen</button>
+          </div>
         </div>
-      </div>
+
+        <div class="setting-block">
+          <label>
+            Ctrl+Alt+Del op afstand
+            <span class="info-tip" tabindex="0" aria-label="Uitleg Ctrl Alt Del">i<span class="info-tooltip">Experimenteel. Registreert een Windows SYSTEM-taak na UAC-bevestiging, zodat een helper Ctrl+Alt+Del kan aanvragen.</span></span>
+          </label>
+          <div id="sas-disabled-state">
+            <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelen…</button>
+          </div>
+          <div id="sas-enabled-state" class="row-between hidden">
+            <p class="muted small">Ingeschakeld.</p>
+            <button id="sas-uninstall-btn" class="btn btn-outline btn-sm">Uitschakelen</button>
+          </div>
+        </div>
+      </details>
     </section>
 
-    <section class="card">
-      <h2><span class="card-icon">ID</span>Verbinden met een ander apparaat</h2>
+    <section class="card connect-card">
+      <div class="card-title-row">
+        <h2><span class="card-icon">ID</span>Verbinden met een ander apparaat</h2>
+        <span class="info-tip" tabindex="0" aria-label="Uitleg verbinden">i<span class="info-tooltip">Gebruik het BromeoRemote-ID en wachtwoord van de andere kant. Sessierechten kun je onder opties beperken.</span></span>
+      </div>
 
       <input id="saved-devices-filter" class="input saved-filter hidden" placeholder="Zoek opgeslagen apparaat of groep" />
       <div id="saved-devices-list" class="saved-devices hidden"></div>
 
-      <p class="muted">Vraag het BromeoRemote-ID en wachtwoord aan de andere kant.</p>
-      <div class="field">
-        <label>Partner-ID</label>
-        <input id="target-id" class="input" placeholder="bv. 482913650" inputmode="numeric" />
-      </div>
-      <div class="field">
-        <label>Wachtwoord</label>
-        <input id="target-password" class="input" type="password" placeholder="Wachtwoord van de partner" />
-      </div>
-      <div class="field">
-        <label class="checkbox-row">
-          <input type="checkbox" id="view-only-toggle" />
-          <span>Alleen bekijken (geen muis-/toetsenbordbesturing)</span>
-        </label>
-      </div>
-      <div class="field permissions-box">
-        <label>Sessierechten</label>
-        <div class="permissions-grid">
-          <label class="checkbox-row">
-            <input type="checkbox" id="permission-control" checked />
-            <span>Muis en toetsenbord</span>
-          </label>
-          <label class="checkbox-row">
-            <input type="checkbox" id="permission-clipboard" checked />
-            <span>Klembord delen</span>
-          </label>
-          <label class="checkbox-row">
-            <input type="checkbox" id="permission-files" checked />
-            <span>Bestanden overzetten</span>
-          </label>
+      <div class="connect-field-grid">
+        <div class="field compact-field">
+          <label>Partner-ID</label>
+          <input id="target-id" class="input" placeholder="bv. 482913650" inputmode="numeric" />
+        </div>
+        <div class="field compact-field">
+          <label>Wachtwoord</label>
+          <input id="target-password" class="input" type="password" placeholder="Wachtwoord van de partner" />
         </div>
       </div>
-      <div class="field remember-row">
-        <label class="checkbox-row">
-          <input type="checkbox" id="remember-device" />
-          <span>Dit apparaat onthouden voor één-tik verbinden</span>
-        </label>
-        <input id="remember-label" class="input hidden" placeholder="Naam (bv. Kantoor-pc)" />
-        <input id="remember-group" class="input hidden" placeholder="Groep (optioneel, bv. Werk, Klanten, Thuis)" />
-        <input id="remember-mac" class="input hidden" placeholder="MAC-adres (optioneel, voor Wake-on-LAN)" />
-        <p class="muted small">Werkt het betrouwbaarst als het andere apparaat "Onbeheerde toegang" met een vast wachtwoord gebruikt — een roterend sessiewachtwoord verandert bij elke herstart.</p>
-      </div>
+
+      <details class="settings-accordion connection-options">
+        <summary>
+          <span>Sessieopties</span>
+          <span class="summary-hint">Alleen kijken, rechten en onthouden</span>
+        </summary>
+        <div class="field compact-field">
+          <label class="checkbox-row">
+            <input type="checkbox" id="view-only-toggle" />
+            <span>Alleen bekijken</span>
+          </label>
+        </div>
+        <div class="field permissions-box compact-field">
+          <label>Sessierechten</label>
+          <div class="permissions-grid">
+            <label class="checkbox-row">
+              <input type="checkbox" id="permission-control" checked />
+              <span>Muis en toetsenbord</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="permission-clipboard" checked />
+              <span>Klembord delen</span>
+            </label>
+            <label class="checkbox-row">
+              <input type="checkbox" id="permission-files" checked />
+              <span>Bestanden overzetten</span>
+            </label>
+          </div>
+        </div>
+        <div class="field remember-row compact-field">
+          <label class="checkbox-row">
+            <input type="checkbox" id="remember-device" />
+            <span>
+              Dit apparaat onthouden
+              <span class="info-tip" tabindex="0" aria-label="Uitleg apparaat onthouden">i<span class="info-tooltip">Werkt het best als de andere kant onbeheerde toegang met een vast wachtwoord gebruikt.</span></span>
+            </span>
+          </label>
+          <input id="remember-label" class="input hidden" placeholder="Naam (bv. Kantoor-pc)" />
+          <input id="remember-group" class="input hidden" placeholder="Groep (optioneel, bv. Werk, Klanten, Thuis)" />
+          <input id="remember-mac" class="input hidden" placeholder="MAC-adres (optioneel, voor Wake-on-LAN)" />
+        </div>
+      </details>
       <button id="connect-btn" class="btn btn-primary">Verbinden</button>
       <p id="connect-status" class="muted small"></p>
     </section>
 
-    <section class="card card-wide">
+    <section class="card card-wide tools-card">
       <div class="section-heading-row">
-        <h2><span class="card-icon">LOG</span>Recente sessies</h2>
-        <button id="clear-session-history" class="btn btn-ghost btn-sm">Wissen</button>
+        <div>
+          <h2><span class="card-icon">TOOL</span>Tools en automatisering</h2>
+          <p class="muted small section-subtitle">Koppel lokale agent-tools en AI-hulp zonder het startscherm lang te maken.</p>
+        </div>
       </div>
-      <div id="session-history-list" class="session-history-list">
+      <div class="tool-panel-grid">
+        <article class="tool-panel">
+          <div class="tool-panel-header">
+            <h3>Agent-meldingen</h3>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg agent-meldingen">i<span class="info-tooltip">Laat lokale tools zoals Google Antigravity meldingen of bevestigingsvragen naar BromeoRemote sturen.</span></span>
+          </div>
+          <div class="field compact-field">
+            <label>Doorsturen naar BromeoRemote-ID</label>
+            <div class="value-row">
+              <input id="notify-forward-id" class="input" placeholder="Optioneel ID" inputmode="numeric" />
+              <button id="notify-forward-save" class="btn btn-primary btn-sm">Opslaan</button>
+            </div>
+          </div>
+          <div class="field compact-field">
+            <label>
+              Lokaal koppeladres
+              <span class="info-tip" tabindex="0" aria-label="Uitleg lokaal koppeladres">i<span class="info-tooltip">Alleen bereikbaar vanaf dit apparaat. Zie docs/ANTIGRAVITY.md voor een voorbeeld.</span></span>
+            </label>
+            <span class="value-mono bridge-url">http://localhost:8973/notify · /confirm</span>
+          </div>
+        </article>
+
+        <article class="tool-panel">
+          <div class="tool-panel-header">
+            <h3>AI Buddy</h3>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg AI Buddy">i<span class="info-tooltip">Gebruik je eigen OpenAI API-sleutel voor hulp tijdens sessies. De sleutel wordt lokaal versleuteld opgeslagen.</span></span>
+          </div>
+          <div class="field compact-field">
+            <label>OpenAI API-sleutel</label>
+            <div class="value-row">
+              <input id="openai-key-input" class="input" type="password" placeholder="sk-…" autocomplete="off" />
+              <button id="openai-key-save" class="btn btn-primary btn-sm">Opslaan</button>
+            </div>
+            <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="card card-wide compact-section">
+      <div class="section-heading-row">
+        <div>
+          <h2><span class="card-icon">LOG</span>Recente sessies</h2>
+          <p id="session-history-summary" class="muted small section-subtitle">Nog geen sessies opgeslagen.</p>
+        </div>
+        <div class="section-actions">
+          <button id="toggle-session-history" class="btn btn-outline btn-sm">Tonen</button>
+          <button id="clear-session-history" class="btn btn-ghost btn-sm">Wissen</button>
+        </div>
+      </div>
+      <div id="session-history-list" class="session-history-list hidden">
         <p class="muted small">Nog geen sessies.</p>
-      </div>
-    </section>
-
-    <section class="card card-wide">
-      <h2><span class="card-icon">API</span>Agent-meldingen (bijv. Google Antigravity)</h2>
-      <p class="muted">Laat lokale tools zoals Google Antigravity een melding of bevestigingsverzoek naar BromeoRemote sturen zodra ze jouw aandacht nodig hebben — ook als je niet achter dit scherm zit.</p>
-      <div class="field">
-        <label>Meldingen doorsturen naar (BromeoRemote-ID, optioneel)</label>
-        <div class="value-row">
-          <input id="notify-forward-id" class="input" placeholder="bv. het ID van je telefoon of laptop" inputmode="numeric" />
-          <button id="notify-forward-save" class="btn btn-primary btn-sm">Opslaan</button>
-        </div>
-        <p class="muted small">Laat leeg om meldingen alleen op dit apparaat te tonen.</p>
-      </div>
-      <div class="field">
-        <label>Lokaal koppeladres voor tools op dit apparaat</label>
-        <span class="value-mono bridge-url">http://localhost:8973/notify · /confirm</span>
-        <p class="muted small">Alleen bereikbaar vanaf dit apparaat — zie <code>docs/ANTIGRAVITY.md</code> voor een kant-en-klaar voorbeeld.</p>
-      </div>
-    </section>
-
-    <section class="card card-wide">
-      <h2><span class="card-icon">AI</span>AI Buddy</h2>
-      <p class="muted">Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen — maak een screenshot van het scherm op afstand en stel een vraag, AI Buddy helpt stap voor stap. De sleutel wordt versleuteld lokaal opgeslagen en verlaat dit apparaat nooit, behalve rechtstreeks naar OpenAI.</p>
-      <div class="field">
-        <label>OpenAI API-sleutel</label>
-        <div class="value-row">
-          <input id="openai-key-input" class="input" type="password" placeholder="sk-…" autocomplete="off" />
-          <button id="openai-key-save" class="btn btn-primary btn-sm">Opslaan</button>
-        </div>
-        <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
       </div>
     </section>
   </main>
@@ -451,6 +511,13 @@
             <option value="auto">Automatisch</option>
             <option value="high">Hoog</option>
             <option value="low">Laag (trage verbinding)</option>
+          </select>
+          <label>Verbindingsfailsafe
+            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
+          </label>
+          <select id="failsafe-select" class="monitor-select" title="Verbindingsfailsafe">
+            <option value="on">Aan</option>
+            <option value="off">Uit</option>
           </select>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import koffi from "koffi";
+import type { CursorShapeName } from "../shared/protocol.js";
 
 // Only verified on Windows (this project's tested platform so far) — the
 // macOS/Linux branches are best-effort and may need a privilege prompt that
@@ -146,5 +147,83 @@ export function restoreWallpaper(): boolean {
     return true;
   } catch {
     return false;
+  }
+}
+
+// Detects which standard system cursor is currently showing, by comparing
+// GetCursorInfo's active cursor handle against LoadCursor(NULL, IDC_*)'s
+// known handles for each standard shape — Windows doesn't expose "what
+// shape is this" any more directly than "does this handle equal that
+// handle." A custom/app-drawn cursor (a handful of games/creative tools
+// use these) won't match any of these and falls back to "arrow" — fine for
+// a remote-support tool, where the standard OS/browser/UI cursors are what
+// actually matters. Windows-only.
+//
+// koffi footgun worth documenting: GetCursorInfo needs the struct pointer
+// declared `_Inout_`, not plain or `_Out_` — `_Out_` silently zeroes the
+// `cbSize` field koffi is supposed to send *in* (the API requires it be
+// pre-set to sizeof(CURSORINFO) to validate the call), which makes the
+// call fail with ERROR_INVALID_PARAMETER; plain (no annotation) does
+// succeed but koffi never copies the result fields back into the JS
+// object. Verified against a real GetLastError()/manual poll before
+// wiring this in — see docs history/commit for that throwaway test.
+let cursorFns: {
+  getCursorInfo: (info: Record<string, unknown>) => number;
+  loadCursor: (hInstance: number, id: number) => bigint;
+  cursorInfoSize: number;
+} | null = null;
+let systemCursorHandles: Partial<Record<CursorShapeName, bigint>> | null = null;
+
+// Win32 IDC_* resource IDs (winuser.h) — passed to LoadCursor via the
+// MAKEINTRESOURCE convention (a small integer used directly as the
+// "pointer" argument, not a real string).
+const IDC: Partial<Record<CursorShapeName, number>> = {
+  arrow: 32512,
+  text: 32513,
+  wait: 32514,
+  "resize-nwse": 32642,
+  "resize-nesw": 32643,
+  "resize-ew": 32644,
+  "resize-ns": 32645,
+  move: 32646,
+  "not-allowed": 32648,
+  hand: 32649,
+  help: 32651,
+};
+
+function ensureCursorFns(): void {
+  if (cursorFns) return;
+  const user32 = koffi.load("user32.dll");
+  const CURSORINFO = koffi.struct("CURSORINFO", {
+    cbSize: "uint32",
+    flags: "uint32",
+    hCursor: "void*",
+    ptX: "int32",
+    ptY: "int32",
+  });
+  cursorFns = {
+    getCursorInfo: user32.func("bool GetCursorInfo(_Inout_ CURSORINFO *pci)") as (info: Record<string, unknown>) => number,
+    loadCursor: user32.func("void* LoadCursorW(void* hInstance, uintptr lpCursorName)") as (hInstance: number, id: number) => bigint,
+    cursorInfoSize: koffi.sizeof(CURSORINFO),
+  };
+  const handles: Partial<Record<CursorShapeName, bigint>> = {};
+  for (const [shape, id] of Object.entries(IDC)) {
+    handles[shape as CursorShapeName] = cursorFns.loadCursor(0, id);
+  }
+  systemCursorHandles = handles;
+}
+
+export function getCursorShape(): CursorShapeName {
+  if (process.platform !== "win32") return "arrow";
+  try {
+    ensureCursorFns();
+    if (!cursorFns || !systemCursorHandles) return "arrow";
+    const info = { cbSize: cursorFns.cursorInfoSize, flags: 0, hCursor: null, ptX: 0, ptY: 0 };
+    if (!cursorFns.getCursorInfo(info)) return "arrow";
+    const hCursor = info.hCursor as bigint | null;
+    const match = Object.entries(systemCursorHandles).find(([, h]) => h === hCursor);
+    return (match?.[0] as CursorShapeName) ?? "arrow";
+  } catch {
+    return "arrow";
   }
 }

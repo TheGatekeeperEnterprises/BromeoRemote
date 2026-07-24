@@ -93,6 +93,27 @@ export interface WindowInfo {
 
 export type QualityLevel = "auto" | "high" | "low";
 
+// Which standard OS cursor is currently showing on the host, detected via
+// GetCursorInfo/LoadCursor comparison (see getCursorShape in
+// client/src/main/system.ts) — Windows itself doesn't expose "what shape is
+// this" any more directly than "does this handle equal that handle", so a
+// custom/app-drawn cursor that doesn't match any of these falls back to
+// "arrow". Covers the shapes a remote-support session actually encounters
+// (links/buttons, text fields, window edges); anything rarer just reads as
+// "arrow" too, which is a reasonable default.
+export type CursorShapeName =
+  | "arrow"
+  | "hand"
+  | "text"
+  | "resize-ns"
+  | "resize-ew"
+  | "resize-nesw"
+  | "resize-nwse"
+  | "move"
+  | "wait"
+  | "not-allowed"
+  | "help";
+
 export type SystemCommand =
   | { kind: "restart-request" }
   | { kind: "lock-request" }
@@ -116,7 +137,24 @@ export type SystemCommand =
   // letterboxing (see resizeAndFocusWindow in client/src/main/system.ts).
   | { kind: "switch-window"; windowId: string; aspect: number }
   | { kind: "resize-active-window"; aspect: number }
-  | { kind: "switch-to-desktop" };
+  | { kind: "switch-to-desktop" }
+  // Sent host->viewer whenever the host's actual OS cursor shape changes
+  // (only while a session is connected — see the poll loop in app.ts),
+  // so the viewer's own on-screen cursor overlay can match it, the way a
+  // real remote-desktop client does (link hover = hand, text field = I-beam,
+  // etc.) instead of always showing a plain arrow.
+  | { kind: "cursor-shape"; shape: CursorShapeName }
+  // Sent viewer->host whenever the viewer's pinch-zoom crosses the "zoomed
+  // in" threshold — lets the host's adaptive bitrate engine (see
+  // updateAdaptiveBitrate in client/src/renderer/session.ts) bias toward
+  // sharpness while the user is actively scrutinizing detail, independent
+  // of whichever quality tier is selected.
+  | { kind: "zoom-state"; zoomedIn: boolean }
+  // Sent host->viewer whenever the adaptive engine's last-resort resolution
+  // scale-down (see ADAPTIVE_RESOLUTION_SCALE_DOWN) turns on or off, so the
+  // viewer can show *why* things look softer instead of it looking like an
+  // unexplained quality bug.
+  | { kind: "adaptive-status"; resolutionScaled: boolean };
 
 export type FileMessage =
   | { kind: "file-offer"; id: string; name: string; size: number }

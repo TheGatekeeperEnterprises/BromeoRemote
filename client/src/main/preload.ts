@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld("bromeo", {
   lockComputer: () => ipcRenderer.invoke("bromeo:lock-computer"),
   blockInput: (enabled: boolean) => ipcRenderer.invoke("bromeo:block-input", enabled),
   hideWallpaper: (enabled: boolean) => ipcRenderer.invoke("bromeo:hide-wallpaper", enabled),
+  getCursorShape: () => ipcRenderer.invoke("bromeo:get-cursor-shape"),
   sasStatus: () => ipcRenderer.invoke("bromeo:sas-status"),
   sasInstall: () => ipcRenderer.invoke("bromeo:sas-install"),
   sasUninstall: () => ipcRenderer.invoke("bromeo:sas-uninstall"),

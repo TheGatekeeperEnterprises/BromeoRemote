@@ -1,7 +1,7 @@
 // Default network config. Override via environment variables at build/run time,
 // or later via an in-app settings screen (see docs/ROADMAP.md).
 
-// `process` only exists in the main process (Node) — the renderer runs with
+// `process` only exists in the main process (Node); the renderer runs with
 // contextIsolation and no Node integration, so guard the lookup.
 const envSignalingUrl =
   typeof process !== "undefined" && process.env ? process.env.BROMEO_SIGNALING_URL : undefined;
@@ -10,13 +10,9 @@ export const DEFAULT_SIGNALING_URL = envSignalingUrl ?? "wss://remote.bromeoremo
 
 export const DEFAULT_ICE_SERVERS: RTCIceServer[] = [
   { urls: "stun:stun.l.google.com:19302" },
-  // Self-hosted coturn (see coturn/ + docs/DEPLOY.md §2). With relay-only ICE
-  // (see session.ts) this is the *only* path, so both transports matter: UDP
-  // is normally preferred, but mobile carrier CGNAT frequently reassigns NAT
-  // mappings mid-flow for long-lived UDP, breaking allocation before it ever
-  // pairs. TCP is far more NAT-friendly for that case, so both are offered
-  // and ICE picks whichever pairs successfully. Static long-term credentials
-  // are fine here since this is a single-tenant relay, not a public service.
+  // Offer both TURN transports. TURN/TCP is useful behind restrictive NATs,
+  // but the app must not depend on it exclusively: if TCP 3478 is blocked,
+  // direct/STUN or TURN/UDP should still let the session start.
   { urls: "turn:turn.bromeoremote.com:3478", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
   { urls: "turn:turn.bromeoremote.com:3478?transport=tcp", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
 ];

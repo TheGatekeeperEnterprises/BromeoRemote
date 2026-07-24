@@ -5,6 +5,14 @@ import { Signaling } from "./signaling";
 // Stays comfortably under the ~64KB/256KB SCTP message ceilings — same
 // constant/value as client/src/renderer/session.ts's CHUNK_SIZE.
 const CHUNK_SIZE = 48 * 1024;
+// Shorter than the ~47s failure ceiling seen in practice (see docs/47seconds.md
+// §4.9a) so the path gets refreshed well before whatever degrades it has a
+// chance to accumulate — a single 30s interval let ~4 refreshes happen before
+// still eventually failing, so refreshing more often is the next thing worth
+// tuning. Kept identical to client/src/renderer/session.ts's constants.
+const ICE_REFRESH_INTERVAL_MS = 15_000;
+const DISCONNECTED_GRACE_MS = 20_000;
+const DISCONNECT_RETRY_INTERVAL_MS = 4_000;
 
 // VP8 (the usual default) has no tools for sharp text/UI edges — it's built
 // for motion video. VP9 adds screen-content-coding (palette prediction,
@@ -21,6 +29,12 @@ function preferScreenContentCodecs(codecs: { mimeType: string }[]): { mimeType: 
     return 3; // VP8 and anything else
   };
   return [...codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
+}
+
+function iceUrls(server: any): string[] {
+  const urls = server?.urls;
+  if (!urls) return [];
+  return Array.isArray(urls) ? urls : [urls];
 }
 
 export interface SessionStats {
@@ -54,20 +68,31 @@ export class MobileSession {
   private chatChannel: any = null;
   private systemChannel: any = null;
   private filesChannel: any = null;
+  private role: "host" | "viewer" | null = null;
   private candidateQueue: any[] = [];
   private pendingSystemCommands: SystemCommand[] = [];
   private incomingFiles = new Map<string, { name: string; total: number; chunks: string[]; received: number }>();
   private statsTimer: ReturnType<typeof setInterval> | null = null;
+  private iceRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private disconnectRetryTimer: ReturnType<typeof setInterval> | null = null;
+  private iceRestartInFlight = false;
   private lastVideoBytes: number | null = null;
   private lastVideoBytesTimestamp: number | null = null;
   private lastMouseMoveSent = 0;
   private captureStream: MediaStream | null = null;
+  // See docs/47seconds.md — this is the mitigation for the mid-session
+  // TURN-relay drop, not a fix for its root cause. It's genuinely active by
+  // default (kept true here) since most users are better served by a
+  // session that keeps quietly re-stitching itself than one that just
+  // drops; setFailsafeEnabled lets a user turn it off from Settings if they
+  // ever want to see a real disconnect instead of repeated background
+  // reconnect attempts.
+  private failsafeEnabled = true;
 
   constructor(private iceServers: any[], private signaling: Signaling, private peerId: string, private callbacks: SessionCallbacks) {
-    // relay-only — see client/src/renderer/session.ts for why: ICE switching
-    // to a "better" direct P2P pair mid-session (then finding it doesn't
-    // actually hold up) is what caused sessions to drop ~40s in.
-    this.pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: "relay" });
+    console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
+    this.pc = new RTCPeerConnection({ iceServers });
 
     this.pc.addEventListener("icecandidate", (event: any) => {
       if (event.candidate) {
@@ -78,15 +103,28 @@ export class MobileSession {
       }
     });
     this.pc.addEventListener("icegatheringstatechange", () => console.log("[ice] gatheringState:", this.pc.iceGatheringState));
-    this.pc.addEventListener("iceconnectionstatechange", () => console.log("[ice] iceConnectionState:", this.pc.iceConnectionState));
+    this.pc.addEventListener("iceconnectionstatechange", () => {
+      console.log("[ice] iceConnectionState:", this.pc.iceConnectionState);
+      if (this.pc.iceConnectionState === "disconnected") this.dumpCandidatePairStats();
+    });
     this.pc.addEventListener("icecandidateerror", (event: any) =>
       console.error("[ice] candidate error:", event.errorCode, event.errorText, event.url ?? event.address)
     );
     this.pc.addEventListener("connectionstatechange", () => {
       console.log("[ice] connectionState:", this.pc.connectionState);
       this.callbacks.onConnectionState?.(this.pc.connectionState);
-      if (this.pc.connectionState === "connected") this.startStatsLoop();
-      if (["disconnected", "failed", "closed"].includes(this.pc.connectionState)) this.stopStatsLoop();
+      if (this.pc.connectionState === "connected") {
+        this.clearDisconnectTimer();
+        this.startStatsLoop();
+        this.startIceRefreshLoop();
+      } else if (this.pc.connectionState === "disconnected") {
+        this.stopStatsLoop();
+        this.scheduleDisconnectRecovery();
+      } else if (["failed", "closed"].includes(this.pc.connectionState)) {
+        this.clearDisconnectTimer();
+        this.stopStatsLoop();
+        this.stopIceRefreshLoop();
+      }
     });
     this.pc.addEventListener("track", (event: any) => {
       if (event.streams && event.streams[0]) this.callbacks.onRemoteStream?.(event.streams[0]);
@@ -130,6 +168,7 @@ export class MobileSession {
 
   /** Initiates the offer, requests recvonly video/audio transceivers, opens data channels. */
   async startAsViewer(): Promise<void> {
+    this.role = "viewer";
     const videoTransceiver = this.pc.addTransceiver("video", { direction: "recvonly" });
     try {
       const capabilities = RTCRtpSender.getCapabilities("video");
@@ -156,6 +195,7 @@ export class MobileSession {
    * the viewer's existing recvonly video transceiver. Mirrors
    * client/src/renderer/session.ts's acceptAsHost. */
   async acceptAsHost(offer: any, captureStream: MediaStream): Promise<void> {
+    this.role = "host";
     await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
     await this.flushCandidateQueue();
 
@@ -195,6 +235,18 @@ export class MobileSession {
     const answer = await this.pc.createAnswer();
     await this.pc.setLocalDescription(new RTCSessionDescription(answer));
     this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: answer } });
+  }
+
+  async answerOffer(offer: any): Promise<void> {
+    await this.pc.setRemoteDescription(new RTCSessionDescription(offer));
+    await this.flushCandidateQueue();
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(new RTCSessionDescription(answer));
+    this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: answer } });
+  }
+
+  hasCaptureStream(): boolean {
+    return this.captureStream != null;
   }
 
   async applyAnswer(answer: any): Promise<void> {
@@ -330,6 +382,124 @@ export class MobileSession {
     }, 2000);
   }
 
+  /** Settings-driven toggle for the periodic ICE-restart failsafe — see failsafeEnabled's own comment. */
+  setFailsafeEnabled(enabled: boolean): void {
+    this.failsafeEnabled = enabled;
+    if (!enabled) this.stopIceRefreshLoop(); // stop an already-running proactive loop immediately
+  }
+
+  private startIceRefreshLoop(): void {
+    if (this.role !== "viewer" || this.iceRefreshTimer || !this.failsafeEnabled) return;
+    this.iceRefreshTimer = setInterval(() => {
+      void this.restartIce("scheduled");
+    }, ICE_REFRESH_INTERVAL_MS);
+  }
+
+  private stopIceRefreshLoop(): void {
+    if (this.iceRefreshTimer) clearInterval(this.iceRefreshTimer);
+    this.iceRefreshTimer = null;
+    this.iceRestartInFlight = false;
+  }
+
+  private scheduleDisconnectRecovery(): void {
+    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce("disconnected");
+    // A single restart attempt can itself fail to land (e.g. it starts while
+    // signalingState isn't stable yet, or its own candidate gather stalls) —
+    // keep retrying every few seconds for the whole grace window instead of
+    // trying once and just waiting out the clock. restartIce() already no-ops
+    // safely if one is still in flight or the state isn't right for it.
+    if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
+      this.disconnectRetryTimer = setInterval(() => {
+        if (this.pc.connectionState === "disconnected") void this.restartIce("disconnected");
+      }, DISCONNECT_RETRY_INTERVAL_MS);
+    }
+    // The grace-period close below always runs regardless of the failsafe
+    // toggle — turning the active recovery attempts off shouldn't mean a
+    // dead connection hangs forever, just that nothing actively fights to
+    // revive it first.
+    if (this.disconnectTimer) return;
+    this.disconnectTimer = setTimeout(() => {
+      this.disconnectTimer = null;
+      this.clearDisconnectRetryTimer();
+      if (this.pc.connectionState === "disconnected") {
+        console.warn("[ice] disconnected recovery timed out, closing peer connection");
+        this.pc.close();
+      }
+    }, DISCONNECTED_GRACE_MS);
+  }
+
+  private clearDisconnectTimer(): void {
+    if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
+    this.disconnectTimer = null;
+    this.clearDisconnectRetryTimer();
+  }
+
+  private clearDisconnectRetryTimer(): void {
+    if (this.disconnectRetryTimer) clearInterval(this.disconnectRetryTimer);
+    this.disconnectRetryTimer = null;
+  }
+
+  private async restartIce(reason: "scheduled" | "disconnected"): Promise<void> {
+    if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
+    if (this.pc.signalingState !== "stable") return;
+    this.iceRestartInFlight = true;
+    try {
+      console.log(`[ice] restarting ICE (${reason})`);
+      this.pc.restartIce?.();
+      const offer = await this.pc.createOffer({ iceRestart: true });
+      await this.pc.setLocalDescription(new RTCSessionDescription(offer));
+      this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: offer } });
+    } catch (err) {
+      console.warn("[ice] ICE restart failed:", err);
+    } finally {
+      this.iceRestartInFlight = false;
+    }
+  }
+
+  // Temporary diagnostic for the ~40-47s mid-session drop investigation
+  // (see docs/WEBRTC-TURN-DEBUGGING.md) — freeze-frames the selected
+  // candidate pair and both its candidates the instant ICE first reports
+  // "disconnected", to see which side stopped hearing from the other.
+  private async dumpCandidatePairStats(): Promise<void> {
+    try {
+      const stats = await this.pc.getStats();
+      const byId = new Map<string, any>();
+      stats.forEach((report: any) => byId.set(report.id, report));
+      stats.forEach((report: any) => {
+        if (report.type === "candidate-pair" && (report.nominated || report.state === "succeeded")) {
+          const local = byId.get(report.localCandidateId);
+          const remote = byId.get(report.remoteCandidateId);
+          console.warn("[ice] DROP DIAGNOSTIC candidate-pair:", JSON.stringify({
+            state: report.state,
+            nominated: report.nominated,
+            bytesSent: report.bytesSent,
+            bytesReceived: report.bytesReceived,
+            lastPacketSentTimestamp: report.lastPacketSentTimestamp,
+            lastPacketReceivedTimestamp: report.lastPacketReceivedTimestamp,
+            currentRoundTripTime: report.currentRoundTripTime,
+            requestsSent: report.requestsSent,
+            responsesReceived: report.responsesReceived,
+            consentRequestsSent: report.consentRequestsSent,
+          }));
+          console.warn("[ice] DROP DIAGNOSTIC local candidate:", JSON.stringify({
+            type: local?.candidateType,
+            protocol: local?.protocol,
+            relayProtocol: local?.relayProtocol,
+            url: local?.url,
+          }));
+          console.warn("[ice] DROP DIAGNOSTIC remote candidate:", JSON.stringify({
+            type: remote?.candidateType,
+            protocol: remote?.protocol,
+            relayProtocol: remote?.relayProtocol,
+            url: remote?.url,
+          }));
+        }
+      });
+    } catch {
+      // diagnostic only, never let this break the session
+    }
+  }
+
   // candidate-pair's availableOutgoingBitrate is only the congestion
   // controller's bandwidth *estimate*, not what's actually being sent — it
   // can sit at its conservative startup value while the real encoded
@@ -356,7 +526,9 @@ export class MobileSession {
   }
 
   close(): void {
+    this.clearDisconnectTimer();
     this.stopStatsLoop();
+    this.stopIceRefreshLoop();
     this.controlChannel?.close();
     this.clipboardChannel?.close();
     this.chatChannel?.close();

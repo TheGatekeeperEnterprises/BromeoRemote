@@ -32,6 +32,12 @@ function applyScreenContentCodecPreference(transceiver: RTCRtpTransceiver | unde
   }
 }
 
+function iceUrls(server: RTCIceServer): string[] {
+  const urls = server.urls;
+  if (!urls) return [];
+  return Array.isArray(urls) ? urls : [urls];
+}
+
 export interface SessionStats {
   fps: number | null;
   bitrateKbps: number | null;
@@ -52,6 +58,54 @@ export interface SessionCallbacks {
 }
 
 const CHUNK_SIZE = 48 * 1024; // stay comfortably under the ~64KB/256KB SCTP message ceilings
+// Shorter than the ~47s failure ceiling seen in practice (see docs/47seconds.md
+// §4.9a) so the path gets refreshed well before whatever degrades it has a
+// chance to accumulate — a single 30s interval let ~4 refreshes happen before
+// still eventually failing, so refreshing more often is the next thing worth
+// tuning.
+const ICE_REFRESH_INTERVAL_MS = 15_000;
+const DISCONNECTED_GRACE_MS = 20_000;
+const DISCONNECT_RETRY_INTERVAL_MS = 4_000;
+
+// Adaptive bitrate ("auto" quality) tuning. Below MIN, text stops being
+// legible no matter what; above MAX there's no visible benefit and it's just
+// wasted bandwidth (matches the existing "low"/"high" manual tiers' bounds,
+// so switching between manual and auto never jumps outside a range the user
+// has already seen). HEADROOM keeps the target under the browser's own
+// bandwidth estimate rather than chasing it exactly, so the encoder isn't
+// the thing that pushes the link into congestion in the first place.
+const ADAPTIVE_MIN_KBPS = 500;
+const ADAPTIVE_MAX_KBPS = 20000;
+const ADAPTIVE_HEADROOM = 0.85;
+// While the viewer is actively zoomed in (see setZoomedIn), the user is
+// scrutinizing detail right now — worth spending closer to the full
+// estimated bandwidth (less safety margin) and never dropping below a
+// legible floor, even if that risks tolerating a bit more congestion than
+// usual. Reverts to the normal headroom/floor the moment they zoom back out.
+const ADAPTIVE_ZOOM_HEADROOM = 0.97;
+const ADAPTIVE_ZOOM_MIN_KBPS = 2500;
+// Last resort: acceptAsHost pins scaleResolutionDownBy at 1 (see its own
+// comment) so bitrate pressure degrades frame rate, not sharpness — right
+// up until the cap has been pinned at its own floor under real congestion
+// for a while, at which point full resolution at a floor-level bitrate is
+// just a blocky mess anyway. Scaling the encode down trades resolution for
+// a bitrate-per-pixel ratio that actually looks clean, the same trade a
+// human would make manually. SUSTAINED_TICKS requires several consecutive
+// congested-at-floor stats ticks (not one blip) before committing to it,
+// since resizing the encoder's internal buffers isn't free and shouldn't
+// flip back and forth on noise.
+const ADAPTIVE_RESOLUTION_SCALE_DOWN = 1.5;
+const ADAPTIVE_SUSTAINED_FLOOR_TICKS = 3;
+// Fast-down/slow-up: congestion should be shed immediately (a full jump to
+// target in one tick), while recovery ramps gradually so a momentarily
+// optimistic bandwidth estimate can't immediately shove the link right back
+// into the congestion it just recovered from.
+const ADAPTIVE_RAMP_UP_STEP = 0.15;
+const ADAPTIVE_PACKET_LOSS_CONGESTED = 0.05;
+// Below this, two estimates are treated as "the same" and skipped — every
+// tick's estimate jitters a little even on a stable link, and re-issuing
+// setParameters for noise alone would churn the encoder for no visible gain.
+const ADAPTIVE_MIN_CHANGE_FRACTION = 0.03;
 
 export class PeerSession {
   private pc: RTCPeerConnection;
@@ -64,10 +118,28 @@ export class PeerSession {
   private candidateQueue: RTCIceCandidateInit[] = [];
   private pendingSystemCommands: SystemCommand[] = [];
   private statsTimer: ReturnType<typeof setInterval> | null = null;
+  private iceRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private disconnectRetryTimer: ReturnType<typeof setInterval> | null = null;
+  private iceRestartInFlight = false;
   private lastVideoBytes: number | null = null;
   private lastVideoBytesTimestamp: number | null = null;
   private incomingFiles = new Map<string, { name: string; total: number; chunks: string[]; received: number }>();
   private lastMouseMoveSent = 0;
+  // See docs/47seconds.md — this is the mitigation for the mid-session
+  // TURN-relay drop, not a fix for its root cause. Genuinely on by default
+  // (a session that quietly re-stitches itself beats one that just drops),
+  // but selectable via setFailsafeEnabled for anyone who'd rather see a
+  // real disconnect than repeated background reconnect attempts.
+  private failsafeEnabled = true;
+  // "auto" quality (the default) drives the bitrate cap continuously off
+  // real measured conditions instead of leaving it permanently uncapped —
+  // see updateAdaptiveBitrate. Manual "high"/"low" picks disable this.
+  private adaptiveQualityEnabled = true;
+  private currentAdaptiveCapKbps: number | null = null;
+  private viewerZoomedIn = false;
+  private currentResolutionScale = 1;
+  private sustainedFloorTicks = 0;
 
   constructor(
     private role: Role,
@@ -76,18 +148,7 @@ export class PeerSession {
     private peerId: string,
     private callbacks: SessionCallbacks
   ) {
-    // Deliberately NOT iceTransportPolicy:"relay" here (mobile does use it —
-    // see mobile/src/session.ts). We tried forcing relay-only on desktop to
-    // fix a ~40s mid-session drop, but that investigation (see
-    // docs/WEBRTC-TURN-DEBUGGING.md) found the drop almost certainly wasn't
-    // about relay-vs-direct switching at all — and forcing relay-only trades
-    // an intermittent drop for a *hard, total* connection failure on any
-    // machine where the local Chromium build can't complete a TURN allocate
-    // (confirmed to happen, cause unknown, isolated to one specific Windows
-    // install during that investigation). Default policy — allow any
-    // candidate type — is the safer default for a wide range of customer
-    // machines; revisit with a more targeted fix if the original drop
-    // resurfaces for real users.
+    console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
     this.pc = new RTCPeerConnection({ iceServers });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
@@ -98,14 +159,27 @@ export class PeerSession {
       }
     };
     this.pc.onicegatheringstatechange = () => console.log("[ice] gatheringState:", this.pc.iceGatheringState);
-    this.pc.oniceconnectionstatechange = () => console.log("[ice] iceConnectionState:", this.pc.iceConnectionState);
+    this.pc.oniceconnectionstatechange = () => {
+      console.log("[ice] iceConnectionState:", this.pc.iceConnectionState);
+      if (this.pc.iceConnectionState === "disconnected") this.dumpCandidatePairStats();
+    };
     this.pc.onicecandidateerror = (ev: any) =>
       console.error("[ice] candidate error:", ev.errorCode, ev.errorText, ev.url ?? ev.address);
     this.pc.onconnectionstatechange = () => {
       console.log("[ice] connectionState:", this.pc.connectionState);
       this.callbacks.onConnectionState?.(this.pc.connectionState);
-      if (this.pc.connectionState === "connected") this.startStatsLoop();
-      if (["disconnected", "failed", "closed"].includes(this.pc.connectionState)) this.stopStatsLoop();
+      if (this.pc.connectionState === "connected") {
+        this.clearDisconnectTimer();
+        this.startStatsLoop();
+        this.startIceRefreshLoop();
+      } else if (this.pc.connectionState === "disconnected") {
+        this.stopStatsLoop();
+        this.scheduleDisconnectRecovery();
+      } else if (["failed", "closed"].includes(this.pc.connectionState)) {
+        this.clearDisconnectTimer();
+        this.stopStatsLoop();
+        this.stopIceRefreshLoop();
+      }
     };
     this.pc.ontrack = (ev) => {
       if (ev.streams[0]) this.callbacks.onRemoteStream?.(ev.streams[0]);
@@ -202,6 +276,19 @@ export class PeerSession {
     this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: answer } });
   }
 
+  /** Host: answers a renegotiation/ICE-restart offer without asking for screen capture again. */
+  async answerOffer(offer: RTCSessionDescriptionInit): Promise<void> {
+    await this.pc.setRemoteDescription(offer);
+    await this.flushCandidateQueue();
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(answer);
+    this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: answer } });
+  }
+
+  hasCaptureStream(): boolean {
+    return this.captureStream != null;
+  }
+
   /** Host: swaps in a newly captured monitor's track without renegotiating the connection. */
   async replaceVideoTrack(newStream: MediaStream): Promise<void> {
     const sender = this.pc.getSenders().find((s) => s.track?.kind === "video");
@@ -216,12 +303,35 @@ export class PeerSession {
 
   /** Host: caps (or uncaps, when null) the outgoing video bitrate for the shared screen. */
   async setVideoBitrate(maxBitrateKbps: number | null): Promise<void> {
+    await this.applyBitrateCap(maxBitrateKbps);
+  }
+
+  private async applyBitrateCap(maxBitrateKbps: number | null): Promise<void> {
     const sender = this.pc.getSenders().find((s) => s.track?.kind === "video");
     if (!sender) return;
     const params = sender.getParameters();
     if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
     params.encodings[0].maxBitrate = maxBitrateKbps ? maxBitrateKbps * 1000 : undefined;
-    await sender.setParameters(params);
+    await sender.setParameters(params).catch(() => undefined);
+  }
+
+  /** Host: toggles the continuous network-adaptive bitrate engine ("auto" quality) on or off. */
+  setAdaptiveQuality(enabled: boolean): void {
+    this.adaptiveQualityEnabled = enabled;
+    if (!enabled) {
+      this.currentAdaptiveCapKbps = null; // don't reuse a stale ramp state on the next "auto" pick
+      this.sustainedFloorTicks = 0;
+      if (this.currentResolutionScale !== 1) {
+        this.currentResolutionScale = 1;
+        void this.applyResolutionScale(1); // manual "high"/"low" are always full resolution
+        this.sendSystemCommand({ kind: "adaptive-status", resolutionScaled: false });
+      }
+    }
+  }
+
+  /** Host: whether the viewer is currently zoomed in — see ADAPTIVE_ZOOM_HEADROOM. */
+  setZoomedIn(zoomedIn: boolean): void {
+    this.viewerZoomedIn = zoomedIn;
   }
 
   /** Viewer: applies the host's answer once it arrives via signaling. */
@@ -329,6 +439,9 @@ export class PeerSession {
       let fps: number | null = null;
       let bitrateKbps: number | null = null;
       let rttMs: number | null = null;
+      let availableOutgoingBps: number | null = null;
+      let qualityLimitationReason: string | null = null;
+      let fractionLost: number | null = null;
       stats.forEach((report) => {
         if (report.type === "inbound-rtp" && report.kind === "video") {
           if (typeof report.framesPerSecond === "number") fps = Math.round(report.framesPerSecond);
@@ -336,13 +449,196 @@ export class PeerSession {
         }
         if (report.type === "outbound-rtp" && report.kind === "video") {
           bitrateKbps = this.computeVideoBitrate(report.bytesSent, report.timestamp) ?? bitrateKbps;
+          if (typeof report.qualityLimitationReason === "string") qualityLimitationReason = report.qualityLimitationReason;
+        }
+        if (report.type === "remote-inbound-rtp" && report.kind === "video") {
+          if (typeof report.fractionLost === "number") fractionLost = report.fractionLost;
         }
         if (report.type === "candidate-pair" && report.state === "succeeded" && report.nominated) {
           if (typeof report.currentRoundTripTime === "number") rttMs = Math.round(report.currentRoundTripTime * 1000);
+          if (typeof report.availableOutgoingBitrate === "number") availableOutgoingBps = report.availableOutgoingBitrate;
         }
       });
       this.callbacks.onStats?.({ fps, bitrateKbps, rttMs });
+      if (this.role === "host" && this.adaptiveQualityEnabled) {
+        await this.updateAdaptiveBitrate(availableOutgoingBps, qualityLimitationReason, fractionLost);
+      }
     }, 2000);
+  }
+
+  // Real congestion-aware bitrate control for "auto" quality, instead of
+  // "auto" just meaning permanently uncapped. availableOutgoingBitrate is
+  // Chromium's own send-side bandwidth estimate (from RTCP/TWCC feedback,
+  // works the same whether the path is direct or TURN-relayed); combined
+  // with qualityLimitationReason/fractionLost as a "this isn't just a
+  // conservative estimate, it's actually congested right now" signal for
+  // reacting faster than the gradual ramp would on its own.
+  private async updateAdaptiveBitrate(
+    availableOutgoingBps: number | null,
+    qualityLimitationReason: string | null,
+    fractionLost: number | null
+  ): Promise<void> {
+    if (availableOutgoingBps == null) return; // no estimate yet this tick — leave the current cap alone
+    const estimateKbps = availableOutgoingBps / 1000;
+    const headroom = this.viewerZoomedIn ? ADAPTIVE_ZOOM_HEADROOM : ADAPTIVE_HEADROOM;
+    const minKbps = this.viewerZoomedIn ? ADAPTIVE_ZOOM_MIN_KBPS : ADAPTIVE_MIN_KBPS;
+    const targetKbps = Math.min(ADAPTIVE_MAX_KBPS, Math.max(minKbps, estimateKbps * headroom));
+    const current = this.currentAdaptiveCapKbps ?? targetKbps;
+
+    const congested =
+      qualityLimitationReason === "bandwidth" || (fractionLost != null && fractionLost > ADAPTIVE_PACKET_LOSS_CONGESTED);
+    let nextKbps: number;
+    if (targetKbps < current || congested) {
+      nextKbps = targetKbps; // shed congestion immediately, no gradual ramp down
+    } else {
+      nextKbps = current + Math.min(targetKbps - current, current * ADAPTIVE_RAMP_UP_STEP); // recover cautiously
+    }
+    nextKbps = Math.round(Math.min(ADAPTIVE_MAX_KBPS, Math.max(minKbps, nextKbps)));
+
+    // Pinned at (or essentially at) the floor while still congested — not a
+    // one-off, an ongoing state — is when full resolution stops being worth
+    // it. Tracked independently of the maxBitrate no-op-skip below, since
+    // this needs to keep counting even on ticks the bitrate itself doesn't
+    // change.
+    const pinnedAtFloorAndCongested = congested && nextKbps <= minKbps * 1.05;
+    this.sustainedFloorTicks = pinnedAtFloorAndCongested ? this.sustainedFloorTicks + 1 : 0;
+    const wantScale = this.sustainedFloorTicks >= ADAPTIVE_SUSTAINED_FLOOR_TICKS ? ADAPTIVE_RESOLUTION_SCALE_DOWN : 1;
+    if (wantScale !== this.currentResolutionScale) {
+      this.currentResolutionScale = wantScale;
+      await this.applyResolutionScale(wantScale);
+      this.sendSystemCommand({ kind: "adaptive-status", resolutionScaled: wantScale > 1 });
+    }
+
+    if (Math.abs(nextKbps - current) < current * ADAPTIVE_MIN_CHANGE_FRACTION) return; // within noise, skip the churn
+    this.currentAdaptiveCapKbps = nextKbps;
+    await this.applyBitrateCap(nextKbps);
+  }
+
+  private async applyResolutionScale(scaleDownBy: number): Promise<void> {
+    const sender = this.pc.getSenders().find((s) => s.track?.kind === "video");
+    if (!sender) return;
+    const params = sender.getParameters();
+    if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+    params.encodings[0].scaleResolutionDownBy = scaleDownBy;
+    await sender.setParameters(params).catch(() => undefined);
+  }
+
+  /** Settings-driven toggle for the periodic ICE-restart failsafe — see failsafeEnabled's own comment. */
+  setFailsafeEnabled(enabled: boolean): void {
+    this.failsafeEnabled = enabled;
+    if (!enabled) this.stopIceRefreshLoop(); // stop an already-running proactive loop immediately
+  }
+
+  private startIceRefreshLoop(): void {
+    if (this.role !== "viewer" || this.iceRefreshTimer || !this.failsafeEnabled) return;
+    this.iceRefreshTimer = setInterval(() => {
+      void this.restartIce("scheduled");
+    }, ICE_REFRESH_INTERVAL_MS);
+  }
+
+  private stopIceRefreshLoop(): void {
+    if (this.iceRefreshTimer) clearInterval(this.iceRefreshTimer);
+    this.iceRefreshTimer = null;
+    this.iceRestartInFlight = false;
+  }
+
+  private scheduleDisconnectRecovery(): void {
+    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce("disconnected");
+    // A single restart attempt can itself fail to land (e.g. it starts while
+    // signalingState isn't stable yet, or its own candidate gather stalls) —
+    // keep retrying every few seconds for the whole grace window instead of
+    // trying once and just waiting out the clock. restartIce() already no-ops
+    // safely if one is still in flight or the state isn't right for it.
+    if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
+      this.disconnectRetryTimer = setInterval(() => {
+        if (this.pc.connectionState === "disconnected") void this.restartIce("disconnected");
+      }, DISCONNECT_RETRY_INTERVAL_MS);
+    }
+    // The grace-period close below always runs regardless of the failsafe
+    // toggle — turning the active recovery attempts off shouldn't mean a
+    // dead connection hangs forever, just that nothing actively fights to
+    // revive it first.
+    if (this.disconnectTimer) return;
+    this.disconnectTimer = setTimeout(() => {
+      this.disconnectTimer = null;
+      this.clearDisconnectRetryTimer();
+      if (this.pc.connectionState === "disconnected") {
+        console.warn("[ice] disconnected recovery timed out, closing peer connection");
+        this.pc.close();
+      }
+    }, DISCONNECTED_GRACE_MS);
+  }
+
+  private clearDisconnectTimer(): void {
+    if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
+    this.disconnectTimer = null;
+    this.clearDisconnectRetryTimer();
+  }
+
+  private clearDisconnectRetryTimer(): void {
+    if (this.disconnectRetryTimer) clearInterval(this.disconnectRetryTimer);
+    this.disconnectRetryTimer = null;
+  }
+
+  private async restartIce(reason: "scheduled" | "disconnected"): Promise<void> {
+    if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
+    if (this.pc.signalingState !== "stable") return;
+    this.iceRestartInFlight = true;
+    try {
+      console.log(`[ice] restarting ICE (${reason})`);
+      this.pc.restartIce?.();
+      const offer = await this.pc.createOffer({ iceRestart: true });
+      await this.pc.setLocalDescription(offer);
+      this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: offer } });
+    } catch (err) {
+      console.warn("[ice] ICE restart failed:", err);
+    } finally {
+      this.iceRestartInFlight = false;
+    }
+  }
+
+  // Temporary diagnostic for the ~40-47s mid-session drop investigation
+  // (see docs/WEBRTC-TURN-DEBUGGING.md) — freeze-frames the selected
+  // candidate pair and both its candidates the instant ICE first reports
+  // "disconnected", to see which side stopped hearing from the other.
+  private async dumpCandidatePairStats(): Promise<void> {
+    const stats = await this.pc.getStats();
+    const byId = new Map<string, any>();
+    stats.forEach((report) => byId.set(report.id, report));
+    stats.forEach((report) => {
+      if (report.type === "candidate-pair" && (report.nominated || report.state === "succeeded")) {
+        const local = byId.get(report.localCandidateId);
+        const remote = byId.get(report.remoteCandidateId);
+        console.warn("[ice] DROP DIAGNOSTIC candidate-pair:", {
+          state: report.state,
+          nominated: report.nominated,
+          bytesSent: report.bytesSent,
+          bytesReceived: report.bytesReceived,
+          lastPacketSentTimestamp: report.lastPacketSentTimestamp,
+          lastPacketReceivedTimestamp: report.lastPacketReceivedTimestamp,
+          currentRoundTripTime: report.currentRoundTripTime,
+          requestsSent: report.requestsSent,
+          responsesReceived: report.responsesReceived,
+          consentRequestsSent: report.consentRequestsSent,
+        });
+        console.warn("[ice] DROP DIAGNOSTIC local candidate:", {
+          type: local?.candidateType,
+          protocol: local?.protocol,
+          address: local?.address,
+          port: local?.port,
+          relayProtocol: local?.relayProtocol,
+          url: local?.url,
+        });
+        console.warn("[ice] DROP DIAGNOSTIC remote candidate:", {
+          type: remote?.candidateType,
+          protocol: remote?.protocol,
+          address: remote?.address,
+          port: remote?.port,
+          relayProtocol: remote?.relayProtocol,
+          url: remote?.url,
+        });
+      }
+    });
   }
 
   // The candidate-pair's availableOutgoingBitrate is only the congestion
@@ -371,7 +667,9 @@ export class PeerSession {
   }
 
   close(): void {
+    this.clearDisconnectTimer();
     this.stopStatsLoop();
+    this.stopIceRefreshLoop();
     this.pendingSystemCommands = [];
     this.controlChannel?.close();
     this.filesChannel?.close();
