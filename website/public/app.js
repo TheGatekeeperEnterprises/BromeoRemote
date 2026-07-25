@@ -92,4 +92,30 @@
   }
 
   loadSiteConfig();
+
+  const btnMollieCheckout = document.querySelector("#btnMollieCheckout");
+  if (btnMollieCheckout) {
+    btnMollieCheckout.addEventListener("click", async () => {
+      const email = prompt("Voer je e-mailadres in om af te rekenen:");
+      if (!email) return;
+
+      try {
+        const originalText = btnMollieCheckout.textContent;
+        btnMollieCheckout.textContent = "Laden...";
+        btnMollieCheckout.disabled = true;
+
+        const response = await postJson("/api/checkout", { email });
+        if (response.ok && response.url) {
+          window.location.href = response.url;
+        } else {
+          alert("Fout bij aanmaken checkout: " + (response.error || "Onbekend"));
+        }
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btnMollieCheckout.textContent = "Afrekenen (Mollie)";
+        btnMollieCheckout.disabled = false;
+      }
+    });
+  }
 })();

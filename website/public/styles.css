@@ -1187,3 +1187,107 @@ button:focus-visible {
     justify-content: flex-start;
   }
 }
+/* Pricing Section */
+.pricing-section {
+  padding: 8rem 0;
+}
+.pricing-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
+  align-items: center;
+  margin-top: 4rem;
+}
+.pricing-illustration img {
+  width: 100%;
+  max-width: 500px;
+  filter: drop-shadow(0 20px 40px rgba(0, 255, 170, 0.2));
+  border-radius: 20px;
+}
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.pricing-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+.pricing-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+.pricing-card.premium-card {
+  background: linear-gradient(145deg, rgba(20,30,50,0.8), rgba(10,20,40,0.9));
+  border: 1px solid var(--primary-accent);
+  box-shadow: 0 10px 30px rgba(11, 232, 129, 0.1);
+}
+.popular-badge {
+  position: absolute;
+  top: -12px;
+  right: 20px;
+  background: var(--primary-accent);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+  text-transform: uppercase;
+}
+.pricing-card h3 {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+.pricing-card .price {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--primary-accent);
+}
+.pricing-card .price span {
+  font-size: 1rem;
+  color: var(--text-muted);
+}
+.pricing-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 2rem;
+  flex-grow: 1;
+}
+.pricing-card ul li {
+  padding-left: 1.5rem;
+  position: relative;
+  margin-bottom: 0.75rem;
+  color: var(--text-secondary);
+}
+.pricing-card ul li::before {
+  content: "?";
+  position: absolute;
+  left: 0;
+  color: var(--primary-accent);
+}
+.download-action.secondary {
+  background: rgba(255,255,255,0.1);
+  color: var(--text-primary);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.download-action.secondary:hover {
+  background: rgba(255,255,255,0.2);
+}
+@media (max-width: 1024px) {
+  .pricing-layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 768px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}

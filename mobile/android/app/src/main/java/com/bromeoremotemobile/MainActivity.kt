@@ -4,6 +4,7 @@ import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
+import com.oney.WebRTCModule.WebRTCModuleOptions
 
 class MainActivity : ReactActivity() {
 
@@ -12,6 +13,8 @@ class MainActivity : ReactActivity() {
   // visible until this activity's first frame draws.
   override fun onCreate(savedInstanceState: android.os.Bundle?) {
     setTheme(R.style.AppTheme)
+    val options = WebRTCModuleOptions.getInstance()
+    options.enableMediaProjectionService = true
     super.onCreate(null)
   }
 

@@ -89,7 +89,8 @@ export class MobileSession {
   // ever want to see a real disconnect instead of repeated background
   // reconnect attempts.
   private failsafeEnabled = true;
-
+  private currentResolutionScale = 1;
+  private sustainedHighRttTicks = 0;
   constructor(private iceServers: any[], private signaling: Signaling, private peerId: string, private callbacks: SessionCallbacks) {
     console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
     this.pc = new RTCPeerConnection({ iceServers });
@@ -375,6 +376,29 @@ export class MobileSession {
             if (typeof report.currentRoundTripTime === "number") rttMs = Math.round(report.currentRoundTripTime * 1000);
           }
         });
+
+        // Adaptive Quality Logic (host side only)
+        if (this.role === "host") {
+          const congested = rttMs != null && rttMs > 150;
+          this.sustainedHighRttTicks = congested ? this.sustainedHighRttTicks + 1 : 0;
+          const wantScale = this.sustainedHighRttTicks >= 3 ? 2 : 1; // scale down by half if high RTT for 3 ticks (6 seconds)
+          if (wantScale !== this.currentResolutionScale) {
+            this.currentResolutionScale = wantScale;
+            const videoSender = this.pc.getSenders().find((s: any) => s.track?.kind === "video");
+            if (videoSender) {
+              try {
+                const params = videoSender.getParameters();
+                if (!params.encodings || params.encodings.length === 0) params.encodings = [{}];
+                params.encodings[0].scaleResolutionDownBy = wantScale;
+                await videoSender.setParameters(params);
+                this.sendSystemCommand({ kind: "adaptive-status", resolutionScaled: wantScale > 1 });
+              } catch {
+                // best effort
+              }
+            }
+          }
+        }
+
         this.callbacks.onStats?.({ fps, bitrateKbps, rttMs, width, height });
       } catch {
         // stats collection is best-effort

@@ -1,5 +1,6 @@
 import { mouse, keyboard, Point, Button, Key, screen } from "@nut-tree-fork/nut-js";
 import type { InputEvent } from "../shared/protocol";
+import { getActiveAppWindowBounds } from "./main";
 
 mouse.config.mouseSpeed = 4000; // near-instant cursor moves, this is remote control not a demo
 
@@ -49,16 +50,26 @@ export function invalidateScreenSizeCache(): void {
   cachedScreenSize = null;
 }
 
+async function resolveInputPosition(xPct: number, yPct: number): Promise<Point> {
+  const windowBounds = getActiveAppWindowBounds();
+  if (windowBounds) {
+    return new Point(
+      Math.round(windowBounds.x + xPct * windowBounds.width),
+      Math.round(windowBounds.y + yPct * windowBounds.height)
+    );
+  }
+  const { width, height } = await getScreenSize();
+  return new Point(Math.round(xPct * width), Math.round(yPct * height));
+}
+
 export async function applyInputEvent(event: InputEvent): Promise<void> {
   switch (event.kind) {
     case "mousemove": {
-      const { width, height } = await getScreenSize();
-      await mouse.setPosition(new Point(Math.round(event.xPct * width), Math.round(event.yPct * height)));
+      await mouse.setPosition(await resolveInputPosition(event.xPct, event.yPct));
       break;
     }
     case "mousedown": {
-      const { width, height } = await getScreenSize();
-      await mouse.setPosition(new Point(Math.round(event.xPct * width), Math.round(event.yPct * height)));
+      await mouse.setPosition(await resolveInputPosition(event.xPct, event.yPct));
       await mouse.pressButton(BUTTON_MAP[event.button]);
       break;
     }

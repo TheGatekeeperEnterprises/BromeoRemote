@@ -1805,34 +1805,46 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
           const installed = ok || (await window.bromeo.sasStatus());
           currentSession?.sendSystemCommand({ kind: "ctrl-alt-del-status", ok, installed });
         }
-      } else if (cmd.kind === "switch-monitor") {
-        await window.bromeo.setActiveMonitor(cmd.monitorId);
+      } else if (
+        cmd.kind === "switch-monitor" ||
+        cmd.kind === "switch-window" ||
+        cmd.kind === "switch-to-desktop"
+      ) {
+        if (!sessionPermissions.control) return;
+        
+        if (cmd.kind === "switch-monitor") {
+          await window.bromeo.setActiveMonitor(cmd.monitorId);
+        } else if (cmd.kind === "switch-window") {
+          await window.bromeo.setActiveWindow(cmd.windowId, cmd.aspect);
+        } else if (cmd.kind === "switch-to-desktop") {
+          await window.bromeo.setCaptureDesktop();
+        }
+
         const stream = await navigator.mediaDevices.getDisplayMedia({
           video: CAPTURE_VIDEO_CONSTRAINTS,
           audio: false,
         });
         await currentSession?.replaceVideoTrack(stream);
+        
+        // Robustly fetch and send the new dimensions as soon as they are available.
+        const track = stream.getVideoTracks()[0];
+        if (track) {
+          let attempts = 0;
+          const timer = setInterval(() => {
+            const settings = track.getSettings();
+            if (settings.width && settings.height) {
+              clearInterval(timer);
+              currentSession?.sendSystemCommand({ kind: "video-dimensions", width: settings.width, height: settings.height });
+            } else if (++attempts > 40) {
+              clearInterval(timer); // give up after 2s
+            }
+          }, 50);
+        }
       } else if (cmd.kind === "window-list-request") {
         const windows = await window.bromeo.listWindows();
         currentSession?.sendSystemCommand({ kind: "window-list", windows });
-      } else if (cmd.kind === "switch-window") {
-        if (!sessionPermissions.control) return;
-        await window.bromeo.setActiveWindow(cmd.windowId, cmd.aspect);
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: CAPTURE_VIDEO_CONSTRAINTS,
-          audio: false,
-        });
-        await currentSession?.replaceVideoTrack(stream);
       } else if (cmd.kind === "resize-active-window") {
         if (sessionPermissions.control) await window.bromeo.resizeActiveWindow(cmd.aspect);
-      } else if (cmd.kind === "switch-to-desktop") {
-        if (!sessionPermissions.control) return;
-        await window.bromeo.setCaptureDesktop();
-        const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: CAPTURE_VIDEO_CONSTRAINTS,
-          audio: false,
-        });
-        await currentSession?.replaceVideoTrack(stream);
       }
     },
     onFileOffer: (offer) => {

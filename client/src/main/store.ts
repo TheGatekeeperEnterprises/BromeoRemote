@@ -49,10 +49,21 @@ export function randomPassword(length = 6): string {
 class Store {
   private path: string;
   private data: StoreData;
+  private isSecondary = false;
 
   constructor() {
     this.path = join(app.getPath("userData"), "bromeoremote-config.json");
     this.data = this.load();
+  }
+
+  setSecondaryInstance(): void {
+    this.isSecondary = true;
+    // Generate a fresh, unique device ID for this secondary instance so it doesn't collide on the server
+    this.data = {
+      ...this.data,
+      deviceId: randomDeviceId(),
+      deviceLabel: `${hostname()} (Instantie 2)`,
+    };
   }
 
   private load(): StoreData {

@@ -15,6 +15,7 @@ import {
   Alert,
   Switch,
   Dimensions,
+  useWindowDimensions,
   Keyboard as RNKeyboard,
   Animated,
   PixelRatio,
@@ -34,6 +35,7 @@ import { requestNotificationPermission, getPushToken, onPushTokenRefresh, onFore
 import { ensureNotificationChannels, onNotificationPress, getInitialNotificationPress, openConfirmNotificationSettings } from "./notifications";
 import { getOpenAiApiKey, setOpenAiApiKey, captureRemoteVideoFrame, askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { isAccessibilityServiceEnabled, openAccessibilitySettings } from "./remoteControl";
+import { isVirtualKeyboardEnabled, isVirtualKeyboardActive, openKeyboardSettings } from "./virtualKeyboard";
 import { RemoteInputTranslator } from "./inputTranslator";
 import { getSavedDevices, saveDevice, removeSavedDevice, toggleFavorite, sortSavedDevices } from "./savedDevices";
 import { getSessionHistory, addSessionHistoryEntry, clearSessionHistory, type SessionHistoryEntry } from "./sessionHistory";
@@ -245,6 +247,8 @@ export default function App(): React.JSX.Element {
   // sit right under the phone's own gesture/button navigation area. Applied
   // directly to that container's `bottom` below.
   const insets = useSafeAreaInsets();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+  const isLandscape = windowWidth > windowHeight;
   const [theme, setThemeState] = useState<AppTheme>("light");
   const colors = themeColors[theme];
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -300,12 +304,20 @@ export default function App(): React.JSX.Element {
   const [pendingIncoming, setPendingIncoming] = useState<{ fromId: string } | null>(null);
   const [currentRole, setCurrentRoleState] = useState<"viewer" | "host" | null>(null);
   const [accessibilityEnabled, setAccessibilityEnabled] = useState(false);
+  const [virtualKeyboardEnabled, setVirtualKeyboardEnabled] = useState(false);
   const roleRef = useRef<"viewer" | "host" | null>(null);
   function setCurrentRole(role: "viewer" | "host" | null): void {
     roleRef.current = role;
     setCurrentRoleState(role);
   }
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  useEffect(() => {
+    if (!keyboardVisible) {
+      setKeyboardDraft("");
+      lastKeyboardDraftRef.current = "";
+    }
+  }, [keyboardVisible]);
+  
   // Tracks the actual OS keyboard height so the video area can shift up
   // above it (see the keyboardHeight usage below) instead of the keyboard
   // simply covering whatever was at the bottom of the screen.
@@ -328,6 +340,7 @@ export default function App(): React.JSX.Element {
   // characters (exactly the scrambled repeats reported when typing fast). A
   // controlled input makes "" the authoritative value immediately.
   const [keyboardDraft, setKeyboardDraft] = useState("");
+  const lastKeyboardDraftRef = useRef("");
   // Only one of the toolbar's dropdown panels is open at a time (Shortcuts,
   // Quick actions, Settings) — matches TeamViewer's mobile session bar.
   const [activePanel, setActivePanel] = useState<"quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | "interactionHelp" | null>(null);
@@ -824,6 +837,20 @@ export default function App(): React.JSX.Element {
       yPct: Math.min(1, Math.max(0, (contentY - rect.y) / rect.height)),
     };
   }
+  function clampPan(pan: number, scale: number, containerSize: number, contentStart: number, contentSize: number): number {
+    const c = containerSize / 2;
+    const scaledContentSize = contentSize * scale;
+    if (scaledContentSize <= containerSize) {
+      // Content fits entirely within the container (e.g. letterboxing). Force it to be centered.
+      return c - contentStart - contentSize / 2;
+    } else {
+      // Content is larger than container. Constrain it so edges don't come into view.
+      const maxPan = c * (1 - 1 / scale) - contentStart;
+      const minPan = c * (1 + 1 / scale) - (contentStart + contentSize);
+      return Math.min(maxPan, Math.max(minPan, pan));
+    }
+  }
+
   // Pan needed so that a given content point (0..1 fraction) stays under a
   // given page-absolute screen point at a given scale — used both to zoom in
   // centered on a double-tap, and to keep the pinch's start point anchored
@@ -837,11 +864,12 @@ export default function App(): React.JSX.Element {
     const rect = getContentRect();
     const contentX = rect.x + contentXPct * rect.width;
     const contentY = rect.y + contentYPct * rect.height;
-    const maxPanX = ((scale - 1) * width) / (2 * scale);
-    const maxPanY = ((scale - 1) * height) / (2 * scale);
-    const panX = Math.min(maxPanX, Math.max(-maxPanX, (lx - cx) / scale - (contentX - cx)));
-    const panY = Math.min(maxPanY, Math.max(-maxPanY, (ly - cy) / scale - (contentY - cy)));
-    return { panX, panY };
+    const targetPanX = (lx - cx) / scale - (contentX - cx);
+    const targetPanY = (ly - cy) / scale - (contentY - cy);
+    return {
+      panX: clampPan(targetPanX, scale, width, rect.x, rect.width),
+      panY: clampPan(targetPanY, scale, height, rect.y, rect.height),
+    };
   }
   // Forward transform (content 0..1 fraction → local screen point, relative to
   // videoWrap) — the inverse of pageToContentPct's math — used to draw the
@@ -858,29 +886,7 @@ export default function App(): React.JSX.Element {
     const ly = cy + scale * (contentY - cy + panY);
     return { lx, ly };
   }
-  // Vertical-only edge-nudge: while zoomed in, keeps the virtual cursor
-  // from wandering out of the visible (panned) viewport top/bottom — nudges
-  // panY just enough to bring it back within a margin, like most
-  // editors/canvases auto-scroll near an edge. Horizontal (X) is handled
-  // completely differently, by moveVirtualCursor's own pan-lock logic
-  // right below — TeamViewer's mouse mode keeps the cursor's screen X
-  // position fixed by panning under it continuously, not just reactively
-  // near an edge — so this function only ever computes/returns a Y value,
-  // it doesn't touch panX at all. Returns the (possibly unchanged) panY;
-  // the caller applies it as part of one combined setZoom.
-  function clampedPanYForCursor(xPct: number, yPct: number): number {
-    const { scale, panY } = zoomRef.current;
-    if (scale <= 1.01) return panY; // whole content already visible, nothing to scroll
-    const { height } = videoLayoutRef.current;
-    if (!height) return panY;
-    const margin = 32;
-    const { ly } = contentPctToLocal(xPct, yPct);
-    const maxPanY = ((scale - 1) * height) / (2 * scale);
-    let newPanY = panY;
-    if (ly < margin) newPanY += (margin - ly) / scale;
-    else if (ly > height - margin) newPanY -= (ly - (height - margin)) / scale;
-    return Math.min(maxPanY, Math.max(-maxPanY, newPanY));
-  }
+
 
   // --- Mouse mode (trackpad-style relative control, vs. touch mode's
   // absolute tap-to-position) — matches TeamViewer's "Muis-modus". ---
@@ -954,10 +960,12 @@ export default function App(): React.JSX.Element {
     const speed = Math.hypot(dxPx, dyPx); // px moved this touch-move event
     const sensitivity = 1 + Math.min(1.3, Math.max(0, speed - 4) / 18);
     const dXPct = (dxPx / width) * sensitivity;
+    const dYPct = (dyPx / height) * sensitivity;
     const next = {
       xPct: Math.min(1, Math.max(0, virtualCursorRef.current.xPct + dXPct)),
-      yPct: Math.min(1, Math.max(0, virtualCursorRef.current.yPct + (dyPx / height) * sensitivity)),
+      yPct: Math.min(1, Math.max(0, virtualCursorRef.current.yPct + dYPct)),
     };
+
     // Deliberately not setVirtualCursor/setState here — this runs on every
     // single touch-move (up to ~60/s) and a full re-render on each one is
     // exactly what made the dot visibly lag behind the finger (see
@@ -966,30 +974,26 @@ export default function App(): React.JSX.Element {
     // needs to move on every event.
     virtualCursorRef.current = next;
 
-    // TeamViewer mouse-mode horizontal pan-lock: while zoomed in, keep the
-    // cursor's SCREEN x position fixed by panning the viewport under it by
-    // the exact amount that cancels out the xPct change above — so it
-    // looks like the desktop scrolls left/right past a stationary cursor,
-    // the way TeamViewer's own touchpad-mode zoom behaves. Once panX is
-    // already at its bound (nothing left to compensate with), the clamp
-    // below simply can't fully cancel the change anymore and the cursor
-    // starts visibly moving horizontally too — that fall-through is
-    // automatic, not a separate mode to handle. Vertical is intentionally
-    // NOT locked this way, per product decision — it just moves the cursor
-    // directly; see clampedPanYForCursor's own, different, reactive-edge
-    // -nudge behavior for it instead.
+    // Pan-lock: while zoomed in, keep the cursor's SCREEN position fixed by 
+    // panning the viewport under it. We do this by calculating the exact pan 
+    // needed to keep the new cursor position (contentX/Y) at the center of the 
+    // screen (cx/cy). Once pan is at its bound (edge of screen), the clamp 
+    // below limits the pan, and the cursor naturally leaves the center to reach 
+    // the edge of the desktop.
     const { scale, panX, panY } = zoomRef.current;
     let newPanX = panX;
+    let newPanY = panY;
     if (scale > 1.01) {
       const rect = getContentRect();
-      const maxPanX = ((scale - 1) * width) / (2 * scale);
-      newPanX = Math.min(maxPanX, Math.max(-maxPanX, panX - rect.width * dXPct));
+      const contentX = rect.x + next.xPct * rect.width;
+      const contentY = rect.y + next.yPct * rect.height;
+      const cx = width / 2;
+      const cy = height / 2;
+      
+      newPanX = clampPan(cx - contentX, scale, width, rect.x, rect.width);
+      newPanY = clampPan(cy - contentY, scale, height, rect.y, rect.height);
     }
-    // TEMP diagnostic for the pan-lock regression report — remove once
-    // confirmed. Shows whether scale is actually >1.01 (pan-lock's
-    // precondition) and what newPanX resolves to, straight from adb logcat.
-    console.log("[pan-lock]", { scale: scale.toFixed(3), dXPct: dXPct.toFixed(4), panX: panX.toFixed(2), newPanX: newPanX.toFixed(2), maxPanXGate: scale > 1.01 });
-    const newPanY = clampedPanYForCursor(next.xPct, next.yPct);
+    
     if (newPanX !== panX || newPanY !== panY) setZoom({ scale, panX: newPanX, panY: newPanY });
 
     moveCursorDotTo(next.xPct, next.yPct);
@@ -1066,11 +1070,15 @@ export default function App(): React.JSX.Element {
 
   useEffect(() => {
     isAccessibilityServiceEnabled().then(setAccessibilityEnabled);
+    isVirtualKeyboardEnabled().then(setVirtualKeyboardEnabled);
     // The only way this actually changes is the user visiting Settings and
     // back (Android has no event for it) — re-check whenever the app returns
     // to the foreground, which covers exactly that path.
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") isAccessibilityServiceEnabled().then(setAccessibilityEnabled);
+      if (state === "active") {
+        isAccessibilityServiceEnabled().then(setAccessibilityEnabled);
+        isVirtualKeyboardEnabled().then(setVirtualKeyboardEnabled);
+      }
     });
     return () => sub.remove();
   }, []);
@@ -1380,6 +1388,11 @@ export default function App(): React.JSX.Element {
           setCursorShape(cmd.shape);
         } else if (cmd.kind === "adaptive-status") {
           setQualityDegraded(cmd.resolutionScaled);
+        } else if (cmd.kind === "video-dimensions") {
+          videoDimsRef.current = { width: cmd.width, height: cmd.height };
+          // Trigger a re-render so the new aspect ratio applies instantly
+          // instead of waiting up to 2s for the next getStats poll.
+          setStatsText((prev) => prev + " ");
         }
       },
     });
@@ -1605,18 +1618,27 @@ export default function App(): React.JSX.Element {
           }
 
           if (pinch.gestureType === "pan") {
-            // Two fingers held down and moved together (not pinching) =
-            // scroll the remote page/document, in whichever direction the
-            // fingers actually moved — up/down/sideways all just fall out
-            // of sending both axes. Incremental against the *last* frame's
-            // centroid (not the gesture's start point), like a real
-            // trackpad/wheel rather than one big jump.
+            // Two fingers held down and moved together (not pinching).
+            // In mouse mode, this scrolls the remote page (sends wheel events).
+            // In touch mode, this pans the zoomed-in viewport (moves the screen).
             const deltaX = centroid.x - pinch.lastCenterX;
             const deltaY = centroid.y - pinch.lastCenterY;
             pinch.lastCenterX = centroid.x;
             pinch.lastCenterY = centroid.y;
-            if (deltaX !== 0 || deltaY !== 0) {
-              sessionRef.current?.sendInput({ kind: "wheel", deltaX: -deltaX / 4, deltaY: -deltaY / 4 });
+            
+            if (interactionModeRef.current === "touch") {
+              const { width, height } = videoLayoutRef.current;
+              const rect = getContentRect();
+              const prev = zoomRef.current;
+              setZoom({
+                ...prev,
+                panX: clampPan(prev.panX + deltaX / prev.scale, prev.scale, width, rect.x, rect.width),
+                panY: clampPan(prev.panY + deltaY / prev.scale, prev.scale, height, rect.y, rect.height),
+              });
+            } else {
+              if (deltaX !== 0 || deltaY !== 0) {
+                sessionRef.current?.sendInput({ kind: "wheel", deltaX: -deltaX / 4, deltaY: -deltaY / 4 });
+              }
             }
             return;
           }
@@ -1738,8 +1760,13 @@ export default function App(): React.JSX.Element {
 
   // --- On-screen keyboard bridge ---
   function onKeyboardChangeText(text: string): void {
-    if (text.length > 0) sessionRef.current?.sendInput({ kind: "text", value: text });
-    setKeyboardDraft("");
+    const last = lastKeyboardDraftRef.current;
+    if (text.length > last.length) {
+      const added = text.slice(last.length);
+      sessionRef.current?.sendInput({ kind: "text", value: added });
+    }
+    lastKeyboardDraftRef.current = text;
+    setKeyboardDraft(text);
   }
   function onKeyboardKeyPress(key: string): void {
     if (key === "Backspace") {
@@ -1877,24 +1904,86 @@ export default function App(): React.JSX.Element {
   }
 
   if (inSession) {
+    const isAiBuddyOpen = activePanel === "aiBuddy";
+
+    const renderAiBuddyContent = () => (
+      <View style={styles.aiBuddyCardInner}>
+        <View style={styles.chatHeader}>
+          <Text style={styles.cardTitle}>AI Buddy</Text>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="AI Buddy sluiten">
+            {toolbarIcon(X)}
+          </TouchableOpacity>
+        </View>
+        {!openaiKeyConfigured ? (
+          <Text style={styles.fileEmptyText}>Stel eerst je OpenAI API-sleutel in bij Instellingen op het beginscherm.</Text>
+        ) : (
+          <>
+            <ScrollView
+              ref={aiBuddyScrollRef}
+              style={styles.chatMessagesList}
+              onContentSizeChange={() => aiBuddyScrollRef.current?.scrollToEnd({ animated: true })}
+            >
+              {aiBuddyLog.length === 0 && (
+                <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</Text>
+              )}
+              {aiBuddyLog.map((m, i) => (
+                <View key={i} style={[styles.chatBubble, m.role === "user" ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
+                  {m.imageBase64 && <Image source={{ uri: m.imageBase64 }} style={styles.aiBuddyMessageImage} resizeMode="cover" />}
+                  <Text style={styles.chatBubbleText}>{m.text}</Text>
+                </View>
+              ))}
+              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
+            </ScrollView>
+            {aiBuddyScreenshot && (
+              <View style={styles.aiBuddyScreenshotPreview}>
+                <Image source={{ uri: aiBuddyScreenshot }} style={styles.aiBuddyScreenshotPreviewImg} resizeMode="cover" />
+                <TouchableOpacity style={styles.aiBuddyScreenshotRemove} onPress={() => setAiBuddyScreenshot(null)}>
+                  {toolbarIcon(X)}
+                </TouchableOpacity>
+              </View>
+            )}
+            <View style={styles.chatInputRow}>
+              <TouchableOpacity style={styles.toolbarBtn} onPress={takeAiBuddyScreenshot} accessibilityRole="button" accessibilityLabel="Screenshot maken">
+                {toolbarIcon(Camera)}
+              </TouchableOpacity>
+              <TextInput
+                style={[styles.input, styles.chatInputField]}
+                value={aiBuddyInput}
+                onChangeText={setAiBuddyInput}
+                placeholder="Stel een vraag over dit probleem…"
+                placeholderTextColor="#8b96b8"
+                onSubmitEditing={sendAiBuddyMessage}
+                returnKeyType="send"
+                editable={!aiBuddySending}
+              />
+              <TouchableOpacity style={styles.chatSendBtn} onPress={sendAiBuddyMessage} disabled={aiBuddySending}>
+                <Text style={styles.primaryBtnText}>Versturen</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
+      </View>
+    );
+
     return (
-      // Only the top edge — the video is deliberately full-bleed on the
-      // other three (see videoWrap/floatingToolbarWrap below), so letting
-      // SafeAreaView pad bottom/left/right here too would double up with
-      // the insets applied directly to the toolbar and push it too far in.
       <SafeAreaView style={[styles.sessionRoot, { marginBottom: keyboardHeight }]} edges={["top"]}>
         <StatusBar barStyle="light-content" />
-        <View
-          ref={videoWrapRef}
-          style={styles.videoWrap}
-          onLayout={() => {
-            // layout.x/y are parent-relative, not comparable to touch events'
-            // page-absolute pageX/pageY — measureInWindow gives true screen coords.
-            videoWrapRef.current?.measureInWindow((x, y, width, height) => {
-              videoLayoutRef.current = { x, y, width, height };
-            });
-          }}
-        >
+        <View style={{ flex: 1, flexDirection: "column" }}>
+          <View style={[styles.sessionContainer, isLandscape && styles.sessionContainerLandscape]}>
+          {isLandscape && isAiBuddyOpen && (
+            <View style={[styles.aiBuddyLandscapePanel, { paddingTop: insets.top, paddingLeft: Math.max(insets.left, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
+              {renderAiBuddyContent()}
+            </View>
+          )}
+          <View
+            ref={videoWrapRef}
+            style={[styles.videoWrap, isAiBuddyOpen && !isLandscape && styles.videoWrapPortraitWithAi]}
+            onLayout={() => {
+              videoWrapRef.current?.measureInWindow((x, y, width, height) => {
+                videoLayoutRef.current = { x, y, width, height };
+              });
+            }}
+          >
           {/* panHandlers live on this inner layer (not videoWrap itself) so
               that expandBtn below — a real sibling, not a descendant of the
               gesture-capturing view — can actually receive its own taps.
@@ -1949,9 +2038,12 @@ export default function App(): React.JSX.Element {
                 // any monitor resolution).
                 const rect = getContentRect();
                 const { scale, panX, panY } = zoom;
-                const tier = zoomLive ? liveTierRef.current : pickTier(scale, getZoomTiers(renderQualityMode));
-                const tierWidth = rect.width * tier;
-                const tierHeight = rect.height * tier;
+                const rawTier = zoomLive ? liveTierRef.current : pickTier(scale, getZoomTiers(renderQualityMode));
+                // Clamp tier to prevent the physical SurfaceView from exceeding Android's max OpenGL texture
+                // size. If layout DP width goes too high (e.g., 6000 DP = 18000px), Android renders a black screen.
+                const safeTier = Math.min(rawTier, Math.max(1, 2000 / Math.max(rect.width, rect.height)));
+                const tierWidth = rect.width * safeTier;
+                const tierHeight = rect.height * safeTier;
                 const boxCenterX = width / 2 + scale * panX;
                 const boxCenterY = height / 2 + scale * panY;
                 return (
@@ -1965,7 +2057,7 @@ export default function App(): React.JSX.Element {
                         top: boxCenterY - tierHeight / 2,
                         width: tierWidth,
                         height: tierHeight,
-                        transform: [{ scale: scale / tier }],
+                        transform: [{ scale: scale / safeTier }],
                       },
                     ]}
                     objectFit="cover"
@@ -2027,27 +2119,51 @@ export default function App(): React.JSX.Element {
               chrome. On Android, RTCView is backed by a SurfaceView, which
               always draws on top of ordinary RN views regardless of
               z-index/order unless the overlay shares its stacking context. */}
-          {toolbarCollapsed ? (
-            <TouchableOpacity
-              style={[styles.expandBtn, { bottom: 8 + insets.bottom }]}
-              onPress={() => setToolbarCollapsed(false)}
-              accessibilityRole="button"
-              accessibilityLabel="Werkbalk uitklappen"
-            >
-              <ChevronUp size={20} color={colors.muted} strokeWidth={2.4} />
-            </TouchableOpacity>
-          ) : (
-            <View style={[styles.floatingToolbarWrap, { paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
-              <View style={styles.sessionToolbar}>
-                {/* Horizontally scrollable so every control (including disconnect)
-                    stays reachable even on narrow screens where this cluster would
-                    otherwise overflow past the right edge and become untappable. */}
-                <ScrollView
-                  horizontal
-                  style={styles.toolbarActions}
-                  contentContainerStyle={styles.toolbarActionsContent}
-                  showsHorizontalScrollIndicator={false}
-                >
+        </View>
+        {!isLandscape && isAiBuddyOpen && (
+          <View style={[styles.aiBuddyPortraitPanel, { paddingHorizontal: 12 }]}>
+            {renderAiBuddyContent()}
+          </View>
+        )}
+        </View>
+        {toolbarCollapsed ? (
+          <TouchableOpacity
+            style={[styles.expandBtn, { bottom: 8 + insets.bottom }]}
+            onPress={() => setToolbarCollapsed(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Werkbalk uitklappen"
+          >
+            <ChevronUp size={20} color={colors.muted} strokeWidth={2.4} />
+          </TouchableOpacity>
+        ) : (
+          <View style={[styles.solidToolbarWrap, { paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
+            <View style={styles.sessionToolbar}>
+              {/* Horizontally scrollable so every control (including disconnect)
+                  stays reachable even on narrow screens where this cluster would
+                  otherwise overflow past the right edge and become untappable. */}
+              <ScrollView
+                horizontal
+                style={styles.toolbarActions}
+                contentContainerStyle={styles.toolbarActionsContent}
+                showsHorizontalScrollIndicator={false}
+              >
+                  {/* "Vensters" and "Toetsenbord" requested to be at the beginning */}
+                  <TouchableOpacity
+                    style={[styles.toolbarBtn, activePanel === "programs" && styles.toolbarBtnActive]}
+                    onPress={openProgramsPanel}
+                    accessibilityRole="button"
+                    accessibilityLabel="Programma's"
+                  >
+                    {toolbarIcon(AppWindow, "Vensters", activePanel === "programs")}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.toolbarBtn}
+                    onPress={() => setKeyboardVisible((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Toetsenbord"
+                  >
+                    {toolbarIcon(Keyboard, "Bord")}
+                  </TouchableOpacity>
                   {/* One button showing whichever mode is currently active —
                       tapping it opens the Besturing panel, where both the
                       mode toggle and its gesture instructions live (see
@@ -2090,14 +2206,6 @@ export default function App(): React.JSX.Element {
                     {toolbarIcon(Folder, "Bestand", activePanel === "files")}
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "programs" && styles.toolbarBtnActive]}
-                    onPress={openProgramsPanel}
-                    accessibilityRole="button"
-                    accessibilityLabel="Programma's"
-                  >
-                    {toolbarIcon(AppWindow, "Vensters", activePanel === "programs")}
-                  </TouchableOpacity>
-                  <TouchableOpacity
                     style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.toolbarBtnActive]}
                     onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
                     accessibilityRole="button"
@@ -2105,43 +2213,34 @@ export default function App(): React.JSX.Element {
                   >
                     {toolbarIcon(Sparkles, "AI Buddy", activePanel === "aiBuddy")}
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.toolbarBtn}
-                    onPress={() => setKeyboardVisible((v) => !v)}
-                    accessibilityRole="button"
-                    accessibilityLabel="Toetsenbord"
-                  >
-                    {toolbarIcon(Keyboard, "Bord")}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolbarBtn, activePanel === "settings" && styles.toolbarBtnActive]}
-                    onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
-                    accessibilityRole="button"
-                    accessibilityLabel="Sessie-instellingen"
-                  >
-                    {toolbarIcon(Settings, "Opties", activePanel === "settings")}
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.toolbarBtn, styles.dangerBtn]}
-                    onPress={disconnectSession}
-                    accessibilityRole="button"
-                    accessibilityLabel="Verbinding verbreken"
-                  >
-                    {toolbarIcon(Power, "Stop", false, true)}
-                  </TouchableOpacity>
-                </ScrollView>
                 <TouchableOpacity
-                  style={styles.collapseBtn}
-                  onPress={() => setToolbarCollapsed(true)}
+                  style={[styles.toolbarBtn, activePanel === "settings" && styles.toolbarBtnActive]}
+                  onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
                   accessibilityRole="button"
-                  accessibilityLabel="Werkbalk inklappen"
+                  accessibilityLabel="Sessie-instellingen"
                 >
-                  <ChevronDown size={20} color={colors.muted} strokeWidth={2.4} />
+                  {toolbarIcon(Settings, "Opties", activePanel === "settings")}
                 </TouchableOpacity>
-              </View>
+                <TouchableOpacity
+                  style={[styles.toolbarBtn, styles.dangerBtn]}
+                  onPress={disconnectSession}
+                  accessibilityRole="button"
+                  accessibilityLabel="Verbinding verbreken"
+                >
+                  {toolbarIcon(Power, "Stop", false, true)}
+                </TouchableOpacity>
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.collapseBtn}
+                onPress={() => setToolbarCollapsed(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Werkbalk inklappen"
+              >
+                <ChevronDown size={20} color={colors.muted} strokeWidth={2.4} />
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
+          </View>
+        )}
         <Modal visible={activePanel === "settings"} transparent animationType="fade" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
@@ -2433,66 +2532,6 @@ export default function App(): React.JSX.Element {
             </View>
           </View>
         </Modal>
-        <Modal visible={activePanel === "aiBuddy"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
-          <View style={styles.chatBackdrop}>
-            <View style={styles.chatCard}>
-              <View style={styles.chatHeader}>
-                <Text style={styles.cardTitle}>AI Buddy</Text>
-                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="AI Buddy sluiten">
-                  {toolbarIcon(X)}
-                </TouchableOpacity>
-              </View>
-              {!openaiKeyConfigured ? (
-                <Text style={styles.fileEmptyText}>Stel eerst je OpenAI API-sleutel in bij Instellingen op het beginscherm.</Text>
-              ) : (
-                <>
-                  <ScrollView
-                    ref={aiBuddyScrollRef}
-                    style={styles.chatMessagesList}
-                    onContentSizeChange={() => aiBuddyScrollRef.current?.scrollToEnd({ animated: true })}
-                  >
-                    {aiBuddyLog.length === 0 && (
-                      <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</Text>
-                    )}
-                    {aiBuddyLog.map((m, i) => (
-                      <View key={i} style={[styles.chatBubble, m.role === "user" ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
-                        {m.imageBase64 && <Image source={{ uri: m.imageBase64 }} style={styles.aiBuddyMessageImage} resizeMode="cover" />}
-                        <Text style={styles.chatBubbleText}>{m.text}</Text>
-                      </View>
-                    ))}
-                    {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
-                  </ScrollView>
-                  {aiBuddyScreenshot && (
-                    <View style={styles.aiBuddyScreenshotPreview}>
-                      <Image source={{ uri: aiBuddyScreenshot }} style={styles.aiBuddyScreenshotPreviewImg} resizeMode="cover" />
-                      <TouchableOpacity style={styles.aiBuddyScreenshotRemove} onPress={() => setAiBuddyScreenshot(null)}>
-                        {toolbarIcon(X)}
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  <View style={styles.chatInputRow}>
-                    <TouchableOpacity style={styles.toolbarBtn} onPress={takeAiBuddyScreenshot} accessibilityRole="button" accessibilityLabel="Screenshot maken">
-                      {toolbarIcon(Camera)}
-                    </TouchableOpacity>
-                    <TextInput
-                      style={[styles.input, styles.chatInputField]}
-                      value={aiBuddyInput}
-                      onChangeText={setAiBuddyInput}
-                      placeholder="Stel een vraag over dit probleem…"
-                      placeholderTextColor="#8b96b8"
-                      onSubmitEditing={sendAiBuddyMessage}
-                      returnKeyType="send"
-                      editable={!aiBuddySending}
-                    />
-                    <TouchableOpacity style={styles.chatSendBtn} onPress={sendAiBuddyMessage} disabled={aiBuddySending}>
-                      <Text style={styles.primaryBtnText}>Versturen</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              )}
-            </View>
-          </View>
-        </Modal>
         {keyboardVisible && (
           <TextInput
             ref={keyboardInputRef}
@@ -2527,7 +2566,8 @@ export default function App(): React.JSX.Element {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </View>
+    </SafeAreaView>
     );
   }
 
@@ -2569,6 +2609,21 @@ export default function App(): React.JSX.Element {
           </Text>
           {!accessibilityEnabled && (
             <TouchableOpacity style={styles.primaryBtn} onPress={openAccessibilitySettings}>
+              <Text style={styles.primaryBtnText}>Instellingen openen</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Virtueel Toetsenbord (Perfect Typen)</Text>
+          <Text style={styles.muted}>
+            Nodig zodat je vanaf de PC direct zinnen kunt typen op deze telefoon in plaats van losse schermkliks.
+          </Text>
+          <Text style={[styles.statusText, virtualKeyboardEnabled ? styles.statusOk : styles.statusBad]}>
+            {virtualKeyboardEnabled ? "● Ingeschakeld" : "● Niet ingeschakeld — typen op afstand is beperkt"}
+          </Text>
+          {!virtualKeyboardEnabled && (
+            <TouchableOpacity style={styles.primaryBtn} onPress={openKeyboardSettings}>
               <Text style={styles.primaryBtnText}>Instellingen openen</Text>
             </TouchableOpacity>
           )}
@@ -2875,17 +2930,36 @@ function createStyles(theme: AppTheme) {
     hostBanner: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     hostBannerText: { color: colors.text, fontSize: 16, fontWeight: "700", textAlign: "center", marginBottom: 20 },
     sessionRoot: { flex: 1, backgroundColor: "#000" },
+    sessionContainer: { flex: 1, backgroundColor: "#000", flexDirection: "column" },
+    sessionContainerLandscape: { flexDirection: "row" },
+    videoWrapPortraitWithAi: { flex: 0.42 },
+    aiBuddyPortraitPanel: {
+      flex: 0.58,
+      backgroundColor: colors.card,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16,
+      paddingTop: 12,
+    },
+    aiBuddyLandscapePanel: {
+      width: 360,
+      maxWidth: "45%",
+      backgroundColor: colors.card,
+      borderRightWidth: 1,
+      borderRightColor: colors.border,
+      paddingTop: 12,
+    },
+    aiBuddyCardInner: { flex: 1, paddingHorizontal: 12 },
     // Floats over the bottom of the video (inside videoWrap) instead of taking
     // up its own dedicated row — matches TeamViewer's full-screen-video-with-
     // floating-toolbar layout instead of eating vertical space permanently.
-    floatingToolbarWrap: { position: "absolute", left: 0, right: 0, bottom: 0, zIndex: 15 },
-    sessionToolbar: { flexDirection: "row", alignItems: "center", padding: 10, backgroundColor: colors.overlayBg },
+    solidToolbarWrap: { backgroundColor: colors.overlayBg },
+    sessionToolbar: { flexDirection: "row", alignItems: "center", paddingVertical: 4, paddingHorizontal: 10 },
     toolbarActions: { flex: 1 },
     toolbarActionsContent: { alignItems: "center", paddingLeft: 8 },
     // Flat by default — no background pill, just a colored icon+label — a
     // filled pill only appears for whichever panel is actually open
     // (toolbarBtnActive) so there's still some indication of open state.
-    toolbarBtn: { borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
+    toolbarBtn: { borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
     toolbarBtnActive: { backgroundColor: colors.toolbarButton },
     toolbarBtnLabel: { fontSize: 9, fontWeight: "600", marginTop: 3, color: colors.toolbarButton },
     toolbarBtnLabelActive: { color: "#fff" },

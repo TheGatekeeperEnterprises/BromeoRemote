@@ -1,5 +1,6 @@
 import type { InputEvent } from "./shared/protocol";
 import { dispatchTap, dispatchLongPress, dispatchSwipePath, dispatchScroll } from "./remoteControl";
+import { commitText, sendKeyEvent, deleteSurroundingText } from "./virtualKeyboard";
 
 // Translates the WebRTC control channel's discrete mouse-style events (built
 // for a cursor-based desktop) into the single gesture Android's
@@ -46,14 +47,32 @@ export class RemoteInputTranslator {
         dispatchScroll(0.5, 0.5, deltaXPct, deltaYPct);
         break;
       }
-      case "keydown":
+      case "keydown": {
+        const key = event.key?.toLowerCase();
+        if (key === "backspace") {
+          // KEYCODE_DEL = 67
+          sendKeyEvent(67);
+        } else if (key === "enter") {
+          // KEYCODE_ENTER = 66
+          sendKeyEvent(66);
+        } else if (key === "escape") {
+          // KEYCODE_BACK = 4
+          sendKeyEvent(4);
+        } else if (key === "arrowleft") {
+          sendKeyEvent(21);
+        } else if (key === "arrowright") {
+          sendKeyEvent(22);
+        } else if (key === "arrowup") {
+          sendKeyEvent(19);
+        } else if (key === "arrowdown") {
+          sendKeyEvent(20);
+        }
+        break;
+      }
       case "keyup":
+        break;
       case "text":
-        // Not supported for phone-as-host in v1 — injecting text/keys via
-        // AccessibilityService requires locating the focused editable node
-        // and calling ACTION_SET_TEXT, a wholly different mechanism from
-        // gesture dispatch. Touch/swipe control covers the common case
-        // (navigating the phone's UI); see docs/MOBILE.md.
+        commitText(event.text);
         break;
     }
   }

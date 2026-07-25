@@ -16,6 +16,7 @@ class MainApplication : Application(), ReactApplication {
         PackageList(this).packages.apply {
           add(RemoteControlPackage())
           add(AiBuddyScreenshotPackage())
+          add(VirtualKeyboardPackage())
         },
     )
   }

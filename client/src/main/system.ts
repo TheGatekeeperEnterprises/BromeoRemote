@@ -98,6 +98,23 @@ export function resizeAndFocusWindow(hwnd: number, x: number, y: number, width: 
   }
 }
 
+let windowBoundsFn: ((hwnd: bigint, rect: Record<string, unknown>) => number) | null = null;
+export function getWindowBounds(hwnd: number): { x: number; y: number; width: number; height: number } | null {
+  if (process.platform !== "win32") return null;
+  try {
+    if (!windowBoundsFn) {
+      const user32 = koffi.load("user32.dll");
+      const RECT = koffi.struct("RECT", { left: "int", top: "int", right: "int", bottom: "int" });
+      windowBoundsFn = user32.func("bool GetWindowRect(void* hWnd, _Out_ RECT *lpRect)") as any;
+    }
+    const rect = { left: 0, top: 0, right: 0, bottom: 0 };
+    if (windowBoundsFn!(BigInt(hwnd), rect)) {
+      return { x: rect.left, y: rect.top, width: rect.right - rect.left, height: rect.bottom - rect.top };
+    }
+  } catch {}
+  return null;
+}
+
 // Hides just the desktop wallpaper *image* (SPI_SETDESKWALLPAPER with an
 // empty path shows the plain background color instead) — distinct from
 // curtain mode, which blanks the whole local screen. Windows-only. The

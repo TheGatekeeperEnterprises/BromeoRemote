@@ -5,7 +5,7 @@ import { store, hashPassword, randomPassword } from "./store";
 import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
 import { sendMagicPacket } from "./wol";
-import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, hideWallpaper, restoreWallpaper, getCursorShape } from "./system";
+import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, hideWallpaper, restoreWallpaper, getCursorShape, getWindowBounds } from "./system";
 import { askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { installSas, isSasInstalled, sendCtrlAltDel, uninstallSas } from "./sasControl";
 import { setMonitorPower } from "./display";
@@ -21,6 +21,13 @@ let activeMonitorId: string | null = null;
 // serves this specific window instead of a full screen.
 let activeWindowId: string | null = null;
 let miniControllerState: MiniControllerState | null = null;
+
+export function getActiveAppWindowBounds(): { x: number; y: number; width: number; height: number } | null {
+  if (!activeWindowId) return null;
+  const hwnd = hwndFromWindowSourceId(activeWindowId);
+  if (hwnd == null) return null;
+  return getWindowBounds(hwnd);
+}
 
 // Electron/Chromium encodes window-type desktopCapturer sources on Windows
 // as "window:<HWND>:0" — the number is the real HWND value.
@@ -417,7 +424,18 @@ ipcMain.handle("bromeo:list-monitors", async (): Promise<MonitorInfo[]> => {
   return sources.map((s, i) => ({ id: s.id, label: s.name || `Scherm ${i + 1}` }));
 });
 
+let savedWindowBounds: { hwnd: number; bounds: { x: number; y: number; width: number; height: number } } | null = null;
+
+function restoreSavedWindowBounds() {
+  if (savedWindowBounds) {
+    const { hwnd, bounds } = savedWindowBounds;
+    resizeAndFocusWindow(hwnd, bounds.x, bounds.y, bounds.width, bounds.height);
+    savedWindowBounds = null;
+  }
+}
+
 ipcMain.handle("bromeo:set-active-monitor", (_e, monitorId: string) => {
+  restoreSavedWindowBounds();
   activeMonitorId = monitorId;
   activeWindowId = null;
   return true;
@@ -427,21 +445,29 @@ ipcMain.handle("bromeo:list-windows", async (): Promise<WindowInfo[]> => {
   const sources = await desktopCapturer.getSources({ types: ["window"], thumbnailSize: { width: 160, height: 160 } });
   return sources
     // Excludes all of this app's own windows, not just the main one —
-    // mini.html's title is "BromeoRemote sessiebediening", not "BromeoRemote",
-    // so an exact match let the floating mini-controller widget itself show
-    // up as a selectable "program."
-    .filter((s) => s.name && s.name.trim() && !s.name.startsWith("BromeoRemote"))
+    // mini.html's title is "BromeoRemote sessiebediening", not "BromeoRemote".
+    // We match exactly to avoid hiding other apps like "BromeoRemote - Google Antigravity IDE".
+    .filter((s) => s.name && s.name.trim() && s.name !== "BromeoRemote" && s.name !== "BromeoRemote sessiebediening")
     .map((s) => ({ id: s.id, name: s.name, thumbnail: s.thumbnail.isEmpty() ? undefined : s.thumbnail.toDataURL() }));
 });
 
 ipcMain.handle("bromeo:set-active-window", (_e, windowId: string, aspect: number) => {
-  activeWindowId = windowId;
+  if (activeWindowId !== windowId) {
+    restoreSavedWindowBounds();
+    activeWindowId = windowId;
+    const hwnd = hwndFromWindowSourceId(activeWindowId);
+    if (hwnd != null) {
+      const bounds = getWindowBounds(hwnd);
+      if (bounds) savedWindowBounds = { hwnd, bounds };
+    }
+  }
   return resizeActiveWindowToAspect(aspect);
 });
 
 ipcMain.handle("bromeo:resize-active-window", (_e, aspect: number) => resizeActiveWindowToAspect(aspect));
 
 ipcMain.handle("bromeo:set-capture-desktop", () => {
+  restoreSavedWindowBounds();
   activeWindowId = null;
   return true;
 });
@@ -547,6 +573,20 @@ function handleBridgeNotification(notification: NotificationPayload): void {
 // though a plain STUN binding (simpler, more tolerant of the hairpin
 // round-trip) usually still got through. Must be set before the app is ready.
 app.commandLine.appendSwitch("disable-features", "DnsOverHttps");
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  // A second instance of BromeoRemote is being opened on this PC!
+  // Assign a fresh, unique device ID so both instances can run simultaneously with distinct IDs.
+  store.setSecondaryInstance();
+}
+
+app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 app.whenReady().then(() => {
   setupDisplayMediaHandler();

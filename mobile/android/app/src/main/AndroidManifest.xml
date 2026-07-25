@@ -11,6 +11,9 @@
     <!-- Android 13+ requires this to be requested at runtime before any
          notification (including FCM push) can actually be shown to the user. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 14+ Screen sharing requirements -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <!-- Lets confirm-kind agent notifications pop up full-screen (like an
          incoming call) even over the lock screen — see
          src/notifications.ts's fullScreenAction. Android 14+ may still
@@ -56,6 +59,25 @@
         <meta-data
           android:name="android.accessibilityservice"
           android:resource="@xml/accessibility_service_config" />
+      </service>
+
+      <!-- Required for react-native-webrtc getDisplayMedia() on Android 14+ -->
+      <service
+          android:name="com.oney.WebRTCModule.WebRTCService"
+          android:foregroundServiceType="mediaProjection"
+          android:exported="false" />
+          
+      <service
+          android:name=".BromeoRemoteKeyboardService"
+          android:label="BromeoRemote Toetsenbord"
+          android:permission="android.permission.BIND_INPUT_METHOD"
+          android:exported="true">
+          <intent-filter>
+              <action android:name="android.view.InputMethod" />
+          </intent-filter>
+          <meta-data
+              android:name="android.view.im"
+              android:resource="@xml/method" />
       </service>
     </application>
 </manifest>

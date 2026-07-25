@@ -52,65 +52,8 @@
         </div>
 
         <div class="hero-product" aria-label="BromeoRemote productvoorbeeld">
-          <div class="product-frame">
-            <div class="console-window">
-              <div class="console-bar">
-                <span class="live-dot"></span>
-                <strong>Remote support console</strong>
-                <span>30 fps</span>
-                <span>300 kbps</span>
-              </div>
-              <div class="console-body">
-                <aside class="console-nav" aria-hidden="true">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </aside>
-                <div class="console-main">
-                  <div class="session-strip">
-                    <div>
-                      <small>Partner</small>
-                      <strong>177 258 887</strong>
-                    </div>
-                    <div>
-                      <small>Status</small>
-                      <strong class="green-text">Verbonden</strong>
-                    </div>
-                    <div>
-                      <small>Rechten</small>
-                      <strong>Muis, toetsenbord, bestanden</strong>
-                    </div>
-                  </div>
-                  <div class="desktop-preview">
-                    <div class="preview-toolbar">
-                      <span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                    <div class="desktop-grid">
-                      <span></span><span></span><span></span><span></span>
-                      <span></span><span></span><span></span><span></span>
-                    </div>
-                    <div class="support-panel">
-                      <strong>Sessietools</strong>
-                      <button type="button">Chat</button>
-                      <button type="button">Bestanden</button>
-                      <button type="button">Verbreken</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="phone-preview" aria-label="Mobiele app preview">
-              <div class="phone-top"></div>
-              <strong>Android app</strong>
-              <span>Touch-modus</span>
-              <span>Muismodus</span>
-              <span>Chat en bestanden</span>
-            </div>
-            <div class="security-badge">
-              <small>Self-hosted</small>
-              <strong>Controle over signaling en data</strong>
-            </div>
+          <div class="product-frame" style="background: transparent; border: none; box-shadow: none;">
+            <img src="/assets/bromeoremote_hero.png" alt="BromeoRemote Interface" style="width: 100%; height: auto; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 255, 255, 0.15);">
           </div>
         </div>
 
@@ -307,6 +250,46 @@
               <li>HTTPS, signaling en optioneel TURN-relay</li>
             </ul>
           </article>
+        </div>
+      </section>
+
+      <section class="section pricing-section" id="licenties" aria-labelledby="pricing-title">
+        <div class="section-heading">
+          <p class="eyebrow">Licenties & Prijzen</p>
+          <h2 id="pricing-title">Flexibele licenties met automatische hardware-koppeling (HWID).</h2>
+          <p>Veilig betalen via Mollie. Onze licenties zijn gekoppeld aan de unieke hardware-vingerafdruk van jouw beheer-pc, voor optimale beveiliging en controle over je licenties.</p>
+        </div>
+        
+        <div class="pricing-layout">
+          <div class="pricing-illustration">
+            <img src="/assets/secure_license.png" alt="Secure License Key">
+          </div>
+          <div class="pricing-grid">
+            <article class="pricing-card">
+              <h3>Personal</h3>
+              <div class="price">€0<span>/mnd</span></div>
+              <p>Voor incidenteel persoonlijk gebruik.</p>
+              <ul>
+                <li>Remote Desktop (LAN & WAN)</li>
+                <li>Standaard encryptie</li>
+                <li>Max. 2 beheerde apparaten</li>
+              </ul>
+              <a href="#downloads" class="download-action secondary">Gratis Downloaden</a>
+            </article>
+            <article class="pricing-card premium-card">
+              <div class="popular-badge">Meest Gekozen</div>
+              <h3>Professional</h3>
+              <div class="price">€19<span>/mnd</span></div>
+              <p>Voor de professionele IT-beheerder.</p>
+              <ul>
+                <li><strong>Hardware ID (HWID) beveiliging</strong></li>
+                <li>Bestandsoverdracht & Klembord</li>
+                <li>Onbeperkte sessies</li>
+                <li>Onbeheerde toegang met 2FA</li>
+              </ul>
+              <button type="button" id="btnMollieCheckout" class="download-action primary" style="border:none; cursor:pointer;">Afrekenen (Mollie)</button>
+            </article>
+          </div>
         </div>
       </section>
 

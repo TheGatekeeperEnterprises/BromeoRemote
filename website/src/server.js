@@ -154,6 +154,38 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
   }
 });
 
+const { createSubscriptionCheckout } = require("./licensing");
+
+app.post("/api/checkout", apiLimiter, async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ ok: false, error: "Geldig e-mailadres is verplicht." });
+    }
+    // TODO: Link with real users table, for now we pass a dummy user UUID
+    const dummyUserId = "00000000-0000-0000-0000-000000000000";
+    const checkoutUrl = await createSubscriptionCheckout(email, dummyUserId);
+    res.json({ ok: true, url: checkoutUrl });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (req, res, next) => {
+  try {
+    const paymentId = req.body.id;
+    if (!paymentId) return res.status(400).send("No payment ID");
+    
+    // In production, fetch the payment via mollieClient.payments.get(paymentId)
+    // and update the license / transaction status in the PostgreSQL database.
+    console.log(`[Mollie Webhook] Received status update for payment: ${paymentId}`);
+    
+    res.status(200).send("OK");
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use(
   express.static(publicDir, {
     etag: true,
