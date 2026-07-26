@@ -70,9 +70,11 @@ import {
   Copy,
   Folder,
   Hand,
+  Home,
   Keyboard,
   Lock,
   MessageCircle,
+  MoreHorizontal,
   Move,
   MousePointer2,
   MousePointerClick,
@@ -1233,7 +1235,7 @@ export default function App(): React.JSX.Element {
     console.trace("[connectTo] call stack");
     pendingConnectRef.current = { targetId: id, passwordHash, remember, label };
     lastConnectRef.current = { targetId: id, passwordHash };
-    setConnectStatus("Verbinding makenâ€¦");
+    setConnectStatus("Verbinding maken…");
     signalingRef.current?.send({ type: "connect-request", targetId: id, fromId: myId, passwordHash, totpCode: totpCodeValue });
   }
 
@@ -1268,7 +1270,7 @@ export default function App(): React.JSX.Element {
     const intervalMs = 15_000;
     const maxAttempts = 20;
     let attempt = 0;
-    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}â€¦`);
+    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}…`);
     const tryOnce = () => {
       attempt++;
       if (sessionRef.current || attempt > maxAttempts) return;
@@ -1466,7 +1468,7 @@ export default function App(): React.JSX.Element {
       const startedAt = sessionStartedAtRef.current;
       const durationSec = Math.round((Date.now() - startedAt) / 1000);
       const filesText = filesTransferredCountRef.current === 0 ? "geen bestanden overgezet" : `${filesTransferredCountRef.current} bestand(en) overgezet`;
-      showToast(`Sessie beÃ«indigd â€” duurde ${formatDuration(durationSec)}, ${filesText}.`);
+      showToast(`Sessie beëindigd â€” duurde ${formatDuration(durationSec)}, ${filesText}.`);
       addSessionHistoryEntry({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         peerId: sessionPeer,
@@ -1697,7 +1699,7 @@ export default function App(): React.JSX.Element {
         }
 
         // touch-modus: three-way disambiguation matching TeamViewer exactly
-        // â€” "EÃ©n vinger om te scrollen" vs "Lang drukken en slepen om te
+        // â€” "Eén vinger om te scrollen" vs "Lang drukken en slepen om te
         // selecteren" vs the tap-to-click handled entirely on release below.
         const { pageX, pageY } = evt.nativeEvent;
         lastTouchRef.current.moved = true;
@@ -1789,7 +1791,7 @@ export default function App(): React.JSX.Element {
     }
   }
 
-  // --- Shortcuts bar (TeamViewer-style: KopiÃ«ren/Plakken/PrtScn/Alt-Tab/Opslaan) ---
+  // --- Shortcuts bar (TeamViewer-style: Kopiëren/Plakken/PrtScn/Alt-Tab/Opslaan) ---
   // Presses each code in order (so modifiers are already held down when the
   // main key goes down), then releases in reverse order â€” same as a person
   // holding Ctrl and tapping C, not releasing Ctrl until after.
@@ -1895,7 +1897,7 @@ export default function App(): React.JSX.Element {
         <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
         <Image source={logo2} style={styles.bootLogo} resizeMode="contain" />
         <ActivityIndicator size="small" color={colors.primary} style={styles.bootSpinner} />
-        <Text style={styles.bootText}>Verbindenâ€¦</Text>
+        <Text style={styles.bootText}>Verbinden…</Text>
       </SafeAreaView>
     );
   }
@@ -1907,7 +1909,7 @@ export default function App(): React.JSX.Element {
         <View style={styles.hostBanner}>
           <Text style={styles.hostBannerText}>{formatId(sessionPeer)} bekijkt en bedient deze telefoon</Text>
           <TouchableOpacity style={[styles.primaryBtn, styles.dangerBtn]} onPress={disconnectSession}>
-            <Text style={styles.primaryBtnText}>Sessie beÃ«indigen</Text>
+            <Text style={styles.primaryBtnText}>Sessie beëindigen</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1943,7 +1945,7 @@ export default function App(): React.JSX.Element {
                   <Text style={styles.chatBubbleText}>{m.text}</Text>
                 </View>
               ))}
-              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt naâ€¦</Text>}
+              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
             </ScrollView>
             {aiBuddyScreenshot && (
               <View style={styles.aiBuddyScreenshotPreview}>
@@ -1961,7 +1963,7 @@ export default function App(): React.JSX.Element {
                 style={[styles.input, styles.chatInputField]}
                 value={aiBuddyInput}
                 onChangeText={setAiBuddyInput}
-                placeholder="Stel een vraag over dit probleemâ€¦"
+                placeholder="Stel een vraag over dit probleem…"
                 placeholderTextColor="#8b96b8"
                 onSubmitEditing={sendAiBuddyMessage}
                 returnKeyType="send"
@@ -2309,7 +2311,7 @@ export default function App(): React.JSX.Element {
                   />
                 </View>
                 <Text style={styles.muted}>
-                  Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie Ã©cht wordt afgesloten. Uitzetten laat een onderbreking direct als verbroken zien.
+                  Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uitzetten laat een onderbreking direct als verbroken zien.
                 </Text>
                 <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Thema</Text>
@@ -2412,7 +2414,7 @@ export default function App(): React.JSX.Element {
               <ScrollView>
                 {(
                   [
-                    { Icon: Copy, title: "KopiÃ«ren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
+                    { Icon: Copy, title: "Kopiëren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
                     { Icon: ClipboardPaste, title: "Plakken", subtitle: "Ctrl+V", onPress: () => sendShortcut(["ControlLeft", "KeyV"]), danger: false },
                     { Icon: Camera, title: "Schermafbeelding", subtitle: "PrtScn", onPress: () => sendShortcut(["PrintScreen"]), danger: false },
                     { Icon: AppWindow, title: "Wissel venster", subtitle: "Alt+Tab", onPress: () => sendShortcut(["AltLeft", "Tab"]), danger: false },
@@ -2469,7 +2471,7 @@ export default function App(): React.JSX.Element {
                   style={[styles.input, styles.chatInputField]}
                   value={chatInput}
                   onChangeText={setChatInput}
-                  placeholder="Typ een berichtâ€¦"
+                  placeholder="Typ een bericht…"
                   placeholderTextColor="#8b96b8"
                   onSubmitEditing={sendChatMessage}
                   returnKeyType="send"
@@ -2491,7 +2493,7 @@ export default function App(): React.JSX.Element {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.primaryBtn} onPress={sendFilePress}>
-                <Text style={styles.primaryBtnText}>Bestand versturenâ€¦</Text>
+                <Text style={styles.primaryBtnText}>Bestand versturen…</Text>
               </TouchableOpacity>
               <ScrollView style={styles.chatMessagesList}>
                 {fileTransfers.length === 0 && <Text style={styles.fileEmptyText}>Nog geen bestandsoverdrachten.</Text>}
@@ -2586,25 +2588,9 @@ export default function App(): React.JSX.Element {
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} />
 
-      {/* â”€â”€ Bottom tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-      <View style={styles.tabBar}>
-        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("home")}>
-          <Text style={[styles.tabBarIcon, activeTab === "home" && styles.tabBarIconActive]}>âŠž</Text>
-          <Text style={[styles.tabBarLabel, activeTab === "home" && styles.tabBarLabelActive]}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("instellingen")}>
-          <Text style={[styles.tabBarIcon, activeTab === "instellingen" && styles.tabBarIconActive]}>âš™</Text>
-          <Text style={[styles.tabBarLabel, activeTab === "instellingen" && styles.tabBarLabelActive]}>Instellingen</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("meer")}>
-          <Text style={[styles.tabBarIcon, activeTab === "meer" && styles.tabBarIconActive]}>â˜°</Text>
-          <Text style={[styles.tabBarLabel, activeTab === "meer" && styles.tabBarLabelActive]}>Meer</Text>
-        </TouchableOpacity>
-      </View>
-
       {/* â”€â”€ Tab: Home â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === "home" && (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           {/* Verbinden bovenaan */}
@@ -2672,7 +2658,7 @@ export default function App(): React.JSX.Element {
             <Text style={styles.label}>Jouw BromeoRemote-ID (voor agent-meldingen)</Text>
             <Text style={styles.mono}>{myId ? formatId(myId) : "â€”"}</Text>
             <Text style={[styles.statusText, serverStatus === "connected" ? styles.statusOk : styles.statusBad]}>
-              {serverStatus === "connected" ? "â— Verbonden met server" : serverStatus === "connecting" ? "Verbindenâ€¦" : "â— Niet verbonden"}
+              {serverStatus === "connected" ? "● Verbonden met server" : serverStatus === "connecting" ? "Verbinden…" : "● Niet verbonden"}
             </Text>
             <Text style={styles.label}>Sessiewachtwoord (verandert bij elke herstart)</Text>
             <Text style={styles.mono}>{hostSessionPassword}</Text>
@@ -2683,7 +2669,7 @@ export default function App(): React.JSX.Element {
 
       {/* â”€â”€ Tab: Instellingen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === "instellingen" && (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           <View style={styles.card}>
@@ -2702,7 +2688,7 @@ export default function App(): React.JSX.Element {
               handmatig ingeschakelde toegankelijkheidsservice.
             </Text>
             <Text style={[styles.statusText, accessibilityEnabled ? styles.statusOk : styles.statusBad]}>
-              {accessibilityEnabled ? "â— Ingeschakeld" : "â— Niet ingeschakeld â€” schermdelen werkt wel, bediening niet"}
+              {accessibilityEnabled ? "● Ingeschakeld" : "● Niet ingeschakeld â€” schermdelen werkt wel, bediening niet"}
             </Text>
             {!accessibilityEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openAccessibilitySettings}>
@@ -2717,7 +2703,7 @@ export default function App(): React.JSX.Element {
               Nodig zodat je vanaf de PC direct zinnen kunt typen op deze telefoon in plaats van losse schermkliks.
             </Text>
             <Text style={[styles.statusText, virtualKeyboardEnabled ? styles.statusOk : styles.statusBad]}>
-              {virtualKeyboardEnabled ? "â— Ingeschakeld" : "â— Niet ingeschakeld â€” typen op afstand is beperkt"}
+              {virtualKeyboardEnabled ? "● Ingeschakeld" : "● Niet ingeschakeld â€” typen op afstand is beperkt"}
             </Text>
             {!virtualKeyboardEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openKeyboardSettings}>
@@ -2730,7 +2716,7 @@ export default function App(): React.JSX.Element {
 
       {/* â”€â”€ Tab: Meer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === "meer" && (
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           <View style={styles.card}>
@@ -2823,7 +2809,7 @@ export default function App(): React.JSX.Element {
               style={styles.input}
               value={openaiKeyInput}
               onChangeText={setOpenaiKeyInput}
-              placeholder="sk-â€¦"
+              placeholder="sk-…"
               placeholderTextColor="#8b96b8"
               secureTextEntry
               autoCapitalize="none"
@@ -2836,6 +2822,24 @@ export default function App(): React.JSX.Element {
           </View>
         </ScrollView>
       )}
+
+
+
+      {/* â”€â”€ Bottom tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <View style={styles.tabBar}>
+        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("home")}>
+          <Home size={22} color={activeTab === "home" ? colors.primary : colors.muted} strokeWidth={activeTab === "home" ? 2.5 : 2} />
+          <Text style={[styles.tabBarLabel, activeTab === "home" && styles.tabBarLabelActive]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("instellingen")}>
+          <Settings size={22} color={activeTab === "instellingen" ? colors.primary : colors.muted} strokeWidth={activeTab === "instellingen" ? 2.5 : 2} />
+          <Text style={[styles.tabBarLabel, activeTab === "instellingen" && styles.tabBarLabelActive]}>Instellingen</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("meer")}>
+          <MoreHorizontal size={22} color={activeTab === "meer" ? colors.primary : colors.muted} strokeWidth={activeTab === "meer" ? 2.5 : 2} />
+          <Text style={[styles.tabBarLabel, activeTab === "meer" && styles.tabBarLabelActive]}>Meer</Text>
+        </TouchableOpacity>
+      </View>
 
 
       <Modal visible={!!activeConfirm} transparent animationType="fade">
@@ -2914,9 +2918,10 @@ function createStyles(theme: AppTheme) {
   const colors = themeColors[theme];
 
   return StyleSheet.create({
-    root: { flex: 1, backgroundColor: colors.bg },
-    scroll: { padding: 20, paddingBottom: 80 },
-    logo: { height: 48, width: 240, marginBottom: 20 },
+    root: { flex: 1, backgroundColor: colors.bg, flexDirection: "column" },
+    scroll: { padding: 20, paddingBottom: 16 },
+    tabContent: { flex: 1 },
+    logo: { height: 44, width: 200, marginBottom: 16, alignSelf: "center" },
     // ── Bottom tab bar ───────────────────────────────────────────────────
     tabBar: {
       flexDirection: "row",
