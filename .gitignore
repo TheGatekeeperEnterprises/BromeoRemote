@@ -21,8 +21,10 @@ client/dist/
 client/release/
 client/out/
 server/dist/
-# APK files are >100MB — too large for GitHub; store locally or use releases page
+# Release binaries — too large for GitHub (APK=107MB, EXE=90MB)
+# Upload via GitHub Releases page instead
 releases/*.apk
+releases/*.exe
 website/node_modules/
 mobile/node_modules/
 mobile/android/app/build/
