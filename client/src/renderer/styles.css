@@ -1912,16 +1912,40 @@ hr {
   background: rgba(255,255,255,0.05);
 }
 
-/* -- Home grid: twee kaarten naast elkaar ------------------------------------- */
+/* ── Home grid ────────────────────────────────────────────────────────── */
 .home-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.98fr);
   gap: 16px;
   width: 100%;
-  align-items: start;
+  align-items: stretch;
 }
-@media (max-width: 700px) {
-  .home-grid {
+.home-grid--3col {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(240px, 0.8fr);
+}
+.home-grid > .card,
+.home-grid--3col > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+/* Mijn apparaten: filter + lijst vullen resterende ruimte */
+.saved-devices--full {
+  display: block;
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+}
+@media (max-width: 900px) {
+  .home-grid--3col {
+    grid-template-columns: 1fr 1fr;
+  }
+  .home-grid--3col > .devices-card {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 620px) {
+  .home-grid, .home-grid--3col {
     grid-template-columns: 1fr;
   }
 }

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
@@ -100,8 +100,8 @@
       </div>
     </div>
     <button id="curtain-manual-toggle" class="btn btn-outline btn-sm hidden">Scherm uit</button>
-    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beÃ«indigen</button>
-    <button id="sharing-panic" class="btn btn-outline btn-sm">BeÃ«indigen + wachtwoord wijzigen</button>
+    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beëindigen</button>
+    <button id="sharing-panic" class="btn btn-outline btn-sm">Beëindigen + wachtwoord wijzigen</button>
   </div>
 
   <header class="topbar">
@@ -155,7 +155,7 @@
     </section>
 
     <!-- Pagina 1: Home (Dit apparaat + Verbinden) -->
-    <div id="tab-home" class="tab-panel home-grid">
+    <div id="tab-home" class="tab-panel home-grid home-grid--3col">
 
       <section class="card device-card">
         <div class="card-title-row">
@@ -179,7 +179,7 @@
             <label>Jouw BromeoRemote-ID</label>
             <div class="value-row">
               <span id="my-id" class="value-mono">â€”</span>
-              <button id="copy-id" class="btn btn-outline btn-sm">KopiÃ«ren</button>
+              <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
             </div>
           </div>
           <div class="field compact-field">
@@ -189,13 +189,13 @@
             </label>
             <div class="value-row">
               <span id="my-password" class="value-mono">â€”</span>
-              <button id="copy-password" class="btn btn-outline btn-sm">KopiÃ«ren</button>
+              <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
             </div>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging kopiÃ«ren</button>
+          <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging Kopiëren</button>
           <button id="regenerate-password" class="btn btn-outline btn-sm">Nieuw sessiewachtwoord</button>
         </div>
 
@@ -267,7 +267,7 @@
               <p class="muted small">Voeg deze sleutel handmatig toe in je authenticator-app als "BromeoRemote".</p>
               <div class="value-row">
                 <span id="totp-secret" class="value-mono totp-secret"></span>
-                <button id="totp-copy" class="btn btn-outline btn-sm">KopiÃ«ren</button>
+                <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
               </div>
               <div class="value-row totp-verify-row">
                 <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
@@ -302,8 +302,7 @@
           <span class="info-tip" tabindex="0" aria-label="Uitleg verbinden">i<span class="info-tooltip">Gebruik het BromeoRemote-ID en wachtwoord van de andere kant. Sessierechten kun je onder opties beperken.</span></span>
         </div>
 
-        <input id="saved-devices-filter" class="input saved-filter hidden" placeholder="Zoek opgeslagen apparaat of groep" />
-        <div id="saved-devices-list" class="saved-devices hidden"></div>
+
 
         <div class="connect-field-grid">
           <div class="field compact-field">
@@ -361,7 +360,16 @@
         <p id="connect-status" class="muted small"></p>
       </section>
 
-    </div>
+      <!-- Kolom 3: Mijn apparaten -->
+      <section class="card devices-card">
+        <div class="card-title-row">
+          <h2><span class="card-icon">★</span>Mijn apparaten</h2>
+          <span class="info-tip" tabindex="0" aria-label="Uitleg opgeslagen apparaten">i<span class="info-tooltip">Opgeslagen apparaten waarmee je eerder verbonden hebt. Klik om direct te verbinden.</span></span>
+        </div>
+        <input id="saved-devices-filter" class="input saved-filter" placeholder="Zoek apparaat of groep…" />
+        <div id="saved-devices-list" class="saved-devices saved-devices--full"></div>
+      </section>
+
 
     <!-- Pagina 2: Tools -->
     <div id="tab-tools" class="tab-panel tab-panel--hidden">
@@ -525,7 +533,7 @@
             <option value="low">Laag (trage verbinding)</option>
           </select>
           <label>Verbindingsfailsafe
-            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie Ã©cht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
           </label>
           <select id="failsafe-select" class="monitor-select" title="Verbindingsfailsafe">
             <option value="on">Aan</option>
