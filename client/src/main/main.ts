@@ -51,32 +51,19 @@ function tileDualWindows(windowId1: string, windowId2: string, aspect: number, i
   if (hwnd1 == null || hwnd2 == null) return null;
   const work = screen.getPrimaryDisplay().workArea;
 
-  let totalW: number;
-  let totalH: number;
-  if (aspect <= work.width / work.height) {
-    totalH = work.height;
-    totalW = Math.round(totalH * aspect);
-  } else {
-    totalW = work.width;
-    totalH = Math.round(totalW / aspect);
-  }
-  totalW = Math.min(totalW, work.width);
-  totalH = Math.min(totalH, work.height);
-
-  const startX = Math.round((work.width - totalW) / 2);
-  const startY = Math.round((work.height - totalH) / 2);
-
   if (isPortrait) {
-    const halfH = Math.floor(totalH / 2);
-    resizeAndFocusWindow(hwnd1, work.x + startX, work.y + startY, totalW, halfH);
-    resizeAndFocusWindow(hwnd2, work.x + startX, work.y + startY + halfH, totalW, totalH - halfH);
+    // PORTRAIT MODE: Window 1 is TOP half, Window 2 is BOTTOM half
+    const halfH = Math.floor(work.height / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfH);
+    resizeAndFocusWindow(hwnd2, work.x, work.y + halfH, work.width, work.height - halfH);
   } else {
-    const halfW = Math.floor(totalW / 2);
-    resizeAndFocusWindow(hwnd1, work.x + startX, work.y + startY, halfW, totalH);
-    resizeAndFocusWindow(hwnd2, work.x + startX + halfW, work.y + startY, totalW - halfW, totalH);
+    // LANDSCAPE MODE: Window 1 is LEFT half, Window 2 is RIGHT half
+    const halfW = Math.floor(work.width / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, halfW, work.height);
+    resizeAndFocusWindow(hwnd2, work.x + halfW, work.y, work.width - halfW, work.height);
   }
 
-  activeDualBounds = { x: startX, y: startY, width: totalW, height: totalH };
+  activeDualBounds = { x: 0, y: 0, width: work.width, height: work.height };
   return activeDualBounds;
 }
 
