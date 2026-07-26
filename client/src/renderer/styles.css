@@ -1806,3 +1806,66 @@ hr {
     width: 100%;
   }
 }
+
+/* -- Tab navigation ------------------------------------------------------------ */
+.tab-nav {
+  display: flex;
+  gap: 0;
+  margin: 0 0 1rem 0;
+  border-bottom: 2px solid var(--border, #e2e6ea);
+  background: transparent;
+}
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted, #6c757d);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  color: var(--text, #212529);
+}
+.tab-btn--active {
+  color: var(--accent, #2563eb);
+  border-bottom-color: var(--accent, #2563eb);
+  font-weight: 600;
+}
+.tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  border-radius: 5px;
+  background: var(--accent-bg, #eff6ff);
+  color: var(--accent, #2563eb);
+}
+.tab-btn--active .tab-icon {
+  background: var(--accent, #2563eb);
+  color: #fff;
+}
+
+/* -- Tab panels ---------------------------------------------------------------- */
+.tab-panel {
+  display: block;
+  animation: tab-in 0.15s ease;
+}
+.tab-panel--hidden {
+  display: none !important;
+}
+@keyframes tab-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

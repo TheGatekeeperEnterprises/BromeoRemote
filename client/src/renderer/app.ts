@@ -883,6 +883,26 @@ function updateIncomingTimeout(): void {
 }
 
 function wireUi(): void {
+  // ── Tab navigation ──────────────────────────────────────────────────────────
+  const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+  const tabPanels = document.querySelectorAll<HTMLDivElement>(".tab-panel");
+  function activateTab(targetTab: string): void {
+    tabBtns.forEach((btn) => {
+      const isActive = btn.dataset.tab === targetTab;
+      btn.classList.toggle("tab-btn--active", isActive);
+      btn.setAttribute("aria-selected", isActive ? "true" : "false");
+    });
+    tabPanels.forEach((panel) => {
+      const isActive = panel.id === `tab-${targetTab}`;
+      panel.classList.toggle("tab-panel--hidden", !isActive);
+    });
+  }
+  tabBtns.forEach((btn) => {
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab ?? "apparaat"));
+  });
+  // Activate first tab by default
+  activateTab("apparaat");
+
   wireToolbarMenus();
   el.deviceLabelSave.onclick = () => saveDeviceLabel();
   el.deviceLabel.onkeydown = (e) => {
