@@ -138,6 +138,8 @@ export type SystemCommand =
   | { kind: "switch-window"; windowId: string; aspect: number }
   | { kind: "resize-active-window"; aspect: number }
   | { kind: "switch-to-desktop" }
+| { kind: "switch-dual-window"; windowId1: string; windowId2: string; isPortrait: boolean }
+  | { kind: "resize-dual-window"; isPortrait: boolean }
   // Sent host->viewer whenever the host's actual OS cursor shape changes
   // (only while a session is connected — see the poll loop in app.ts),
   // so the viewer's own on-screen cursor overlay can match it, the way a

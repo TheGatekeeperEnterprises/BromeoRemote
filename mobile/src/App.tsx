@@ -350,7 +350,10 @@ export default function App(): React.JSX.Element {
   // "Control a program" — pick one of the host's open windows, view/control
   // just that window (resized on the host to match this phone's aspect
   // ratio), instead of the whole desktop.
-  const [windowList, setWindowList] = useState<WindowInfo[]>([]);
+    const [windowList, setWindowList] = useState<WindowInfo[]>([]);
+  const [splitMode, setSplitMode] = useState<boolean>(false);
+  const [selectedSplitWindows, setSelectedSplitWindows] = useState<WindowInfo[]>([]);
+  const [activeDualWindows, setActiveDualWindows] = useState<{ win1: WindowInfo; win2: WindowInfo } | null>(null);
   const [activeAppWindow, setActiveAppWindow] = useState<{ id: string; name: string } | null>(null);
   const [chatMessages, setChatMessages] = useState<{ text: string; timestamp: number; fromMe: boolean }[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -1838,29 +1841,70 @@ export default function App(): React.JSX.Element {
   // on-demand rather than pushed once at session start.
   function openProgramsPanel(): void {
     sessionRef.current?.sendSystemCommand({ kind: "window-list-request" });
+    setSelectedSplitWindows([]);
     setActivePanel("programs");
   }
   function selectProgram(win: WindowInfo): void {
+    setActiveDualWindows(null);
     sessionRef.current?.sendSystemCommand({ kind: "switch-window", windowId: win.id, aspect: currentPhoneAspect() });
     setActiveAppWindow({ id: win.id, name: win.name });
     setActivePanel(null);
     resetZoomAndCursorForNewSource();
   }
+
+  function toggleSplitWindowSelection(win: WindowInfo): void {
+    const isAlreadySelected = selectedSplitWindows.some((w) => w.id === win.id);
+    let updated: WindowInfo[];
+    if (isAlreadySelected) {
+      updated = selectedSplitWindows.filter((w) => w.id !== win.id);
+    } else {
+      if (selectedSplitWindows.length >= 2) {
+        updated = [selectedSplitWindows[1], win];
+      } else {
+        updated = [...selectedSplitWindows, win];
+      }
+    }
+    setSelectedSplitWindows(updated);
+
+    if (updated.length === 2) {
+      const win1 = updated[0];
+      const win2 = updated[1];
+      const isPort = windowHeight > windowWidth;
+      sessionRef.current?.sendSystemCommand({
+        kind: "switch-dual-window",
+        windowId1: win1.id,
+        windowId2: win2.id,
+        isPortrait: isPort,
+      });
+      setActiveDualWindows({ win1, win2 });
+      setActiveAppWindow({ id: "dual", name: `${win1.name} + ${win2.name}` });
+      setActivePanel(null);
+      resetZoomAndCursorForNewSource();
+    }
+  }
+
   function closeProgramMode(): void {
     sessionRef.current?.sendSystemCommand({ kind: "switch-to-desktop" });
     setActiveAppWindow(null);
+    setActiveDualWindows(null);
+    setSelectedSplitWindows([]);
     resetZoomAndCursorForNewSource();
   }
   // While controlling a specific program, keep asking the host to resize
   // that window to match the phone's current aspect ratio as it's rotated —
   // "portrait houd = portrait venster, opzij houd = landscape venster".
   useEffect(() => {
-    if (!activeAppWindow) return;
-    const sub = Dimensions.addEventListener("change", () => {
-      sessionRef.current?.sendSystemCommand({ kind: "resize-active-window", aspect: currentPhoneAspect() });
+    if (!activeAppWindow && !activeDualWindows) return;
+    const sub = Dimensions.addEventListener("change", ({ window }) => {
+      const isPort = window.height > window.width;
+      if (activeDualWindows) {
+        sessionRef.current?.sendSystemCommand({ kind: "resize-dual-window", isPortrait: isPort });
+      } else if (activeAppWindow) {
+        sessionRef.current?.sendSystemCommand({ kind: "resize-active-window", aspect: window.width / window.height });
+      }
     });
     return () => sub.remove();
-  }, [activeAppWindow]);
+  }, [activeAppWindow, activeDualWindows]);
   function toggleBlockInput(): void {
     const enabling = !inputBlocked;
     sessionRef.current?.sendSystemCommand({ kind: "block-input", enabled: enabling });
@@ -2624,22 +2668,64 @@ export default function App(): React.JSX.Element {
                   {toolbarIcon(X)}
                 </TouchableOpacity>
               </View>
+
+              <View style={[styles.modeToggle, { marginBottom: 10 }]}>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, !splitMode && styles.modeToggleBtnActive]}
+                  onPress={() => { setSplitMode(false); setSelectedSplitWindows([]); }}
+                >
+                  <Text style={[styles.settingsQualityText, !splitMode && styles.settingsQualityTextActive]}>1 Venster</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.modeToggleBtn, splitMode && styles.modeToggleBtnActive]}
+                  onPress={() => { setSplitMode(true); setSelectedSplitWindows([]); }}
+                >
+                  <Text style={[styles.settingsQualityText, splitMode && styles.settingsQualityTextActive]}>2 Vensters (Splitsen)</Text>
+                </TouchableOpacity>
+              </View>
+
+              {splitMode && (
+                <Text style={[styles.muted, { marginBottom: 8, fontSize: 12 }]}>
+                  {selectedSplitWindows.length === 0
+                    ? "Kies 2 vensters: tik op het 1e venster"
+                    : selectedSplitWindows.length === 1
+                    ? `1e: ${selectedSplitWindows[0].name} — tik nu op het 2e venster`
+                    : "2 vensters geselecteerd"}
+                </Text>
+              )}
+
               <ScrollView style={styles.chatMessagesList}>
                 {windowList.length === 0 && <Text style={styles.fileEmptyText}>Geen open programma's gevonden.</Text>}
-                {windowList.map((w) => (
-                  <TouchableOpacity key={w.id} style={styles.programRow} onPress={() => selectProgram(w)}>
-                    {w.thumbnail ? (
-                      <Image source={{ uri: w.thumbnail }} style={styles.programThumbnail} resizeMode="cover" />
-                    ) : (
-                      <View style={[styles.programThumbnail, styles.programThumbnailPlaceholder]}>
-                        <AppWindow size={20} color={colors.muted} strokeWidth={2.25} />
-                      </View>
-                    )}
-                    <Text style={styles.programName} numberOfLines={2}>
-                      {w.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                {windowList.map((w) => {
+                  const isSelected = selectedSplitWindows.some((sw) => sw.id === w.id);
+                  const idx = selectedSplitWindows.findIndex((sw) => sw.id === w.id);
+                  return (
+                    <TouchableOpacity
+                      key={w.id}
+                      style={[
+                        styles.programRow,
+                        isSelected && { backgroundColor: "rgba(52, 120, 246, 0.2)", borderColor: colors.primary, borderWidth: 1.5 },
+                      ]}
+                      onPress={() => (splitMode ? toggleSplitWindowSelection(w) : selectProgram(w))}
+                    >
+                      {w.thumbnail ? (
+                        <Image source={{ uri: w.thumbnail }} style={styles.programThumbnail} resizeMode="cover" />
+                      ) : (
+                        <View style={[styles.programThumbnail, styles.programThumbnailPlaceholder]}>
+                          <AppWindow size={20} color={colors.muted} strokeWidth={2.25} />
+                        </View>
+                      )}
+                      <Text style={styles.programName} numberOfLines={2}>
+                        {w.name}
+                      </Text>
+                      {splitMode && isSelected && (
+                        <View style={{ backgroundColor: colors.primary, borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center" }}>
+                          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>{idx + 1}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </ScrollView>
             </View>
           </View>

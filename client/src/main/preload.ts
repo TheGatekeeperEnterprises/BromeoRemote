@@ -59,6 +59,8 @@ contextBridge.exposeInMainWorld("bromeo", {
   setActiveWindow: (windowId: string, aspect: number) => ipcRenderer.invoke("bromeo:set-active-window", windowId, aspect),
   resizeActiveWindow: (aspect: number) => ipcRenderer.invoke("bromeo:resize-active-window", aspect),
   setCaptureDesktop: () => ipcRenderer.invoke("bromeo:set-capture-desktop"),
+  setDualWindow: (windowId1: string, windowId2: string, isPortrait: boolean) => ipcRenderer.invoke("bromeo:set-dual-window", windowId1, windowId2, isPortrait),
+  resizeDualWindow: (isPortrait: boolean) => ipcRenderer.invoke("bromeo:resize-dual-window", isPortrait),
   sendBridgeDecision: (id: string, decision: "allow" | "deny") =>
     ipcRenderer.invoke("bromeo:bridge-decision", id, decision),
   onBridgeNotification: (cb: (notification: NotificationPayload) => void) => {

@@ -40,6 +40,26 @@ function hwndFromWindowSourceId(id: string): number | null {
 // area as possible while matching the viewer's aspect ratio (so a portrait
 // phone gets a tall window, landscape gets a wide one, not just whatever
 // shape the window already happened to be).
+let activeDualWindows: { windowId1: string; windowId2: string } | null = null;
+
+function tileDualWindows(windowId1: string, windowId2: string, isPortrait: boolean): boolean {
+  const hwnd1 = hwndFromWindowSourceId(windowId1);
+  const hwnd2 = hwndFromWindowSourceId(windowId2);
+  if (hwnd1 == null || hwnd2 == null) return false;
+  const work = screen.getPrimaryDisplay().workArea;
+
+  if (isPortrait) {
+    const halfHeight = Math.floor(work.height / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfHeight);
+    resizeAndFocusWindow(hwnd2, work.x, work.y + halfHeight, work.width, halfHeight);
+  } else {
+    const halfWidth = Math.floor(work.width / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, halfWidth, work.height);
+    resizeAndFocusWindow(hwnd2, work.x + halfWidth, work.y, halfWidth, work.height);
+  }
+  return true;
+}
+
 function resizeActiveWindowToAspect(aspect: number): boolean {
   if (!activeWindowId) return false;
   const hwnd = hwndFromWindowSourceId(activeWindowId);
@@ -424,14 +444,22 @@ ipcMain.handle("bromeo:list-monitors", async (): Promise<MonitorInfo[]> => {
   return sources.map((s, i) => ({ id: s.id, label: s.name || `Scherm ${i + 1}` }));
 });
 
-let savedWindowBounds: { hwnd: number; bounds: { x: number; y: number; width: number; height: number } } | null = null;
+let savedWindowBoundsList: { hwnd: number; bounds: { x: number; y: number; width: number; height: number } }[] = [];
+
+function saveWindowBoundsForHwnd(hwnd: number) {
+  if (!savedWindowBoundsList.some((item) => item.hwnd === hwnd)) {
+    const bounds = getWindowBounds(hwnd);
+    if (bounds) {
+      savedWindowBoundsList.push({ hwnd, bounds });
+    }
+  }
+}
 
 function restoreSavedWindowBounds() {
-  if (savedWindowBounds) {
-    const { hwnd, bounds } = savedWindowBounds;
-    resizeAndFocusWindow(hwnd, bounds.x, bounds.y, bounds.width, bounds.height);
-    savedWindowBounds = null;
+  for (const item of savedWindowBoundsList) {
+    resizeAndFocusWindow(item.hwnd, item.bounds.x, item.bounds.y, item.bounds.width, item.bounds.height);
   }
+  savedWindowBoundsList = [];
 }
 
 ipcMain.handle("bromeo:set-active-monitor", (_e, monitorId: string) => {
@@ -455,18 +483,33 @@ ipcMain.handle("bromeo:set-active-window", (_e, windowId: string, aspect: number
   if (activeWindowId !== windowId) {
     restoreSavedWindowBounds();
     activeWindowId = windowId;
+    activeDualWindows = null;
     const hwnd = hwndFromWindowSourceId(activeWindowId);
-    if (hwnd != null) {
-      const bounds = getWindowBounds(hwnd);
-      if (bounds) savedWindowBounds = { hwnd, bounds };
-    }
+    if (hwnd != null) saveWindowBoundsForHwnd(hwnd);
   }
   return resizeActiveWindowToAspect(aspect);
 });
 
 ipcMain.handle("bromeo:resize-active-window", (_e, aspect: number) => resizeActiveWindowToAspect(aspect));
 
+ipcMain.handle("bromeo:set-dual-window", (_e, windowId1: string, windowId2: string, isPortrait: boolean) => {
+  restoreSavedWindowBounds();
+  activeWindowId = null;
+  activeDualWindows = { windowId1, windowId2 };
+  const hwnd1 = hwndFromWindowSourceId(windowId1);
+  const hwnd2 = hwndFromWindowSourceId(windowId2);
+  if (hwnd1 != null) saveWindowBoundsForHwnd(hwnd1);
+  if (hwnd2 != null) saveWindowBoundsForHwnd(hwnd2);
+  return tileDualWindows(windowId1, windowId2, isPortrait);
+});
+
+ipcMain.handle("bromeo:resize-dual-window", (_e, isPortrait: boolean) => {
+  if (!activeDualWindows) return false;
+  return tileDualWindows(activeDualWindows.windowId1, activeDualWindows.windowId2, isPortrait);
+});
+
 ipcMain.handle("bromeo:set-capture-desktop", () => {
+  activeDualWindows = null;
   restoreSavedWindowBounds();
   activeWindowId = null;
   return true;

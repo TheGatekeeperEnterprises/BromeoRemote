@@ -1828,6 +1828,8 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
       } else if (
         cmd.kind === "switch-monitor" ||
         cmd.kind === "switch-window" ||
+        cmd.kind === "switch-dual-window" ||
+        cmd.kind === "resize-dual-window" ||
         cmd.kind === "switch-to-desktop"
       ) {
         if (!sessionPermissions.control) return;
@@ -1836,6 +1838,11 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
           await window.bromeo.setActiveMonitor(cmd.monitorId);
         } else if (cmd.kind === "switch-window") {
           await window.bromeo.setActiveWindow(cmd.windowId, cmd.aspect);
+        } else if (cmd.kind === "switch-dual-window") {
+          await window.bromeo.setDualWindow(cmd.windowId1, cmd.windowId2, cmd.isPortrait);
+        } else if (cmd.kind === "resize-dual-window") {
+          await window.bromeo.resizeDualWindow(cmd.isPortrait);
+          return;
         } else if (cmd.kind === "switch-to-desktop") {
           await window.bromeo.setCaptureDesktop();
         }
