@@ -733,7 +733,7 @@ async function toggleHostScreenPower(): Promise<void> {
 async function endSessionAndRotatePassword(): Promise<void> {
   endSession();
   await regenerateSessionPassword(false);
-  toast("Sessie beÃ«indigd en wachtwoord gewijzigd.");
+  toast("Sessie beëindigd en wachtwoord gewijzigd.");
 }
 
 function openHostChatPanel(): void {
@@ -2309,8 +2309,13 @@ function sendChatMessage(inputEl: HTMLInputElement): void {
 function receiveChatMessage(text: string, timestamp: number): void {
   chatLog.push({ text, timestamp, mine: false });
   renderChat();
-  const panel = currentRole === "host" ? el.hostChatPanel : el.chatPanel;
-  if (panel.classList.contains("hidden")) toast("Nieuw chatbericht ontvangen.");
+  if (currentRole === "host") {
+    openHostChatPanel();
+  } else {
+    [el.filesPanel, el.chatPanel, el.textPanel, el.shortcutsPanel, el.notesPanel, el.aiBuddyPanel].forEach((p) => p.classList.add("hidden"));
+    el.chatPanel.classList.remove("hidden");
+    el.chatInput.focus();
+  }
 }
 
 function renderChat(): void {

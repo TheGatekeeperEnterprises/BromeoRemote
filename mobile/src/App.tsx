@@ -21,7 +21,7 @@ import {
   PixelRatio,
 } from "react-native";
 // react-native's own SafeAreaView is effectively iOS-only in practice (a
-// no-op on Android) Ã¢â‚¬â€ this one actually insets for the status bar/notch on
+// no-op on Android) — this one actually insets for the status bar/notch on
 // both platforms, via the SafeAreaProvider wrapping <App/> in index.js.
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -101,7 +101,7 @@ const RENDER_QUALITY_MODE_KEY = "bromeoremote_render_quality_mode";
 const SHOW_CURSOR_KEY = "bromeoremote_show_remote_cursor";
 const THEME_KEY = "bromeoremote_theme";
 
-// Mirrors the actual gesture handling in the panResponder below exactly Ã¢â‚¬â€
+// Mirrors the actual gesture handling in the panResponder below exactly —
 // keep in sync if that logic changes.
 const MOUSE_MODE_GESTURES = [
   { Icon: MousePointerClick, title: "Tikken", desc: "Klikken (links)" },
@@ -124,7 +124,7 @@ type AppTheme = "light" | "dark";
 type IconComponent = React.ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
 
 // Maps the host's reported OS cursor shape (see the "cursor-shape"
-// SystemCommand) to the matching overlay icon Ã¢â‚¬â€ see CURSOR_SHAPE_ICONS'
+// SystemCommand) to the matching overlay icon — see CURSOR_SHAPE_ICONS'
 // components in gestureIcons.tsx for why each looks the way it does.
 const CURSOR_SHAPE_ICONS: Record<CursorShapeName, IconComponent> = {
   arrow: ArrowCursorIcon,
@@ -141,7 +141,7 @@ const CURSOR_SHAPE_ICONS: Record<CursorShapeName, IconComponent> = {
 };
 
 // Where each icon's real "hotspot" sits within its 24x24 box (see
-// moveCursorDotTo) Ã¢â‚¬â€ arrow is the one genuinely pointed shape (its actual
+// moveCursorDotTo) — arrow is the one genuinely pointed shape (its actual
 // tip, per ArrowCursorIcon's own doc comment); every other shape here
 // renders as a centered symbol (TextCursorIcon's I-beam, or a
 // CursorBadgeIcon circle), so their hotspot is just the box center.
@@ -233,7 +233,7 @@ function formatDuration(totalSeconds: number): string {
   return minutes > 0 ? `${minutes} min ${seconds}s` : `${seconds}s`;
 }
 
-// Regenerated fresh each app launch Ã¢â‚¬â€ mirrors client/src/main/store.ts's
+// Regenerated fresh each app launch — mirrors client/src/main/store.ts's
 // rotating session password for the desktop's "unattended" toggle counterpart.
 function randomPassword(length = 6): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous 0/O/1/I
@@ -243,7 +243,7 @@ function randomPassword(length = 6): string {
 }
 
 export default function App(): React.JSX.Element {
-  // SafeAreaView only pads elements laid out in normal flow Ã¢â‚¬â€ the session
+  // SafeAreaView only pads elements laid out in normal flow — the session
   // toolbar deliberately floats over the video with position:"absolute" (see
   // floatingToolbarWrap), which bypasses that padding entirely and let it
   // sit right under the phone's own gesture/button navigation area. Applied
@@ -260,7 +260,7 @@ export default function App(): React.JSX.Element {
   const [targetPassword, setTargetPassword] = useState("");
   const [connectStatus, setConnectStatus] = useState("");
   // Lightweight non-blocking status feedback (e.g. "Vergrendelen
-  // aangevraagd.") Ã¢â‚¬â€ distinct from Alert.alert, which stays reserved for
+  // aangevraagd.") — distinct from Alert.alert, which stays reserved for
   // failures that genuinely need the user to notice and dismiss.
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -280,12 +280,12 @@ export default function App(): React.JSX.Element {
   // hash/label/id without threading them through the server round-trip.
   const pendingConnectRef = useRef<{ targetId: string; passwordHash: string; remember: boolean; label: string } | null>(null);
   // Unlike pendingConnectRef (cleared once the connect-response resolves),
-  // this stays set for the life of the session Ã¢â‚¬â€ needed to retry with a TOTP
+  // this stays set for the life of the session — needed to retry with a TOTP
   // code, and to auto-reconnect after a restart request.
   const lastConnectRef = useRef<{ targetId: string; passwordHash: string } | null>(null);
   const restartRequestedForRef = useRef<string | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
-  // Gates auto-reconnect to sessions that actually connected at least once Ã¢â‚¬â€
+  // Gates auto-reconnect to sessions that actually connected at least once —
   // an initial attempt that never got off the ground shouldn't retry-loop.
   const sessionReachedConnectedOnceRef = useRef(false);
   const filesTransferredCountRef = useRef(0);
@@ -300,7 +300,7 @@ export default function App(): React.JSX.Element {
   const [notifications, setNotifications] = useState<NotifyEntry[]>([]);
   const [activeConfirm, setActiveConfirm] = useState<NotifyEntry | null>(null);
   // Phone-as-host: a pc can view/control THIS phone the same way this app
-  // views other pcs. Session password (not persisted Ã¢â‚¬â€ regenerated on every
+  // views other pcs. Session password (not persisted — regenerated on every
   // launch, mirrors the desktop's rotating password) gates who can even
   // trigger the accept/decline dialog below.
   const [hostSessionPassword] = useState(() => randomPassword());
@@ -333,7 +333,7 @@ export default function App(): React.JSX.Element {
       hideSub.remove();
     };
   }, []);
-  // The hidden keyboard-bridge TextInput's own controlled value Ã¢â‚¬â€ always
+  // The hidden keyboard-bridge TextInput's own controlled value — always
   // reset to "" right after each keystroke is forwarded. Previously this
   // field was uncontrolled and cleared via an imperative .clear() call,
   // which is an async native command with no relation to React's own state:
@@ -345,9 +345,9 @@ export default function App(): React.JSX.Element {
   const [keyboardDraft, setKeyboardDraft] = useState("");
   const lastKeyboardDraftRef = useRef("");
   // Only one of the toolbar's dropdown panels is open at a time (Shortcuts,
-  // Quick actions, Settings) Ã¢â‚¬â€ matches TeamViewer's mobile session bar.
+  // Quick actions, Settings) — matches TeamViewer's mobile session bar.
   const [activePanel, setActivePanel] = useState<"quickActions" | "settings" | "chat" | "files" | "programs" | "aiBuddy" | "interactionHelp" | null>(null);
-  // "Control a program" Ã¢â‚¬â€ pick one of the host's open windows, view/control
+  // "Control a program" — pick one of the host's open windows, view/control
   // just that window (resized on the host to match this phone's aspect
   // ratio), instead of the whole desktop.
   const [windowList, setWindowList] = useState<WindowInfo[]>([]);
@@ -372,7 +372,7 @@ export default function App(): React.JSX.Element {
     setActivePanel((p) => (p === "chat" ? null : "chat"));
   }
 
-  // --- AI Buddy (local-only Ã¢â‚¬â€ this device's own OpenAI key, never touches
+  // --- AI Buddy (local-only — this device's own OpenAI key, never touches
   // the signaling server) ---
   const [aiBuddyLog, setAiBuddyLog] = useState<{ role: "user" | "assistant"; text: string; imageBase64?: string; timestamp: number }[]>([]);
   const [aiBuddyInput, setAiBuddyInput] = useState("");
@@ -393,7 +393,7 @@ export default function App(): React.JSX.Element {
   async function takeAiBuddyScreenshot(): Promise<void> {
     const frame = await captureRemoteVideoFrame(rtcViewRef);
     if (!frame) {
-      showToast("Kon geen screenshot maken Ã¢â‚¬â€ is het beeld al geladen?");
+      showToast("Kon geen screenshot maken — is het beeld al geladen?");
       return;
     }
     setAiBuddyScreenshot(frame);
@@ -417,10 +417,10 @@ export default function App(): React.JSX.Element {
       const result = await askAiBuddy(history);
       setAiBuddyLog((prev) => [
         ...prev,
-        { role: "assistant", text: result.ok && result.reply ? result.reply : `Ã¢Å¡Â Ã¯Â¸Â ${result.error ?? "Onbekende fout."}`, timestamp: Date.now() },
+        { role: "assistant", text: result.ok && result.reply ? result.reply : `Ã¢Å¡Â ïÂ¸Â ${result.error ?? "Onbekende fout."}`, timestamp: Date.now() },
       ]);
     } catch (err) {
-      setAiBuddyLog((prev) => [...prev, { role: "assistant", text: `Ã¢Å¡Â Ã¯Â¸Â ${(err as Error).message}`, timestamp: Date.now() }]);
+      setAiBuddyLog((prev) => [...prev, { role: "assistant", text: `Ã¢Å¡Â ïÂ¸Â ${(err as Error).message}`, timestamp: Date.now() }]);
     } finally {
       setAiBuddySending(false);
     }
@@ -449,12 +449,12 @@ export default function App(): React.JSX.Element {
     );
   }
 
-  // Icon-only toolbar buttons read as unclear/generic Ã¢â‚¬â€ pairing every icon
+  // Icon-only toolbar buttons read as unclear/generic — pairing every icon
   // with a short label is standard practice (iOS tab bars, Material Design
   // bottom app bars) precisely because icons alone are rarely self-
   // explanatory at a glance, even well-drawn ones.
   function toolbarIcon(Icon: IconComponent, label?: string, active = false, danger = false): React.JSX.Element {
-    // Flat dark-blue icon by default (no background pill) Ã¢â‚¬â€ white only
+    // Flat dark-blue icon by default (no background pill) — white only
     // when its panel is actually open (toolbarBtnActive's filled pill) or
     // for the permanently-red disconnect button (dangerBtn's own background).
     return (
@@ -535,7 +535,7 @@ export default function App(): React.JSX.Element {
     }
   }
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
-  // Persisted across launches (see the AsyncStorage load effect below) Ã¢â‚¬â€ the
+  // Persisted across launches (see the AsyncStorage load effect below) — the
   // desktop client persists the same two settings to localStorage.
   const [showRemoteCursor, setShowRemoteCursorState] = useState(true);
   function setShowRemoteCursor(next: boolean): void {
@@ -543,12 +543,12 @@ export default function App(): React.JSX.Element {
     AsyncStorage.setItem(SHOW_CURSOR_KEY, next ? "1" : "0").catch(() => undefined);
   }
   // Updates only on genuine hover-context changes on the host (see the
-  // "cursor-shape" SystemCommand), not a hot path Ã¢â‚¬â€ plain state/re-render
+  // "cursor-shape" SystemCommand), not a hot path — plain state/re-render
   // for the *icon itself* is fine here, unlike the cursor dot's own
   // *position* (see cursorAnim). cursorShapeRef exists only because
   // moveCursorDotTo is called from the panResponder's handlers, which are
   // captured once via useRef(PanResponder.create(...)) and would otherwise
-  // only ever see the "arrow" value from that first render Ã¢â‚¬â€ same reason
+  // only ever see the "arrow" value from that first render — same reason
   // zoomRef/virtualCursorRef exist alongside their own state elsewhere here.
   const [cursorShape, setCursorShapeState] = useState<CursorShapeName>("arrow");
   const cursorShapeRef = useRef<CursorShapeName>("arrow");
@@ -561,7 +561,7 @@ export default function App(): React.JSX.Element {
   const [qualityLevel, setQualityLevelState] = useState<QualityLevel>("auto");
   // True while the host's adaptive engine has resorted to scaling down the
   // encode resolution (see ADAPTIVE_RESOLUTION_SCALE_DOWN in the host's
-  // session.ts) Ã¢â‚¬â€ surfaced so a soft/blurry picture reads as "your
+  // session.ts) — surfaced so a soft/blurry picture reads as "your
   // connection is struggling" rather than an unexplained quality bug.
   const [qualityDegraded, setQualityDegraded] = useState(false);
   function setQualityLevel(level: QualityLevel): void {
@@ -569,7 +569,7 @@ export default function App(): React.JSX.Element {
     AsyncStorage.setItem(QUALITY_LEVEL_KEY, level).catch(() => undefined);
     sessionRef.current?.sendSystemCommand({ kind: "quality-request", level });
   }
-  // See docs/47seconds.md and MobileSession's own failsafeEnabled comment Ã¢â‚¬â€
+  // See docs/47seconds.md and MobileSession's own failsafeEnabled comment —
   // on by default (a session that quietly re-stitches itself beats one that
   // just drops), but selectable in Settings for anyone who'd rather see a
   // real disconnect than repeated background reconnect attempts.
@@ -580,7 +580,7 @@ export default function App(): React.JSX.Element {
     sessionRef.current?.setFailsafeEnabled(enabled);
   }
   // Controls how big a layout box RTCView's native SurfaceViewRenderer gets
-  // to decode/render into Ã¢â‚¬â€ see getZoomTiers' own comment for the full
+  // to decode/render into — see getZoomTiers' own comment for the full
   // reasoning. "tiered" (default) only grows it when crossing a zoom step,
   // bounding worst-case blur while keeping the average render size (and
   // its GPU/battery/memory cost) low; "always-max" renders at the sharpest
@@ -617,7 +617,7 @@ export default function App(): React.JSX.Element {
   const confirmQueueRef = useRef<NotifyEntry[]>([]);
   const seenNotificationIdsRef = useRef<Set<string>>(new Set());
   // PanResponder.create() runs once inside useRef, so its handlers close over
-  // whatever this was AT THAT TIME forever Ã¢â‚¬â€ a ref (not useState) is required
+  // whatever this was AT THAT TIME forever — a ref (not useState) is required
   // so sendMouseAt always reads the current layout instead of a stale {0,0}.
   // Stores the full page-absolute rect: locationX/Y from touch events land on
   // whichever native view is directly under the finger (e.g. RTCView instead
@@ -625,19 +625,19 @@ export default function App(): React.JSX.Element {
   // uses pageX/Y minus this known origin instead.
   const videoLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
   // The actual decoded frame's resolution (from RTCView's onDimensionsChange)
-  // Ã¢â‚¬â€ needed to size the video box correctly for the current orientation
+  // — needed to size the video box correctly for the current orientation
   // (see getContentRect below), since the video's aspect ratio can be
   // anything (full desktop, a specific shared window, any monitor
   // resolution) and rarely exactly matches the container's. Without this,
   // tap/cursor percentage math silently assumed the video filled 100% of
   // videoLayoutRef 1:1, which is only true when the aspect ratios happen to
-  // match Ã¢â‚¬â€ otherwise every mapped point was off, which is exactly why the
+  // match — otherwise every mapped point was off, which is exactly why the
   // mouse-mode cursor dot and the real remote cursor (baked into the video)
   // would land in different spots.
   const videoDimsRef = useRef({ width: 0, height: 0 });
   const videoWrapRef = useRef<View>(null);
   // Whichever RTCView branch is currently mounted (see the three render
-  // branches below) Ã¢â‚¬â€ needed so AI Buddy's screenshot button can resolve
+  // branches below) — needed so AI Buddy's screenshot button can resolve
   // the native view by tag for PixelCopy capture (see aiBuddy.ts). `any`
   // matches this codebase's established pattern for react-native-webrtc's
   // own imprecise typings (see session.ts).
@@ -645,7 +645,7 @@ export default function App(): React.JSX.Element {
   const keyboardInputRef = useRef<TextInput>(null);
   const lastTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean }>({ x: 0, y: 0, time: 0, moved: false });
 
-  // Pinch-to-zoom on the video (visual only Ã¢â‚¬â€ the touchÃ¢â€ â€™mouse mapping below
+  // Pinch-to-zoom on the video (visual only — the touchÃ¢â€ â€™mouse mapping below
   // inverts this transform so clicks stay accurate while zoomed in).
   const [zoom, setZoomState] = useState({ scale: 1, panX: 0, panY: 0 });
   // Mirrors `zoom` for reading inside the PanResponder closures below, which
@@ -655,7 +655,7 @@ export default function App(): React.JSX.Element {
     zoomRef.current = next;
     setZoomState(next);
     // The dot's on-screen spot is a function of both the cursor's content
-    // fraction *and* the current zoom/pan transform Ã¢â‚¬â€ a pinch/pan changes
+    // fraction *and* the current zoom/pan transform — a pinch/pan changes
     // where the same fraction lands on screen even though the cursor
     // itself hasn't logically moved, so it needs refreshing here too (see
     // cursorAnim's doc comment near virtualCursorRef).
@@ -663,25 +663,25 @@ export default function App(): React.JSX.Element {
   }
   // True for the duration of an active 2-finger pinch. Resizing RTCView's
   // real layout (below) makes Android reallocate the native SurfaceView's
-  // render buffer Ã¢â‚¬â€ far heavier than a transform, and firing that on every
+  // render buffer — far heavier than a transform, and firing that on every
   // single pinch-move touch event (up to ~60/s) is what caused the reported
   // lag/overshoot/disappearing. A throttled periodic real-resize *during*
   // the pinch (instead of only once it settles) was tried to reduce how
   // long text stays blurry mid-gesture, but every one of those still
-  // reallocated the SurfaceView and was visible as a flicker each time Ã¢â‚¬â€
+  // reallocated the SurfaceView and was visible as a flicker each time —
   // worse than the blur it was meant to fix. So: cheap transform-scale for
   // the whole live pinch, real (sharp) resize only once it settles.
   const [zoomLive, setZoomLive] = useState(false);
   // Zooming only magnifies the already-decoded frame (see the RTCView
-  // transform below) Ã¢â‚¬â€ it doesn't reveal more real detail unless the
+  // transform below) — it doesn't reveal more real detail unless the
   // encoder was already spending enough bits to have that detail there in
   // the first place. So while zoomed in, temporarily ask the host for its
-  // highest quality tier Ã¢â‚¬â€ but only when the user's own preference is
+  // highest quality tier — but only when the user's own preference is
   // "low": "auto" is uncapped (WebRTC's own congestion control decides,
   // which is already at least as good as a fixed "high" ceiling) and
   // "high" is already the boost target, so forcing "high" in either of
   // those cases would either do nothing or actively *lower* an uncapped
-  // connection's ceiling Ã¢â‚¬â€ the opposite of what zooming in should do.
+  // connection's ceiling — the opposite of what zooming in should do.
   const zoomQualityBoostRef = useRef(false);
   useEffect(() => {
     const zoomedIn = zoom.scale > 1.15;
@@ -703,12 +703,12 @@ export default function App(): React.JSX.Element {
     startPanX: number;
     startPanY: number;
     // Tracks the centroid frame-to-frame once classified "pan" (see below),
-    // so each move sends an incremental wheel delta Ã¢â‚¬â€ like a real trackpad
-    // Ã¢â‚¬â€ instead of one big jump computed against the gesture's start point.
+    // so each move sends an incremental wheel delta — like a real trackpad
+    // — instead of one big jump computed against the gesture's start point.
     lastCenterX: number;
     lastCenterY: number;
     // Undecided until either the finger spacing or the centroid has moved
-    // enough to tell a pinch from a two-finger pan apart Ã¢â‚¬â€ deliberately a
+    // enough to tell a pinch from a two-finger pan apart — deliberately a
     // separate "wait and see" state rather than defaulting to one of them,
     // which used to send real scroll-wheel input to the host during the
     // ambiguous first moments of almost every real pinch gesture (they're
@@ -716,7 +716,7 @@ export default function App(): React.JSX.Element {
     gestureType: "undecided" | "zoom" | "pan";
   } | null>(null);
   const lastTapRef = useRef({ time: 0, x: 0, y: 0 });
-  // The render tier locked in for the duration of the current live pinch Ã¢â‚¬â€
+  // The render tier locked in for the duration of the current live pinch —
   // see getZoomTiers' comment. Fixed at gesture-grant time and held through
   // the whole gesture so RTCView's layout size never changes mid-pinch (a
   // real resize, the same cost that caused flicker when it happened every
@@ -734,13 +734,13 @@ export default function App(): React.JSX.Element {
   // Kept wired in case a future react-native-webrtc/Fabric combination
   // makes this actually fire (see the onStats handler above for why it
   // currently doesn't, and why videoDimsRef is populated from getStats
-  // instead) Ã¢â‚¬â€ harmless either way, and would just make updates faster if
+  // instead) — harmless either way, and would just make updates faster if
   // it ever does start working.
   function handleVideoDimensionsChange(e: { nativeEvent: { width: number; height: number } }): void {
     videoDimsRef.current = { width: e.nativeEvent.width, height: e.nativeEvent.height };
   }
   // Where the video box sits within videoLayoutRef, always fitted to the
-  // axis the *container's own orientation* pins Ã¢â‚¬â€ not, as a plain
+  // axis the *container's own orientation* pins — not, as a plain
   // objectFit="contain"/"cover" would do, to whichever axis the *video's*
   // aspect ratio happens to be closer to. The video can be anything (full
   // desktop, a specific shared window, any monitor resolution, portrait or
@@ -750,7 +750,7 @@ export default function App(): React.JSX.Element {
   // above/below); in landscape the container is wider than tall, so the
   // video always fills the full height (any pillarbox space only ever
   // lands left/right). This rect is always centered and always <= the
-  // container in both dimensions, same as a real letterbox Ã¢â‚¬â€ it's just
+  // container in both dimensions, same as a real letterbox — it's just
   // deliberately never letting the *video's* aspect ratio override which
   // axis that letterboxing happens on. The RTCView render below sizes the
   // actual native view to this rect directly (not objectFit) so this is
@@ -769,14 +769,14 @@ export default function App(): React.JSX.Element {
     return { x: (cw - width) / 2, y: 0, width, height: ch };
   }
   // The video's source resolution is fixed (screen-share capture, not a
-  // camera) Ã¢â‚¬â€ zooming in only magnifies already-decoded pixels (see the
+  // camera) — zooming in only magnifies already-decoded pixels (see the
   // RTCView transform below), it never reveals more real detail. Past the
   // scale where one source pixel already maps to one physical screen
   // pixel, further zoom is pure blur with zero informational benefit, so
   // cap it there instead of letting pinch/double-tap zoom go arbitrarily
   // far past the point of being readable. Clamped to a sane range in case
   // videoDimsRef isn't populated yet (getStats hasn't reported a resolution
-  // for this session yet Ã¢â‚¬â€ see the onStats handler) or reports something
+  // for this session yet — see the onStats handler) or reports something
   // degenerate.
   function getMaxZoomScale(): number {
     const rect = getContentRect();
@@ -787,7 +787,7 @@ export default function App(): React.JSX.Element {
   }
   // react-native-webrtc's RTCView on Android is backed by a native
   // SurfaceViewRenderer that decodes/renders at whatever the view's own
-  // *layout* size is, not the source resolution Ã¢â‚¬â€ confirmed against the
+  // *layout* size is, not the source resolution — confirmed against the
   // library's own source, no prop exists to decouple them (see the
   // conversation this was researched in). That means a CSS transform-scale
   // (used for zoom) always stretches an already-fixed-resolution bitmap:
@@ -795,17 +795,17 @@ export default function App(): React.JSX.Element {
   // is, regardless of the incoming stream's real quality.
   //
   // The fix: render RTCView at a bigger layout size than the screen needs
-  // Ã¢â‚¬â€ a "tier" Ã¢â‚¬â€ and use transform *only* to scale that down to whatever
+  // — a "tier" — and use transform *only* to scale that down to whatever
   // the actual target size should be. Downscaling a higher-res render
   // never looks blurry (unlike upscaling a lower-res one), so as long as
   // the current zoom stays within a tier's own range, it stays sharp with
   // zero extra transitions. "tiered" mode only grows the layout size (a
-  // real SurfaceView buffer reallocation Ã¢â‚¬â€ the same cost that caused
+  // real SurfaceView buffer reallocation — the same cost that caused
   // flicker when done every touch-move frame, see zoomLive's own history)
-  // when crossing into a new tier, not continuously Ã¢â‚¬â€ bounding worst-case
+  // when crossing into a new tier, not continuously — bounding worst-case
   // blur to within one tier's range while keeping the *average* render
   // size, and its GPU/battery/memory cost, low. "always-max" instead
-  // always uses the single sharpest tier for the whole session Ã¢â‚¬â€ zero
+  // always uses the single sharpest tier for the whole session — zero
   // transitions/blur ever, at the cost of that higher render size being
   // paid constantly, even fully zoomed out.
   function getZoomTiers(mode: "tiered" | "always-max"): number[] {
@@ -815,7 +815,7 @@ export default function App(): React.JSX.Element {
     steps.push(max);
     return steps;
   }
-  // The smallest tier that's still >= the given scale Ã¢â‚¬â€ i.e. "just enough"
+  // The smallest tier that's still >= the given scale — i.e. "just enough"
   // render resolution for this zoom level, never less.
   function pickTier(scale: number, tiers: number[]): number {
     return tiers.find((t) => t >= scale - 0.001) ?? tiers[tiers.length - 1];
@@ -823,7 +823,7 @@ export default function App(): React.JSX.Element {
   // Inverts the current zoom/pan transform: page-absolute touch point Ã¢â€ â€™ the
   // underlying (unzoomed) content point, as a 0..1 fraction of the video.
   // RN's transform array `[translateX, translateY, scale]` applies translate
-  // FIRST (in the view's own local space), then scale around its center Ã¢â‚¬â€ so
+  // FIRST (in the view's own local space), then scale around its center — so
   // a content point p maps to screen position: center + S*((p - center) + pan).
   function pageToContentPct(pageX: number, pageY: number): { xPct: number; yPct: number } {
     const { x: originX, y: originY, width, height } = videoLayoutRef.current;
@@ -855,7 +855,7 @@ export default function App(): React.JSX.Element {
   }
 
   // Pan needed so that a given content point (0..1 fraction) stays under a
-  // given page-absolute screen point at a given scale Ã¢â‚¬â€ used both to zoom in
+  // given page-absolute screen point at a given scale — used both to zoom in
   // centered on a double-tap, and to keep the pinch's start point anchored
   // under the fingers as the gesture continues.
   function panToKeepContentAt(contentXPct: number, contentYPct: number, pageX: number, pageY: number, scale: number): { panX: number; panY: number } {
@@ -875,7 +875,7 @@ export default function App(): React.JSX.Element {
     };
   }
   // Forward transform (content 0..1 fraction Ã¢â€ â€™ local screen point, relative to
-  // videoWrap) Ã¢â‚¬â€ the inverse of pageToContentPct's math Ã¢â‚¬â€ used to draw the
+  // videoWrap) — the inverse of pageToContentPct's math — used to draw the
   // mouse-mode cursor overlay at the right spot, including while zoomed.
   function contentPctToLocal(xPct: number, yPct: number): { lx: number; ly: number } {
     const { width, height } = videoLayoutRef.current;
@@ -892,7 +892,7 @@ export default function App(): React.JSX.Element {
 
 
   // --- Mouse mode (trackpad-style relative control, vs. touch mode's
-  // absolute tap-to-position) Ã¢â‚¬â€ matches TeamViewer's "Muis-modus". ---
+  // absolute tap-to-position) — matches TeamViewer's "Muis-modus". ---
   // Muis-modus is the global default (persisted via AsyncStorage).
   const [interactionMode, setInteractionModeState] = useState<"touch" | "mouse">("mouse");
   const interactionModeRef = useRef<"touch" | "mouse">("mouse");
@@ -902,14 +902,14 @@ export default function App(): React.JSX.Element {
     // Persist preference so it survives app restarts and new sessions
     AsyncStorage.setItem("@interactionMode", mode).catch(() => {});
   }
-  // The cursor's logical position (content fraction) Ã¢â‚¬â€ a plain ref, not
+  // The cursor's logical position (content fraction) — a plain ref, not
   // React state: nothing renders directly from this (the dot's *visual*
   // position is cursorAnim below), it's only read by sendCursorEvent/
   // scroll-into-view/etc. Used to be state, which meant every single
   // touch-move re-rendered this whole (large) component just to move a
   // 20px dot, and fell visibly behind real finger movement under that cost.
   const virtualCursorRef = useRef({ xPct: 0.5, yPct: 0.5 });
-  // The dot's actual on-screen position Ã¢â‚¬â€ see virtualCursorRef above for
+  // The dot's actual on-screen position — see virtualCursorRef above for
   // why this is a native-driven Animated value instead of state.
   const cursorAnim = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   function setVirtualCursor(next: { xPct: number; yPct: number }): void {
@@ -918,7 +918,7 @@ export default function App(): React.JSX.Element {
   }
   // Positions the animated dot for a given content fraction, with the same
   // off-screen clamping the dot's render used to do inline (see
-  // contentPctToLocal's doc comment Ã¢â‚¬â€ briefly relevant right after a
+  // contentPctToLocal's doc comment — briefly relevant right after a
   // content-source switch, while zoom/pan still reference the old content).
   function moveCursorDotTo(xPct: number, yPct: number): void {
     const { lx, ly } = contentPctToLocal(xPct, yPct);
@@ -926,7 +926,7 @@ export default function App(): React.JSX.Element {
     const clampedLx = width ? Math.min(width, Math.max(0, lx)) : lx;
     const clampedLy = height ? Math.min(height, Math.max(0, ly)) : ly;
     // Each shape's icon has its own real "hotspot" within its 24x24 box
-    // (see CURSOR_SHAPE_HOTSPOTS) Ã¢â‚¬â€ offsetting by that instead of half the
+    // (see CURSOR_SHAPE_HOTSPOTS) — offsetting by that instead of half the
     // box size is what makes the rendered icon land exactly on the logical
     // cursor position, the way a real OS cursor's hotspot is a specific
     // point on it (its tip, for an arrow), not its bounding box's center.
@@ -935,13 +935,13 @@ export default function App(): React.JSX.Element {
   }
   // Mouse mode's click-drag ("selecteren") arms on the second tap of a
   // double-tap (matches TeamViewer's muis-modus exactly) rather than on a
-  // held-still timer Ã¢â‚¬â€ a plain single-finger drag, however slowly it
+  // held-still timer — a plain single-finger drag, however slowly it
   // proceeds, now never arms it, however long it takes.
   const mouseGestureRef = useRef({ downTime: 0, buttonDown: false, dragSelectArmed: false, downX: 0, downY: 0 });
   const lastMouseTapRef = useRef({ time: 0, x: 0, y: 0 });
   // Touch mode's single-finger disambiguation (matches TeamViewer's
   // touch-modus exactly): "pending" until either enough drift or enough
-  // hold-time decides it Ã¢â‚¬â€ moving early makes it "scrolling" (remote scroll,
+  // hold-time decides it — moving early makes it "scrolling" (remote scroll,
   // never touches the cursor), staying still past the long-press window
   // first makes it "dragSelecting" (click-and-drag from the press point).
   const touchGestureRef = useRef<{ phase: "pending" | "scrolling" | "dragSelecting"; downTime: number; downX: number; downY: number }>({
@@ -959,7 +959,7 @@ export default function App(): React.JSX.Element {
     // up so crossing a large desktop from a small phone screen doesn't take
     // repeated swipes. Flat 1.8x was too fast even at slow speed (reported
     // as "cursor moves faster than my finger"); flat 1.0x fixed that but
-    // made fast movement tedious Ã¢â‚¬â€ this keeps slow movement exactly at 1:1
+    // made fast movement tedious — this keeps slow movement exactly at 1:1
     // and only speeds up once a move is unambiguously a fast flick, the way
     // real OS pointer acceleration (and TeamViewer's own mouse mode) works.
     const speed = Math.hypot(dxPx, dyPx); // px moved this touch-move event
@@ -971,7 +971,7 @@ export default function App(): React.JSX.Element {
       yPct: Math.min(1, Math.max(0, virtualCursorRef.current.yPct + dYPct)),
     };
 
-    // Deliberately not setVirtualCursor/setState here Ã¢â‚¬â€ this runs on every
+    // Deliberately not setVirtualCursor/setState here — this runs on every
     // single touch-move (up to ~60/s) and a full re-render on each one is
     // exactly what made the dot visibly lag behind the finger (see
     // cursorAnim's doc comment above). The ref stays the source of truth for
@@ -1023,7 +1023,7 @@ export default function App(): React.JSX.Element {
 
       const signaling = new Signaling(DEFAULT_SIGNALING_URL);
       signalingRef.current = signaling;
-      // "hello" re-registers this device's ID with the server's registry Ã¢â‚¬â€
+      // "hello" re-registers this device's ID with the server's registry —
       // must fire on every reconnect (Signaling now retries automatically
       // after a dropped connection), not just the first one, or this device
       // would be connected but unreachable by ID after any blip.
@@ -1055,7 +1055,7 @@ export default function App(): React.JSX.Element {
     const unsubForeground = onForegroundPush((fromId, notification) => addNotification({ ...notification, replyTo: fromId }));
     // Background/killed: these fire for notifications *we* displayed via
     // notifee (see index.js's background handler + src/notifications.ts),
-    // not Firebase's own auto-display Ã¢â‚¬â€ replaces onPushOpenedApp/
+    // not Firebase's own auto-display — replaces onPushOpenedApp/
     // getInitialPush, which only ever fired for Firebase-displayed ones.
     const unsubOpened = onNotificationPress((fromId, notification) => addNotification({ ...notification, replyTo: fromId }));
     getInitialNotificationPress().then((initial) => {
@@ -1077,7 +1077,7 @@ export default function App(): React.JSX.Element {
     isAccessibilityServiceEnabled().then(setAccessibilityEnabled);
     isVirtualKeyboardEnabled().then(setVirtualKeyboardEnabled);
     // The only way this actually changes is the user visiting Settings and
-    // back (Android has no event for it) Ã¢â‚¬â€ re-check whenever the app returns
+    // back (Android has no event for it) — re-check whenever the app returns
     // to the foreground, which covers exactly that path.
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
@@ -1191,9 +1191,9 @@ export default function App(): React.JSX.Element {
   }
 
   function addNotification(entry: NotifyEntry): void {
-    // The same notification can arrive twice Ã¢â‚¬â€ once over the WebSocket (if
+    // The same notification can arrive twice — once over the WebSocket (if
     // still connected) and once via push (server sends both, see
-    // server/src/index.ts) Ã¢â‚¬â€ so de-dupe by the bridge's own notification id.
+    // server/src/index.ts) — so de-dupe by the bridge's own notification id.
     if (seenNotificationIdsRef.current.has(entry.id)) return;
     seenNotificationIdsRef.current.add(entry.id);
     setNotifications((prev) => [entry, ...prev].slice(0, 20));
@@ -1235,7 +1235,7 @@ export default function App(): React.JSX.Element {
     console.trace("[connectTo] call stack");
     pendingConnectRef.current = { targetId: id, passwordHash, remember, label };
     lastConnectRef.current = { targetId: id, passwordHash };
-    setConnectStatus("Verbinding makenâ€¦");
+    setConnectStatus("Verbinding maken…");
     signalingRef.current?.send({ type: "connect-request", targetId: id, fromId: myId, passwordHash, totpCode: totpCodeValue });
   }
 
@@ -1257,7 +1257,7 @@ export default function App(): React.JSX.Element {
     connectTo(cleanTarget, passwordHash, rememberDevice, rememberLabel.trim() || formatId(cleanTarget));
   }
 
-  // One-tap reconnect: the stored passwordHash is resent as-is Ã¢â‚¬â€ the wire
+  // One-tap reconnect: the stored passwordHash is resent as-is — the wire
   // protocol only ever carries the hash, never the plaintext, so there's
   // nothing to re-derive here.
   function connectToSaved(device: SavedDevice): void {
@@ -1270,7 +1270,7 @@ export default function App(): React.JSX.Element {
     const intervalMs = 15_000;
     const maxAttempts = 20;
     let attempt = 0;
-    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}â€¦`);
+    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}…`);
     const tryOnce = () => {
       attempt++;
       if (sessionRef.current || attempt > maxAttempts) return;
@@ -1332,10 +1332,10 @@ export default function App(): React.JSX.Element {
           console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
           // sessionStartedAtRef is already null by the time a *deliberate*
           // hangup (disconnect button, peer-initiated bye, ...) reaches
-          // here, since endSession() clears it before session.close() Ã¢â‚¬â€
+          // here, since endSession() clears it before session.close() —
           // so surpriseDrop only true for a genuine unexpected drop of a
           // session that actually connected (e.g. the NAT-timeout-driven
-          // drop a direct P2P path can hit Ã¢â‚¬â€ see
+          // drop a direct P2P path can hit — see
           // docs/WEBRTC-TURN-DEBUGGING.md).
           const surpriseDrop = sessionStartedAtRef.current != null && sessionReachedConnectedOnceRef.current;
           const reconnect =
@@ -1356,13 +1356,13 @@ export default function App(): React.JSX.Element {
         // RTCView's onDimensionsChange prop (see getContentRect/
         // handleVideoDimensionsChange) requires a native boolean-enable
         // handshake that doesn't reliably fire under this app's Fabric (New
-        // Architecture) setup Ã¢â‚¬â€ react-native-webrtc's ViewManager expects
+        // Architecture) setup — react-native-webrtc's ViewManager expects
         // the very same "onDimensionsChange" prop to arrive as a plain
         // boolean to flip its internal enabled flag, which Fabric's
         // codegen'd event props don't do the way the legacy bridge did.
         // getStats' inbound-rtp report already carries frameWidth/
         // frameHeight regardless, and this callback already fires every 2s
-        // (see startStatsLoop) Ã¢â‚¬â€ piggybacking on it here is a reliable
+        // (see startStatsLoop) — piggybacking on it here is a reliable
         // source for the video's real resolution instead. A couple of
         // seconds' lag before the fit-per-orientation math (re)applies
         // after a resolution change (e.g. switching monitors/windows) is a
@@ -1373,7 +1373,7 @@ export default function App(): React.JSX.Element {
         if (stats.fps != null) parts.push(`${stats.fps} fps`);
         if (stats.bitrateKbps != null) parts.push(`${stats.bitrateKbps} kbps`);
         if (stats.rttMs != null) parts.push(`${stats.rttMs} ms`);
-        setStatsText(parts.join(" Ã‚Â· "));
+        setStatsText(parts.join(" · "));
       },
       onChatMessage: receiveChatMessage,
       onFileOffer: handleFileOffer,
@@ -1381,7 +1381,7 @@ export default function App(): React.JSX.Element {
       onFileComplete: handleFileComplete,
       onSystemCommand: (cmd) => {
         // `enabled` is the host's actual resulting state (not an echo of
-        // what we requested) Ã¢â‚¬â€ always safe to trust directly, `ok` just
+        // what we requested) — always safe to trust directly, `ok` just
         // decides whether we also surface a failure warning.
         if (cmd.kind === "block-input-status") {
           setInputBlocked(cmd.enabled);
@@ -1411,7 +1411,7 @@ export default function App(): React.JSX.Element {
     });
     sessionRef.current = session;
     session.startAsViewer();
-    // Apply the persisted quality preference to this session too Ã¢â‚¬â€ mirrors
+    // Apply the persisted quality preference to this session too — mirrors
     // the desktop viewer applying its own saved setting right after connecting.
     session.sendSystemCommand({ kind: "quality-request", level: qualityLevel });
     session.setFailsafeEnabled(failsafeReconnect);
@@ -1430,7 +1430,7 @@ export default function App(): React.JSX.Element {
     }
   }
 
-  // Just creates the session and waits Ã¢â‚¬â€ the offer itself arrives moments
+  // Just creates the session and waits — the offer itself arrives moments
   // later via a separate "signal" message once the viewer sees our accept.
   function startHostSession(peerId: string): void {
     const signaling = signalingRef.current;
@@ -1450,7 +1450,7 @@ export default function App(): React.JSX.Element {
   }
 
   // Triggers Android's own screen-recording confirmation dialog (MediaProjection
-  // isn't grantable silently, by design Ã¢â‚¬â€ the phone's own user must confirm it
+  // isn't grantable silently, by design — the phone's own user must confirm it
   // even though they already accepted the BromeoRemote request a moment ago).
   async function captureAndAnswer(offer: any): Promise<void> {
     try {
@@ -1468,7 +1468,7 @@ export default function App(): React.JSX.Element {
       const startedAt = sessionStartedAtRef.current;
       const durationSec = Math.round((Date.now() - startedAt) / 1000);
       const filesText = filesTransferredCountRef.current === 0 ? "geen bestanden overgezet" : `${filesTransferredCountRef.current} bestand(en) overgezet`;
-      showToast(`Sessie beÃ«indigd Ã¢â‚¬â€ duurde ${formatDuration(durationSec)}, ${filesText}.`);
+      showToast(`Sessie beëindigd — duurde ${formatDuration(durationSec)}, ${filesText}.`);
       addSessionHistoryEntry({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         peerId: sessionPeer,
@@ -1489,7 +1489,7 @@ export default function App(): React.JSX.Element {
     setConnectStatus("");
     setZoom({ scale: 1, panX: 0, panY: 0 });
     // The host has its own safety net that releases this on disconnect
-    // regardless of what we do here Ã¢â‚¬â€ this just keeps this UI's toggle from
+    // regardless of what we do here — this just keeps this UI's toggle from
     // showing a stale "blocked" state at the start of the next session.
     setInputBlocked(false);
     setWallpaperHidden(false);
@@ -1543,7 +1543,7 @@ export default function App(): React.JSX.Element {
 
         if (interactionModeRef.current === "mouse") {
           const lastTap = lastMouseTapRef.current;
-          // Same double-tap window/proximity check touch-mode's zoom uses Ã¢â‚¬â€
+          // Same double-tap window/proximity check touch-mode's zoom uses —
           // judged by raw finger position, since that's what a real
           // double-tap is, regardless of where the virtual cursor is.
           const isSecondTapOfDoubleTap = now - lastTap.time < 300 && Math.hypot(pageX - lastTap.x, pageY - lastTap.y) < 40;
@@ -1559,12 +1559,12 @@ export default function App(): React.JSX.Element {
         if (isDoubleTap) {
           lastTapRef.current = { time: 0, x: 0, y: 0 }; // consume, avoid a triple-tap re-triggering
           // A real double-click passthrough (two mousedown/mouseup pairs,
-          // exactly like a plain single tap doubled up Ã¢â‚¬â€ see the "pending"
+          // exactly like a plain single tap doubled up — see the "pending"
           // release-path below) rather than a local zoom gesture, matching
           // real remote-desktop touch mode: double-tap opens things
           // (icons, files), it doesn't zoom. Zoom still has pinch, which
           // works identically in every mode (see onPanResponderGrant's
-          // touches.length >= 2 branch above) Ã¢â‚¬â€ this was a redundant
+          // touches.length >= 2 branch above) — this was a redundant
           // shortcut on top of that, not the only way to zoom.
           sendMouseAt("mousedown", pageX, pageY);
           sendMouseAt("mouseup", pageX, pageY);
@@ -1572,7 +1572,7 @@ export default function App(): React.JSX.Element {
           sendMouseAt("mouseup", pageX, pageY);
           return;
         }
-        // Nothing sent yet Ã¢â‚¬â€ touch-modus's single finger is three-way
+        // Nothing sent yet — touch-modus's single finger is three-way
         // ambiguous at this point (tap-click / scroll-drag / long-press then
         // drag-select) and onPanResponderMove/Release resolve it below,
         // matching TeamViewer's touch-modus exactly.
@@ -1621,7 +1621,7 @@ export default function App(): React.JSX.Element {
             const scaleDeviation = Math.abs(ratio - 1);
             const drift = Math.hypot(centroid.x - pinch.startCenterX, centroid.y - pinch.startCenterY);
             // Real pinches are rarely perfectly symmetric from frame one, so
-            // this waits for a clear signal instead of defaulting to "pan" Ã¢â‚¬â€
+            // this waits for a clear signal instead of defaulting to "pan" —
             // that used to send real scroll-wheel input to the host for
             // every ambiguous early frame of almost any pinch, which looked
             // like (and was) the remote screen shifting on its own while the
@@ -1657,7 +1657,7 @@ export default function App(): React.JSX.Element {
           }
 
           // Anchored to the pinch's fixed starting point, not the live
-          // (drifting) centroid Ã¢â‚¬â€ real pinches rarely stay perfectly
+          // (drifting) centroid — real pinches rarely stay perfectly
           // centered, and re-anchoring to the moving centroid made the image
           // visibly scroll/drift during an ordinary pinch. maxPanX/Y
           // (derived from scale) already keeps panning in bounds at any
@@ -1677,7 +1677,7 @@ export default function App(): React.JSX.Element {
           const gesture = mouseGestureRef.current;
           // Only counts as "moved" (which suppresses the tap/long-press
           // click on release) past a small deadzone from the actual touch-
-          // down point Ã¢â‚¬â€ without this, a finger that trembles even 1-2px
+          // down point — without this, a finger that trembles even 1-2px
           // during an otherwise-still tap or long-press would silently
           // never register as a click, since PanResponder fires a move
           // event for any nonzero delta, however tiny. The cursor itself
@@ -1686,7 +1686,7 @@ export default function App(): React.JSX.Element {
           const driftFromDown = Math.hypot(pageX - gesture.downX, pageY - gesture.downY);
           lastTouchRef.current = { x: pageX, y: pageY, time: last.time, moved: last.moved || driftFromDown > 4 };
           if (!gesture.buttonDown && gesture.dragSelectArmed) {
-            // Dragging on the second tap of a double-tap Ã¢â‚¬â€ matches
+            // Dragging on the second tap of a double-tap — matches
             // TeamViewer muis-modus's "Dubbele-tik en slepen om te
             // selecteren" exactly. A plain single-finger drag (not preceded
             // by a same-spot tap moments earlier) never arms this, however
@@ -1699,14 +1699,14 @@ export default function App(): React.JSX.Element {
         }
 
         // touch-modus: three-way disambiguation matching TeamViewer exactly
-        // Ã¢â‚¬â€ "EÃ©n vinger om te scrollen" vs "Lang drukken en slepen om te
+        // — "Eén vinger om te scrollen" vs "Lang drukken en slepen om te
         // selecteren" vs the tap-to-click handled entirely on release below.
         const { pageX, pageY } = evt.nativeEvent;
         lastTouchRef.current.moved = true;
         const g = touchGestureRef.current;
         if (g.phase === "pending") {
           const drift = Math.hypot(pageX - g.downX, pageY - g.downY);
-          if (drift < 8) return; // still just jitter Ã¢â‚¬â€ keep waiting, don't decide yet
+          if (drift < 8) return; // still just jitter — keep waiting, don't decide yet
           if (Date.now() - g.downTime < 500) {
             g.phase = "scrolling"; // moved before the long-press window elapsed
           } else {
@@ -1747,7 +1747,7 @@ export default function App(): React.JSX.Element {
           sendMouseAt("mouseup", lastTouchRef.current.x, lastTouchRef.current.y);
         } else if (g.phase === "pending") {
           // Never moved: either a quick tap, or a long-press released
-          // without ever dragging Ã¢â‚¬â€ "Lange tik voor rechtsklikken".
+          // without ever dragging — "Lange tik voor rechtsklikken".
           const { x, y } = lastTouchRef.current;
           if (Date.now() - g.downTime > 500) {
             sendMouseAt("mousedown", x, y, "right");
@@ -1757,7 +1757,7 @@ export default function App(): React.JSX.Element {
             sendMouseAt("mouseup", x, y);
           }
         }
-        // "scrolling" phase needs nothing on release Ã¢â‚¬â€ it never touched the cursor.
+        // "scrolling" phase needs nothing on release — it never touched the cursor.
         touchGestureRef.current = { phase: "pending", downTime: 0, downX: 0, downY: 0 };
       },
     })
@@ -1791,9 +1791,9 @@ export default function App(): React.JSX.Element {
     }
   }
 
-  // --- Shortcuts bar (TeamViewer-style: KopiÃ«ren/Plakken/PrtScn/Alt-Tab/Opslaan) ---
+  // --- Shortcuts bar (TeamViewer-style: Kopiëren/Plakken/PrtScn/Alt-Tab/Opslaan) ---
   // Presses each code in order (so modifiers are already held down when the
-  // main key goes down), then releases in reverse order Ã¢â‚¬â€ same as a person
+  // main key goes down), then releases in reverse order — same as a person
   // holding Ctrl and tapping C, not releasing Ctrl until after.
   function sendShortcut(codes: string[]): void {
     for (const code of codes) sessionRef.current?.sendInput({ kind: "keydown", key: code, code });
@@ -1807,13 +1807,13 @@ export default function App(): React.JSX.Element {
     showToast("Vergrendelen aangevraagd.");
   }
   // Only works if the host has explicitly enabled it (Sessie-instellingen op
-  // de desktop-app) Ã¢â‚¬â€ the host reports back via ctrl-alt-del-status if not.
+  // de desktop-app) — the host reports back via ctrl-alt-del-status if not.
   function sendCtrlAltDel(): void {
     sessionRef.current?.sendSystemCommand({ kind: "ctrl-alt-del-request" });
     setActivePanel(null);
   }
   // Whatever zoom/pan was dialed in applied to the *previous* video content
-  // Ã¢â‚¬â€ switching source (desktop Ã¢â€ â€ a specific window, or between windows)
+  // — switching source (desktop Ã¢â€ â€ a specific window, or between windows)
   // swaps in content with a completely different resolution/aspect ratio,
   // but contentPctToLocal doesn't clamp its output to the visible container.
   // Carrying over a stale scale/pan onto new content could place the mouse-
@@ -1852,7 +1852,7 @@ export default function App(): React.JSX.Element {
     resetZoomAndCursorForNewSource();
   }
   // While controlling a specific program, keep asking the host to resize
-  // that window to match the phone's current aspect ratio as it's rotated Ã¢â‚¬â€
+  // that window to match the phone's current aspect ratio as it's rotated —
   // "portrait houd = portrait venster, opzij houd = landscape venster".
   useEffect(() => {
     if (!activeAppWindow) return;
@@ -1897,7 +1897,7 @@ export default function App(): React.JSX.Element {
         <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
         <Image source={logo2} style={styles.bootLogo} resizeMode="contain" />
         <ActivityIndicator size="small" color={colors.primary} style={styles.bootSpinner} />
-        <Text style={styles.bootText}>Verbindenâ€¦</Text>
+        <Text style={styles.bootText}>Verbinden…</Text>
       </SafeAreaView>
     );
   }
@@ -1909,7 +1909,7 @@ export default function App(): React.JSX.Element {
         <View style={styles.hostBanner}>
           <Text style={styles.hostBannerText}>{formatId(sessionPeer)} bekijkt en bedient deze telefoon</Text>
           <TouchableOpacity style={[styles.primaryBtn, styles.dangerBtn]} onPress={disconnectSession}>
-            <Text style={styles.primaryBtnText}>Sessie beÃ«indigen</Text>
+            <Text style={styles.primaryBtnText}>Sessie beëindigen</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -1937,7 +1937,7 @@ export default function App(): React.JSX.Element {
               onContentSizeChange={() => aiBuddyScrollRef.current?.scrollToEnd({ animated: true })}
             >
               {aiBuddyLog.length === 0 && (
-                <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag Ã¢â‚¬â€ AI Buddy helpt je stap voor stap.</Text>
+                <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</Text>
               )}
               {aiBuddyLog.map((m, i) => (
                 <View key={i} style={[styles.chatBubble, m.role === "user" ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
@@ -1945,7 +1945,7 @@ export default function App(): React.JSX.Element {
                   <Text style={styles.chatBubbleText}>{m.text}</Text>
                 </View>
               ))}
-              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt naâ€¦</Text>}
+              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
             </ScrollView>
             {aiBuddyScreenshot && (
               <View style={styles.aiBuddyScreenshotPreview}>
@@ -1963,7 +1963,7 @@ export default function App(): React.JSX.Element {
                 style={[styles.input, styles.chatInputField]}
                 value={aiBuddyInput}
                 onChangeText={setAiBuddyInput}
-                placeholder="Stel een vraag over dit probleemâ€¦"
+                placeholder="Stel een vraag over dit probleem…"
                 placeholderTextColor="#8b96b8"
                 onSubmitEditing={sendAiBuddyMessage}
                 returnKeyType="send"
@@ -1998,11 +1998,11 @@ export default function App(): React.JSX.Element {
             }}
           >
           {/* panHandlers live on this inner layer (not videoWrap itself) so
-              that expandBtn below Ã¢â‚¬â€ a real sibling, not a descendant of the
-              gesture-capturing view Ã¢â‚¬â€ can actually receive its own taps.
+              that expandBtn below — a real sibling, not a descendant of the
+              gesture-capturing view — can actually receive its own taps.
               With panHandlers on the outer view, onStartShouldSetPanResponder
               returning true claims every touch inside videoWrap, including
-              ones landing on expandBtn, before its onPress ever fires Ã¢â‚¬â€
+              ones landing on expandBtn, before its onPress ever fires —
               exactly why "uitklappen" stopped working after being collapsed. */}
           <View style={styles.videoGestureLayer} {...panResponder.panHandlers}>
             {remoteStream &&
@@ -2012,16 +2012,16 @@ export default function App(): React.JSX.Element {
                 // zooming via a plain transform on a 1x-sized box always
                 // upscales an already-fixed-resolution bitmap (blurry). The
                 // box below is instead laid out at `tier` size (>= the
-                // current zoom, chosen by getZoomTiers/pickTier) Ã¢â‚¬â€ high
-                // enough to stay sharp Ã¢â‚¬â€ positioned so its *center* lands
+                // current zoom, chosen by getZoomTiers/pickTier) — high
+                // enough to stay sharp — positioned so its *center* lands
                 // exactly where the real target scale/pan says it should
                 // (independent of tier, verified algebraically against
                 // contentPctToLocal's own formula), then transform-scaled
                 // *down* to the real target size. Downscaling never looks
                 // blurry, unlike upscaling, so this stays sharp within a
                 // tier's whole range. `tier` is locked for the duration of
-                // a live pinch (liveTierRef) so the layout size Ã¢â‚¬â€ and thus
-                // the expensive SurfaceView reallocation it triggers Ã¢â‚¬â€
+                // a live pinch (liveTierRef) so the layout size — and thus
+                // the expensive SurfaceView reallocation it triggers —
                 // never changes mid-gesture (that's what caused visible
                 // flicker the one time a real per-frame resize was tried);
                 // it only changes on grant (new gesture) or once a gesture
@@ -2040,7 +2040,7 @@ export default function App(): React.JSX.Element {
                   );
                 }
                 // The box the video actually renders in, per the current
-                // phone orientation (see getContentRect) Ã¢â‚¬â€ deliberately
+                // phone orientation (see getContentRect) — deliberately
                 // sized/positioned explicitly rather than left to
                 // objectFit, since objectFit's contain/cover only ever
                 // compare the *video's* aspect ratio against the
@@ -2082,7 +2082,7 @@ export default function App(): React.JSX.Element {
               showRemoteCursor &&
               (() => {
                 // Position comes entirely from cursorAnim (see its doc
-                // comment near virtualCursorRef) Ã¢â‚¬â€ moveCursorDotTo already
+                // comment near virtualCursorRef) — moveCursorDotTo already
                 // applies the same off-screen clamping this used to do
                 // inline here, plus the current shape's hotspot offset, so
                 // there's nothing left to compute at render time.
@@ -2129,9 +2129,9 @@ export default function App(): React.JSX.Element {
         )}
         </View>
 
-        {/* â”€â”€ Portrait: TOP bar (Vensters Â· AI Buddy Â· Opties Â· Stop) â”€â”€â”€â”€â”€ */}
+        {/* ── Portrait: TOP bar (Vensters · AI Buddy · Opties · Stop) ───── */}
         {!isLandscape && (
-          <View style={[styles.portraitTopBar, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right }]}>
+          <View style={[styles.portraitTopBar, { paddingLeft: insets.left, paddingRight: insets.right }]}>
             {/* Vensters dropdown */}
             <TouchableOpacity
               style={[styles.portraitTopBtn, activePanel === "programs" && styles.portraitTopBtnActive]}
@@ -2180,9 +2180,9 @@ export default function App(): React.JSX.Element {
           </View>
         )}
 
-        {/* â”€â”€ Portrait: BOTTOM bar (Muis Â· Bestand Â· Snel Â· Bord Â· Chat) â”€â”€ */}
+        {/* ── Portrait: BOTTOM bar (Muis · Bestand · Snel · Bord · Chat) ── */}
         {!isLandscape && (
-          <View style={[styles.portraitBottomBar, { paddingBottom: insets.bottom, paddingLeft: insets.left, paddingRight: insets.right }]}>
+          <View style={[styles.portraitBottomBar, { paddingBottom: Math.max(insets.bottom, 4), paddingLeft: insets.left, paddingRight: insets.right }]}>
             {/* Muis / Touch modus */}
             <TouchableOpacity
               style={[styles.portraitBottomBtn, activePanel === "interactionHelp" && styles.portraitBottomBtnActive]}
@@ -2228,7 +2228,7 @@ export default function App(): React.JSX.Element {
               accessibilityLabel="Toetsenbord"
             >
               <Keyboard size={22} color={keyboardVisible ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text style={[styles.portraitBottomBtnLabel, keyboardVisible && styles.portraitBottomBtnLabelActive]}>Bord</Text>
+              <Text style={[styles.portraitBottomBtnLabel, keyboardVisible && styles.portraitBottomBtnLabelActive]}>Toetsenbord</Text>
             </TouchableOpacity>
 
             {/* Chat */}
@@ -2245,7 +2245,7 @@ export default function App(): React.JSX.Element {
           </View>
         )}
 
-        {/* â”€â”€ Landscape: existing collapsed/expanded toolbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        {/* ── Landscape: existing collapsed/expanded toolbar ─────────────── */}
         {isLandscape && (toolbarCollapsed ? (
           <TouchableOpacity
             style={[styles.expandBtn, { bottom: 8 + insets.bottom }]}
@@ -2362,7 +2362,7 @@ export default function App(): React.JSX.Element {
                   <Text style={styles.settingsLabel}>Verbinding</Text>
                   <Text style={styles.settingsValueText}>
                     {formatId(sessionPeer)}
-                    {statsText ? ` Ã‚Â· ${statsText}` : ""}
+                    {statsText ? ` · ${statsText}` : ""}
                   </Text>
                 </View>
                 <View style={styles.settingsRow}>
@@ -2398,7 +2398,7 @@ export default function App(): React.JSX.Element {
                   </View>
                 </View>
                 <Text style={styles.muted}>
-                  "Altijd scherp" houdt tijdens de hele sessie de scherpst mogelijke weergave aan, ook helemaal uitgezoomd Ã¢â‚¬â€ dat kost continu meer batterij/geheugen. "Gebalanceerd" (aanbevolen) verhoogt de scherpte alleen in stappen naarmate je verder inzoomt.
+                  "Altijd scherp" houdt tijdens de hele sessie de scherpst mogelijke weergave aan, ook helemaal uitgezoomd — dat kost continu meer batterij/geheugen. "Gebalanceerd" (aanbevolen) verhoogt de scherpte alleen in stappen naarmate je verder inzoomt.
                 </Text>
                 <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Verbindingsfailsafe</Text>
@@ -2410,7 +2410,7 @@ export default function App(): React.JSX.Element {
                   />
                 </View>
                 <Text style={styles.muted}>
-                  Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie Ã©cht wordt afgesloten. Uitzetten laat een onderbreking direct als verbroken zien.
+                  Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uitzetten laat een onderbreking direct als verbroken zien.
                 </Text>
                 <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Thema</Text>
@@ -2503,7 +2503,7 @@ export default function App(): React.JSX.Element {
         </Modal>
         <Modal visible={activePanel === "quickActions"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.chatBackdrop}>
-            <View style={styles.chatCard}>
+            <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
                 <Text style={styles.cardTitle}>Snelkoppelingen</Text>
                 <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Sluiten">
@@ -2513,7 +2513,7 @@ export default function App(): React.JSX.Element {
               <ScrollView>
                 {(
                   [
-                    { Icon: Copy, title: "KopiÃ«ren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
+                    { Icon: Copy, title: "Kopiëren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
                     { Icon: ClipboardPaste, title: "Plakken", subtitle: "Ctrl+V", onPress: () => sendShortcut(["ControlLeft", "KeyV"]), danger: false },
                     { Icon: Camera, title: "Schermafbeelding", subtitle: "PrtScn", onPress: () => sendShortcut(["PrintScreen"]), danger: false },
                     { Icon: AppWindow, title: "Wissel venster", subtitle: "Alt+Tab", onPress: () => sendShortcut(["AltLeft", "Tab"]), danger: false },
@@ -2546,7 +2546,7 @@ export default function App(): React.JSX.Element {
         </Modal>
         <Modal visible={activePanel === "chat"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.chatBackdrop}>
-            <View style={styles.chatCard}>
+            <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
                 <Text style={styles.cardTitle}>Chat</Text>
                 <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Chat sluiten">
@@ -2570,7 +2570,7 @@ export default function App(): React.JSX.Element {
                   style={[styles.input, styles.chatInputField]}
                   value={chatInput}
                   onChangeText={setChatInput}
-                  placeholder="Typ een berichtâ€¦"
+                  placeholder="Typ een bericht…"
                   placeholderTextColor="#8b96b8"
                   onSubmitEditing={sendChatMessage}
                   returnKeyType="send"
@@ -2584,7 +2584,7 @@ export default function App(): React.JSX.Element {
         </Modal>
         <Modal visible={activePanel === "files"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.chatBackdrop}>
-            <View style={styles.chatCard}>
+            <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
                 <Text style={styles.cardTitle}>Bestanden</Text>
                 <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Bestanden sluiten">
@@ -2592,7 +2592,7 @@ export default function App(): React.JSX.Element {
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.primaryBtn} onPress={sendFilePress}>
-                <Text style={styles.primaryBtnText}>Bestand versturenâ€¦</Text>
+                <Text style={styles.primaryBtnText}>Bestand versturen…</Text>
               </TouchableOpacity>
               <ScrollView style={styles.chatMessagesList}>
                 {fileTransfers.length === 0 && <Text style={styles.fileEmptyText}>Nog geen bestandsoverdrachten.</Text>}
@@ -2601,7 +2601,7 @@ export default function App(): React.JSX.Element {
                   return (
                     <View key={f.id} style={styles.fileRow}>
                       <Text style={styles.fileRowName} numberOfLines={1}>
-                        {f.direction === "send" ? "Ã¢â€ â€˜ " : "Ã¢â€ â€œ "}
+                        {f.direction === "send" ? "↑ " : "↓ "}
                         {f.name}
                       </Text>
                       <View style={styles.fileProgressTrack}>
@@ -2617,7 +2617,7 @@ export default function App(): React.JSX.Element {
         </Modal>
         <Modal visible={activePanel === "programs"} transparent animationType="slide" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.chatBackdrop}>
-            <View style={styles.chatCard}>
+            <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
                 <Text style={styles.cardTitle}>Programma's</Text>
                 <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Programma's sluiten">
@@ -2658,7 +2658,7 @@ export default function App(): React.JSX.Element {
           />
         )}
         {/* Agent confirmations (e.g. Google Antigravity) must stay reachable
-            even mid-session Ã¢â‚¬â€ you may be actively controlling a PC when an
+            even mid-session — you may be actively controlling a PC when an
             agent on that same PC (or another one) needs your approval. */}
         <Modal visible={!!activeConfirm} transparent animationType="fade">
           <View style={styles.modalBackdrop}>
@@ -2755,9 +2755,9 @@ export default function App(): React.JSX.Element {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Dit apparaat</Text>
             <Text style={styles.label}>Jouw BromeoRemote-ID (voor agent-meldingen)</Text>
-            <Text style={styles.mono}>{myId ? formatId(myId) : "Ã¢â‚¬â€"}</Text>
+            <Text style={styles.mono}>{myId ? formatId(myId) : "—"}</Text>
             <Text style={[styles.statusText, serverStatus === "connected" ? styles.statusOk : styles.statusBad]}>
-              {serverStatus === "connected" ? "â—Â Verbonden met server" : serverStatus === "connecting" ? "Verbindenâ€¦" : "â—Â Niet verbonden"}
+              {serverStatus === "connected" ? "●Â Verbonden met server" : serverStatus === "connecting" ? "Verbinden…" : "●Â Niet verbonden"}
             </Text>
             <Text style={styles.label}>Sessiewachtwoord (verandert bij elke herstart)</Text>
             <Text style={styles.mono}>{hostSessionPassword}</Text>
@@ -2787,7 +2787,7 @@ export default function App(): React.JSX.Element {
               handmatig ingeschakelde toegankelijkheidsservice.
             </Text>
             <Text style={[styles.statusText, accessibilityEnabled ? styles.statusOk : styles.statusBad]}>
-              {accessibilityEnabled ? "â—Â Ingeschakeld" : "â—Â Niet ingeschakeld Ã¢â‚¬â€ schermdelen werkt wel, bediening niet"}
+              {accessibilityEnabled ? "●Â Ingeschakeld" : "●Â Niet ingeschakeld — schermdelen werkt wel, bediening niet"}
             </Text>
             {!accessibilityEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openAccessibilitySettings}>
@@ -2802,7 +2802,7 @@ export default function App(): React.JSX.Element {
               Nodig zodat je vanaf de PC direct zinnen kunt typen op deze telefoon in plaats van losse schermkliks.
             </Text>
             <Text style={[styles.statusText, virtualKeyboardEnabled ? styles.statusOk : styles.statusBad]}>
-              {virtualKeyboardEnabled ? "â—Â Ingeschakeld" : "â—Â Niet ingeschakeld Ã¢â‚¬â€ typen op afstand is beperkt"}
+              {virtualKeyboardEnabled ? "●Â Ingeschakeld" : "●Â Niet ingeschakeld — typen op afstand is beperkt"}
             </Text>
             {!virtualKeyboardEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openKeyboardSettings}>
@@ -2826,7 +2826,7 @@ export default function App(): React.JSX.Element {
               <>
                 <TouchableOpacity onPress={() => setSessionHistoryExpanded((v) => !v)}>
                   <Text style={styles.label}>
-                    {sessionHistory.length} sessie{sessionHistory.length === 1 ? "" : "s"} opgeslagen Ã¢â‚¬â€ laatste{" "}
+                    {sessionHistory.length} sessie{sessionHistory.length === 1 ? "" : "s"} opgeslagen — laatste{" "}
                     {new Date(sessionHistory[0].startedAt).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} met{" "}
                     {formatId(sessionHistory[0].peerId)}. {sessionHistoryExpanded ? "Verbergen" : "Tonen"}
                   </Text>
@@ -2839,9 +2839,9 @@ export default function App(): React.JSX.Element {
                           <Text style={styles.savedDeviceLabel}>{formatId(entry.peerId)}</Text>
                           <Text style={styles.savedDeviceId}>
                             {new Date(entry.startedAt).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                            {" Ã‚Â· "}
+                            {" · "}
                             {formatDuration(entry.durationSec)}
-                            {entry.filesTransferred > 0 ? ` Ã‚Â· ${entry.filesTransferred} bestand(en)` : ""}
+                            {entry.filesTransferred > 0 ? ` · ${entry.filesTransferred} bestand(en)` : ""}
                           </Text>
                         </View>
                       </View>
@@ -2900,7 +2900,7 @@ export default function App(): React.JSX.Element {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>AI Buddy</Text>
             <Text style={styles.muted}>
-              Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen Ã¢â‚¬â€ maak een screenshot van het scherm op
+              Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen — maak een screenshot van het scherm op
               afstand en stel een vraag, AI Buddy helpt stap voor stap.
             </Text>
             <Text style={styles.label}>OpenAI API-sleutel</Text>
@@ -2908,7 +2908,7 @@ export default function App(): React.JSX.Element {
               style={styles.input}
               value={openaiKeyInput}
               onChangeText={setOpenaiKeyInput}
-              placeholder="sk-â€¦"
+              placeholder="sk-…"
               placeholderTextColor="#8b96b8"
               secureTextEntry
               autoCapitalize="none"
@@ -3021,7 +3021,7 @@ function createStyles(theme: AppTheme) {
     scroll: { padding: 20, paddingBottom: 16 },
     tabContent: { flex: 1 },
     logo: { height: 44, width: 200, marginBottom: 16, alignSelf: "center" },
-    // â”€â”€ Bottom tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Bottom tab bar ───────────────────────────────────────────────────
     tabBar: {
       flexDirection: "row",
       backgroundColor: colors.card,
@@ -3135,7 +3135,7 @@ function createStyles(theme: AppTheme) {
     },
     aiBuddyCardInner: { flex: 1, paddingHorizontal: 12 },
     // Floats over the bottom of the video (inside videoWrap) instead of taking
-    // up its own dedicated row Ã¢â‚¬â€ matches TeamViewer's full-screen-video-with-
+    // up its own dedicated row — matches TeamViewer's full-screen-video-with-
     // floating-toolbar layout instead of eating vertical space permanently.
     // Portrait mode: fixed top bar during session
     portraitTopBar: {
@@ -3183,14 +3183,14 @@ function createStyles(theme: AppTheme) {
       zIndex: 30,
       borderTopWidth: 1,
       borderTopColor: "rgba(255,255,255,0.08)",
-      paddingVertical: 6,
+      paddingTop: 4,
     },
     portraitBottomBtn: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      paddingVertical: 6,
-      gap: 3,
+      paddingVertical: 3,
+      gap: 2,
       borderRadius: 8,
     },
     portraitBottomBtnActive: {
@@ -3211,7 +3211,7 @@ function createStyles(theme: AppTheme) {
     sessionToolbar: { flexDirection: "row", alignItems: "center", paddingVertical: 4, paddingHorizontal: 10 },
     toolbarActions: { flex: 1 },
     toolbarActionsContent: { alignItems: "center", paddingLeft: 8 },
-    // Flat by default Ã¢â‚¬â€ no background pill, just a colored icon+label Ã¢â‚¬â€ a
+    // Flat by default — no background pill, just a colored icon+label — a
     // filled pill only appears for whichever panel is actually open
     // (toolbarBtnActive) so there's still some indication of open state.
     toolbarBtn: { borderRadius: 8, paddingVertical: 4, paddingHorizontal: 8, marginLeft: 8, minWidth: 48, alignItems: "center" },
