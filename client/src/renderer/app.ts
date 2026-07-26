@@ -883,13 +883,13 @@ function updateIncomingTimeout(): void {
 }
 
 function wireUi(): void {
-  // ── Tab navigation ──────────────────────────────────────────────────────────
-  const tabBtns = document.querySelectorAll<HTMLButtonElement>(".tab-btn");
+  // ── Tab navigation (topbar knoppen) ─────────────────────────────────────────
+  const tabBtns = document.querySelectorAll<HTMLButtonElement>(".topbar-tab");
   const tabPanels = document.querySelectorAll<HTMLDivElement>(".tab-panel");
   function activateTab(targetTab: string): void {
     tabBtns.forEach((btn) => {
       const isActive = btn.dataset.tab === targetTab;
-      btn.classList.toggle("tab-btn--active", isActive);
+      btn.classList.toggle("topbar-tab--active", isActive);
       btn.setAttribute("aria-selected", isActive ? "true" : "false");
     });
     tabPanels.forEach((panel) => {
@@ -898,10 +898,10 @@ function wireUi(): void {
     });
   }
   tabBtns.forEach((btn) => {
-    btn.addEventListener("click", () => activateTab(btn.dataset.tab ?? "apparaat"));
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab ?? "home"));
   });
   // Activate first tab by default
-  activateTab("apparaat");
+  activateTab("home");
 
   wireToolbarMenus();
   el.deviceLabelSave.onclick = () => saveDeviceLabel();

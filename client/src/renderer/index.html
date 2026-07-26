@@ -1,8 +1,8 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <!-- connect-src must explicitly allow stun:/turn: — Chromium enforces CSP
+  <!-- connect-src must explicitly allow stun:/turn: â€” Chromium enforces CSP
        against RTCPeerConnection's ICE server URLs too, not just fetch/WS.
        Without these, every STUN/TURN request is silently blocked before it
        ever leaves the process, with no candidates gathered at all. -->
@@ -94,22 +94,27 @@
         <div class="notify-panel-header"><h4>Chat</h4></div>
         <div id="host-chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
         <div class="chat-input-row">
-          <input id="host-chat-input" class="input" placeholder="Typ een bericht…" />
+          <input id="host-chat-input" class="input" placeholder="Typ een berichtâ€¦" />
           <button id="host-chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
         </div>
       </div>
     </div>
     <button id="curtain-manual-toggle" class="btn btn-outline btn-sm hidden">Scherm uit</button>
-    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beëindigen</button>
-    <button id="sharing-panic" class="btn btn-outline btn-sm">Beëindigen + wachtwoord wijzigen</button>
+    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beÃ«indigen</button>
+    <button id="sharing-panic" class="btn btn-outline btn-sm">BeÃ«indigen + wachtwoord wijzigen</button>
   </div>
 
   <header class="topbar">
     <div class="brand">
-      <img src="../../assets/logo2.png" alt="BromeoRemote — Access Anywhere" class="brand-logo" />
+      <img src="../../assets/logo2.png" alt="BromeoRemote â€” Access Anywhere" class="brand-logo" />
     </div>
+    <nav class="topbar-tabs" role="tablist" aria-label="Paginanavigatie">
+      <button class="topbar-tab topbar-tab--active" role="tab" aria-selected="true"  data-tab="home"    aria-controls="tab-home">Home</button>
+      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="tools"   aria-controls="tab-tools">Tools</button>
+      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="sessies" aria-controls="tab-sessies">Sessies</button>
+    </nav>
     <div class="topbar-right">
-      <span id="server-status" class="status-pill status-pill--pending"><span class="status-dot"></span><span id="server-status-text">Verbinden…</span></span>
+      <span id="server-status" class="status-pill status-pill--pending"><span class="status-dot"></span><span id="server-status-text">Verbindenâ€¦</span></span>
       <div class="notify-wrap">
         <button id="notify-bell-btn" class="btn btn-icon" title="Meldingen" aria-label="Meldingen">!</button>
         <div id="notify-panel" class="notify-panel hidden">
@@ -125,6 +130,7 @@
     </div>
   </header>
 
+
   <main id="home" class="home home--compact">
     <section class="overview-panel">
       <div>
@@ -135,40 +141,25 @@
       <div class="overview-actions">
         <span class="status-card">
           <span class="status-card-label">Apparaatnaam</span>
-          <span id="overview-label" class="status-card-value status-card-value--text">—</span>
+          <span id="overview-label" class="status-card-value status-card-value--text">â€”</span>
         </span>
         <span class="status-card">
           <span class="status-card-label">Dit apparaat</span>
-          <span id="overview-id" class="status-card-value">—</span>
+          <span id="overview-id" class="status-card-value">â€”</span>
         </span>
         <span class="status-card">
           <span class="status-card-label">Sessiecode</span>
-          <span id="overview-password" class="status-card-value">—</span>
+          <span id="overview-password" class="status-card-value">â€”</span>
         </span>
       </div>
     </section>
 
-    <!-- Tab navigation -->
-    <nav class="tab-nav" role="tablist" aria-label="Hoofdnavigatie">
-      <button class="tab-btn tab-btn--active" role="tab" aria-selected="true"  aria-controls="tab-apparaat"  id="tabnav-apparaat"  data-tab="apparaat">
-        <span class="tab-icon">PC</span>Dit apparaat
-      </button>
-      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-verbinden" id="tabnav-verbinden" data-tab="verbinden">
-        <span class="tab-icon">ID</span>Verbinden
-      </button>
-      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-tools"    id="tabnav-tools"    data-tab="tools">
-        <span class="tab-icon">⚙</span>Tools
-      </button>
-      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-sessies"  id="tabnav-sessies"  data-tab="sessies">
-        <span class="tab-icon">LOG</span>Sessies
-      </button>
-    </nav>
+    <!-- Pagina 1: Home (Dit apparaat + Verbinden) -->
+    <div id="tab-home" class="tab-panel home-grid">
 
-    <!-- Tab: Dit apparaat -->
-    <div id="tab-apparaat" class="tab-panel" role="tabpanel" aria-labelledby="tabnav-apparaat">
       <section class="card device-card">
         <div class="card-title-row">
-          <h2>Dit apparaat</h2>
+          <h2><span class="card-icon">PC</span>Dit apparaat</h2>
           <span class="info-tip" tabindex="0" aria-label="Uitleg over dit apparaat">i<span class="info-tooltip">Deel je ID en sessiecode met iemand die je mag helpen. De sessiecode wijzigt bij elke herstart.</span></span>
         </div>
 
@@ -187,8 +178,8 @@
           <div class="field compact-field">
             <label>Jouw BromeoRemote-ID</label>
             <div class="value-row">
-              <span id="my-id" class="value-mono">—</span>
-              <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
+              <span id="my-id" class="value-mono">â€”</span>
+              <button id="copy-id" class="btn btn-outline btn-sm">KopiÃ«ren</button>
             </div>
           </div>
           <div class="field compact-field">
@@ -197,14 +188,14 @@
               <span class="info-tip" tabindex="0" aria-label="Uitleg sessiewachtwoord">i<span class="info-tooltip">Tijdelijke code voor snelle hulp. Gebruik onbeheerde toegang voor vaste werkplekken.</span></span>
             </label>
             <div class="value-row">
-              <span id="my-password" class="value-mono">—</span>
-              <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
+              <span id="my-password" class="value-mono">â€”</span>
+              <button id="copy-password" class="btn btn-outline btn-sm">KopiÃ«ren</button>
             </div>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging kopiëren</button>
+          <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging kopiÃ«ren</button>
           <button id="regenerate-password" class="btn btn-outline btn-sm">Nieuw sessiewachtwoord</button>
         </div>
 
@@ -276,7 +267,7 @@
               <p class="muted small">Voeg deze sleutel handmatig toe in je authenticator-app als "BromeoRemote".</p>
               <div class="value-row">
                 <span id="totp-secret" class="value-mono totp-secret"></span>
-                <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
+                <button id="totp-copy" class="btn btn-outline btn-sm">KopiÃ«ren</button>
               </div>
               <div class="value-row totp-verify-row">
                 <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
@@ -295,7 +286,7 @@
               <span class="info-tip" tabindex="0" aria-label="Uitleg Ctrl Alt Del">i<span class="info-tooltip">Experimenteel. Registreert een Windows SYSTEM-taak na UAC-bevestiging, zodat een helper Ctrl+Alt+Del kan aanvragen.</span></span>
             </label>
             <div id="sas-disabled-state">
-              <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelen…</button>
+              <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelenâ€¦</button>
             </div>
             <div id="sas-enabled-state" class="row-between hidden">
               <p class="muted small">Ingeschakeld.</p>
@@ -304,13 +295,10 @@
           </div>
         </details>
       </section>
-    </div>
 
-    <!-- Tab: Verbinden -->
-    <div id="tab-verbinden" class="tab-panel tab-panel--hidden" role="tabpanel" aria-labelledby="tabnav-verbinden">
       <section class="card connect-card">
         <div class="card-title-row">
-          <h2>Verbinden met een ander apparaat</h2>
+          <h2><span class="card-icon">ID</span>Verbinden met een ander apparaat</h2>
           <span class="info-tip" tabindex="0" aria-label="Uitleg verbinden">i<span class="info-tooltip">Gebruik het BromeoRemote-ID en wachtwoord van de andere kant. Sessierechten kun je onder opties beperken.</span></span>
         </div>
 
@@ -372,10 +360,11 @@
         <button id="connect-btn" class="btn btn-primary">Verbinden</button>
         <p id="connect-status" class="muted small"></p>
       </section>
+
     </div>
 
-    <!-- Tab: Tools -->
-    <div id="tab-tools" class="tab-panel tab-panel--hidden" role="tabpanel" aria-labelledby="tabnav-tools">
+    <!-- Pagina 2: Tools -->
+    <div id="tab-tools" class="tab-panel tab-panel--hidden">
       <section class="card card-wide tools-card">
         <div class="tool-panel-grid">
           <article class="tool-panel">
@@ -395,7 +384,7 @@
                 Lokaal koppeladres
                 <span class="info-tip" tabindex="0" aria-label="Uitleg lokaal koppeladres">i<span class="info-tooltip">Alleen bereikbaar vanaf dit apparaat. Zie docs/ANTIGRAVITY.md voor een voorbeeld.</span></span>
               </label>
-              <span class="value-mono bridge-url">http://localhost:8973/notify · /confirm</span>
+              <span class="value-mono bridge-url">http://localhost:8973/notify Â· /confirm</span>
             </div>
           </article>
 
@@ -407,7 +396,7 @@
             <div class="field compact-field">
               <label>OpenAI API-sleutel</label>
               <div class="value-row">
-                <input id="openai-key-input" class="input" type="password" placeholder="sk-…" autocomplete="off" />
+                <input id="openai-key-input" class="input" type="password" placeholder="sk-â€¦" autocomplete="off" />
                 <button id="openai-key-save" class="btn btn-primary btn-sm">Opslaan</button>
               </div>
               <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
@@ -417,12 +406,12 @@
       </section>
     </div>
 
-    <!-- Tab: Sessies -->
-    <div id="tab-sessies" class="tab-panel tab-panel--hidden" role="tabpanel" aria-labelledby="tabnav-sessies">
+    <!-- Pagina 3: Sessies -->
+    <div id="tab-sessies" class="tab-panel tab-panel--hidden">
       <section class="card card-wide compact-section">
         <div class="section-heading-row">
           <div>
-            <h2>Recente sessies</h2>
+            <h2><span class="card-icon">LOG</span>Recente sessies</h2>
             <p id="session-history-summary" class="muted small section-subtitle">Nog geen sessies opgeslagen.</p>
           </div>
           <div class="section-actions">
@@ -436,9 +425,10 @@
       </section>
     </div>
   </main>
+  </main>
 
   <footer class="app-footer">
-    <span>BromeoRemote v<span id="app-version">—</span></span>
+    <span>BromeoRemote v<span id="app-version">â€”</span></span>
     <button id="check-updates-btn" class="btn btn-ghost btn-sm">Controleer op updates</button>
     <span id="update-status-text" class="muted small"></span>
     <div class="spacer"></div>
@@ -462,7 +452,7 @@
   <div id="restart-confirm-modal" class="modal-backdrop hidden">
     <div class="modal">
       <h3>Apparaat herstarten?</h3>
-      <p><strong id="restart-target">—</strong> wordt over enkele seconden opnieuw opgestart. Niet-opgeslagen werk op dat apparaat kan verloren gaan. BromeoRemote probeert daarna automatisch opnieuw te verbinden.</p>
+      <p><strong id="restart-target">â€”</strong> wordt over enkele seconden opnieuw opgestart. Niet-opgeslagen werk op dat apparaat kan verloren gaan. BromeoRemote probeert daarna automatisch opnieuw te verbinden.</p>
       <div class="modal-actions">
         <button id="restart-cancel" class="btn btn-outline">Annuleren</button>
         <button id="restart-confirm" class="btn btn-danger">Herstarten</button>
@@ -473,7 +463,7 @@
   <div id="incoming-modal" class="modal-backdrop hidden">
     <div class="modal">
       <h3>Inkomende verbindingsaanvraag</h3>
-      <p><strong id="incoming-from">—</strong> wil verbinden met dit apparaat <span id="incoming-action">en het besturen</span>.</p>
+      <p><strong id="incoming-from">â€”</strong> wil verbinden met dit apparaat <span id="incoming-action">en het besturen</span>.</p>
       <p id="incoming-timeout" class="muted small modal-note">Aanvraag verloopt over 60 seconden.</p>
       <div class="modal-actions">
         <button id="incoming-decline" class="btn btn-outline">Weigeren</button>
@@ -535,7 +525,7 @@
             <option value="low">Laag (trage verbinding)</option>
           </select>
           <label>Verbindingsfailsafe
-            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie Ã©cht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
           </label>
           <select id="failsafe-select" class="monitor-select" title="Verbindingsfailsafe">
             <option value="on">Aan</option>
@@ -587,20 +577,20 @@
       </div>
     </div>
     <div class="video-wrap" data-fit="fit">
-      <div id="session-hint" class="session-hint">Beeld wordt geladen…</div>
+      <div id="session-hint" class="session-hint">Beeld wordt geladenâ€¦</div>
       <video id="remote-video" autoplay playsinline></video>
     </div>
     <canvas id="ai-buddy-capture-canvas" class="hidden"></canvas>
     <div id="files-panel" class="files-panel hidden">
       <h4>Bestandsoverdracht</h4>
-      <button id="send-file-btn" class="btn btn-primary btn-sm">Bestand versturen…</button>
+      <button id="send-file-btn" class="btn btn-primary btn-sm">Bestand versturenâ€¦</button>
       <div id="files-list" class="files-list"></div>
     </div>
     <div id="chat-panel" class="chat-panel chat-panel--session hidden">
       <div class="notify-panel-header"><h4>Chat</h4></div>
       <div id="chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
       <div class="chat-input-row">
-        <input id="chat-input" class="input" placeholder="Typ een bericht…" />
+        <input id="chat-input" class="input" placeholder="Typ een berichtâ€¦" />
         <button id="chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
       </div>
     </div>
@@ -611,18 +601,18 @@
       </div>
       <div id="ai-buddy-messages" class="chat-messages ai-buddy-messages">
         <p class="muted small">
-          Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.
+          Maak een screenshot van het scherm op afstand en stel een vraag â€” AI Buddy helpt je stap voor stap.
         </p>
       </div>
       <div id="ai-buddy-screenshot-preview" class="ai-buddy-screenshot-preview hidden">
         <img id="ai-buddy-screenshot-img" alt="Screenshot van het scherm op afstand" />
-        <button id="ai-buddy-screenshot-remove" class="btn btn-outline btn-sm" title="Screenshot verwijderen">✕</button>
+        <button id="ai-buddy-screenshot-remove" class="btn btn-outline btn-sm" title="Screenshot verwijderen">âœ•</button>
       </div>
       <div class="chat-input-row">
         <button id="ai-buddy-screenshot-btn" class="btn btn-outline btn-icon-sm" title="Screenshot van scherm op afstand" aria-label="Screenshot maken">
           <svg class="toolbar-icon"><use href="#icon-window"></use></svg>
         </button>
-        <input id="ai-buddy-input" class="input" placeholder="Stel een vraag over dit probleem…" />
+        <input id="ai-buddy-input" class="input" placeholder="Stel een vraag over dit probleemâ€¦" />
         <button id="ai-buddy-send-btn" class="btn btn-primary btn-sm">Versturen</button>
       </div>
     </div>
