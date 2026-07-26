@@ -1839,9 +1839,9 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
         } else if (cmd.kind === "switch-window") {
           await window.bromeo.setActiveWindow(cmd.windowId, cmd.aspect);
         } else if (cmd.kind === "switch-dual-window") {
-          await window.bromeo.setDualWindow(cmd.windowId1, cmd.windowId2, cmd.isPortrait);
+          await window.bromeo.setDualWindow(cmd.windowId1, cmd.windowId2, cmd.aspect, cmd.isPortrait);
         } else if (cmd.kind === "resize-dual-window") {
-          await window.bromeo.resizeDualWindow(cmd.isPortrait);
+          await window.bromeo.resizeDualWindow(cmd.aspect, cmd.isPortrait);
           return;
         } else if (cmd.kind === "switch-to-desktop") {
           await window.bromeo.setCaptureDesktop();

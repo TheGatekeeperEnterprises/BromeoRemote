@@ -42,20 +42,35 @@ function hwndFromWindowSourceId(id: string): number | null {
 // shape the window already happened to be).
 let activeDualWindows: { windowId1: string; windowId2: string } | null = null;
 
-function tileDualWindows(windowId1: string, windowId2: string, isPortrait: boolean): boolean {
+function tileDualWindows(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): boolean {
   const hwnd1 = hwndFromWindowSourceId(windowId1);
   const hwnd2 = hwndFromWindowSourceId(windowId2);
   if (hwnd1 == null || hwnd2 == null) return false;
   const work = screen.getPrimaryDisplay().workArea;
 
-  if (isPortrait) {
-    const halfHeight = Math.floor(work.height / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfHeight);
-    resizeAndFocusWindow(hwnd2, work.x, work.y + halfHeight, work.width, halfHeight);
+  let totalW: number;
+  let totalH: number;
+  if (aspect <= work.width / work.height) {
+    totalH = work.height;
+    totalW = Math.round(totalH * aspect);
   } else {
-    const halfWidth = Math.floor(work.width / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, halfWidth, work.height);
-    resizeAndFocusWindow(hwnd2, work.x + halfWidth, work.y, halfWidth, work.height);
+    totalW = work.width;
+    totalH = Math.round(totalW / aspect);
+  }
+  totalW = Math.min(totalW, work.width);
+  totalH = Math.min(totalH, work.height);
+
+  const startX = work.x + Math.round((work.width - totalW) / 2);
+  const startY = work.y + Math.round((work.height - totalH) / 2);
+
+  if (isPortrait) {
+    const halfH = Math.floor(totalH / 2);
+    resizeAndFocusWindow(hwnd1, startX, startY, totalW, halfH);
+    resizeAndFocusWindow(hwnd2, startX, startY + halfH, totalW, halfH);
+  } else {
+    const halfW = Math.floor(totalW / 2);
+    resizeAndFocusWindow(hwnd1, startX, startY, halfW, totalH);
+    resizeAndFocusWindow(hwnd2, startX + halfW, startY, halfW, totalH);
   }
   return true;
 }
@@ -492,7 +507,7 @@ ipcMain.handle("bromeo:set-active-window", (_e, windowId: string, aspect: number
 
 ipcMain.handle("bromeo:resize-active-window", (_e, aspect: number) => resizeActiveWindowToAspect(aspect));
 
-ipcMain.handle("bromeo:set-dual-window", (_e, windowId1: string, windowId2: string, isPortrait: boolean) => {
+ipcMain.handle("bromeo:set-dual-window", (_e, windowId1: string, windowId2: string, aspect: number, isPortrait: boolean) => {
   restoreSavedWindowBounds();
   activeWindowId = null;
   activeDualWindows = { windowId1, windowId2 };
@@ -500,12 +515,12 @@ ipcMain.handle("bromeo:set-dual-window", (_e, windowId1: string, windowId2: stri
   const hwnd2 = hwndFromWindowSourceId(windowId2);
   if (hwnd1 != null) saveWindowBoundsForHwnd(hwnd1);
   if (hwnd2 != null) saveWindowBoundsForHwnd(hwnd2);
-  return tileDualWindows(windowId1, windowId2, isPortrait);
+  return tileDualWindows(windowId1, windowId2, aspect, isPortrait);
 });
 
-ipcMain.handle("bromeo:resize-dual-window", (_e, isPortrait: boolean) => {
+ipcMain.handle("bromeo:resize-dual-window", (_e, aspect: number, isPortrait: boolean) => {
   if (!activeDualWindows) return false;
-  return tileDualWindows(activeDualWindows.windowId1, activeDualWindows.windowId2, isPortrait);
+  return tileDualWindows(activeDualWindows.windowId1, activeDualWindows.windowId2, aspect, isPortrait);
 });
 
 ipcMain.handle("bromeo:set-capture-desktop", () => {

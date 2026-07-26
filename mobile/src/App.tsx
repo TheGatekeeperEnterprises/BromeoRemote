@@ -1874,6 +1874,7 @@ export default function App(): React.JSX.Element {
         kind: "switch-dual-window",
         windowId1: win1.id,
         windowId2: win2.id,
+        aspect: currentPhoneAspect(),
         isPortrait: isPort,
       });
       setActiveDualWindows({ win1, win2 });
@@ -1898,7 +1899,7 @@ export default function App(): React.JSX.Element {
     const sub = Dimensions.addEventListener("change", ({ window }) => {
       const isPort = window.height > window.width;
       if (activeDualWindows) {
-        sessionRef.current?.sendSystemCommand({ kind: "resize-dual-window", isPortrait: isPort });
+        sessionRef.current?.sendSystemCommand({ kind: "resize-dual-window", aspect: window.width / window.height, isPortrait: isPort });
       } else if (activeAppWindow) {
         sessionRef.current?.sendSystemCommand({ kind: "resize-active-window", aspect: window.width / window.height });
       }

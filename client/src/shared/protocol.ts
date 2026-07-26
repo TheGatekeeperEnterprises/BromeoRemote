@@ -156,8 +156,8 @@ export type SystemCommand =
   | { kind: "switch-window"; windowId: string; aspect: number }
   | { kind: "resize-active-window"; aspect: number }
   | { kind: "switch-to-desktop" }
-| { kind: "switch-dual-window"; windowId1: string; windowId2: string; isPortrait: boolean }
-  | { kind: "resize-dual-window"; isPortrait: boolean }
+| { kind: "switch-dual-window"; windowId1: string; windowId2: string; aspect: number; isPortrait: boolean }
+  | { kind: "resize-dual-window"; aspect: number; isPortrait: boolean }
   // Immediately tells the viewer the new video stream dimensions
   | { kind: "video-dimensions"; width: number; height: number }
   // Sent host->viewer whenever the host's actual OS cursor shape changes
