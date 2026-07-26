@@ -890,12 +890,14 @@ export default function App(): React.JSX.Element {
 
   // --- Mouse mode (trackpad-style relative control, vs. touch mode's
   // absolute tap-to-position) — matches TeamViewer's "Muis-modus". ---
-  // Matches TeamViewer's mobile default (mouse/touchpad mode, not tap-to-position).
+  // Muis-modus is the global default (persisted via AsyncStorage).
   const [interactionMode, setInteractionModeState] = useState<"touch" | "mouse">("mouse");
-  const interactionModeRef = useRef(interactionMode);
+  const interactionModeRef = useRef<"touch" | "mouse">("mouse");
   function setInteractionMode(mode: "touch" | "mouse"): void {
     interactionModeRef.current = mode;
     setInteractionModeState(mode);
+    // Persist preference so it survives app restarts and new sessions
+    AsyncStorage.setItem("@interactionMode", mode).catch(() => {});
   }
   // The cursor's logical position (content fraction) — a plain ref, not
   // React state: nothing renders directly from this (the dot's *visual*
@@ -1298,7 +1300,15 @@ export default function App(): React.JSX.Element {
     const signaling = signalingRef.current;
     if (!signaling) return;
     setCurrentRole("viewer");
-    setInteractionMode("touch");
+    // Load persisted interaction mode preference (default: mouse)
+    AsyncStorage.getItem("@interactionMode").then((saved) => {
+      const mode = saved === "touch" ? "touch" : "mouse";
+      interactionModeRef.current = mode;
+      setInteractionModeState(mode);
+    }).catch(() => {
+      interactionModeRef.current = "mouse";
+      setInteractionModeState("mouse");
+    });
     setVirtualCursor({ xPct: 0.5, yPct: 0.5 });
     sessionStartedAtRef.current = Date.now();
     filesTransferredCountRef.current = 0;
