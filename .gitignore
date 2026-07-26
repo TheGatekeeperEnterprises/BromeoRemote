@@ -21,6 +21,8 @@ client/dist/
 client/release/
 client/out/
 server/dist/
+# APK files are >100MB — too large for GitHub; store locally or use releases page
+releases/*.apk
 website/node_modules/
 mobile/node_modules/
 mobile/android/app/build/
