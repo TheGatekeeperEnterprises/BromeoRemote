@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BromeoRemote Admin</title>
+  <link rel="icon" href="/assets/icon.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b1425;
+      --bg2: #111d35;
+      --bg3: #162040;
+      --border: rgba(255,255,255,0.08);
+      --accent: #0be881;
+      --accent2: #00c9ff;
+      --text: #e8edf5;
+      --muted: #8898aa;
+      --danger: #ff4d6d;
+      --warning: #ffb84d;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 240px; min-height: 100vh; background: var(--bg2);
+      border-right: 1px solid var(--border); display: flex; flex-direction: column;
+      position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
+    }
+    .sidebar-logo { padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
+    .sidebar-logo img { height: 28px; }
+    .sidebar-logo span { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+    .sidebar nav { flex: 1; padding: 1rem 0; }
+    .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; cursor: pointer; font-size: 0.9rem; color: var(--muted); transition: all 0.15s; border-left: 3px solid transparent; }
+    .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+    .nav-item.active { color: var(--accent); background: rgba(11,232,129,0.06); border-left-color: var(--accent); }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .sidebar-footer { padding: 1rem 1.25rem; border-top: 1px solid var(--border); }
+    .admin-info { font-size: 0.8rem; color: var(--muted); margin-bottom: 0.75rem; }
+    .logout-btn { width: 100%; background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.2); color: var(--danger); border-radius: 8px; padding: 0.6rem; cursor: pointer; font-size: 0.85rem; transition: all 0.15s; }
+    .logout-btn:hover { background: rgba(255,77,109,0.2); }
+
+    /* Main content */
+    .main { margin-left: 240px; flex: 1; display: flex; flex-direction: column; }
+    .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+    .topbar h1 { font-size: 1.25rem; font-weight: 600; }
+    .content { padding: 2rem; flex: 1; }
+
+    /* Stats grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+    .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; }
+    .stat-label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: 700; }
+    .stat-value.accent { color: var(--accent); }
+    .stat-value.blue { color: var(--accent2); }
+    .stat-value.warn { color: var(--warning); }
+
+    /* Tables */
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 1.5rem; }
+    .card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .card-header h2 { font-size: 1rem; font-weight: 600; }
+    .search-input { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.875rem; color: var(--text); font-size: 0.875rem; outline: none; width: 220px; transition: border-color 0.15s; }
+    .search-input:focus { border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding: 0.75rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border); font-weight: 600; }
+    td { padding: 0.875rem 1.5rem; font-size: 0.875rem; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+    .clickable { cursor: pointer; }
+
+    /* Badges */
+    .badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .badge-green { background: rgba(11,232,129,0.12); color: var(--accent); }
+    .badge-blue { background: rgba(0,201,255,0.12); color: var(--accent2); }
+    .badge-red { background: rgba(255,77,109,0.12); color: var(--danger); }
+    .badge-warn { background: rgba(255,184,77,0.12); color: var(--warning); }
+    .badge-gray { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; }
+    .btn-primary { background: var(--accent); color: #0b1425; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-outline:hover { border-color: rgba(255,255,255,0.3); }
+    .btn-danger { background: rgba(255,77,109,0.1); border: 1px solid rgba(255,77,109,0.25); color: var(--danger); }
+    .btn-danger:hover { background: rgba(255,77,109,0.2); }
+    .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8rem; }
+
+    /* Detail panel */
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    @media (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.4rem; font-weight: 600; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.6rem 0.875rem; color: var(--text); font-size: 0.875rem; outline: none; transition: border-color 0.15s;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); }
+    .form-group select option { background: var(--bg2); }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+    .modal-overlay.hidden { display: none; }
+    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal h2 { font-size: 1.1rem; margin-bottom: 1.5rem; }
+    .modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
+    /* Misc */
+    .page-hidden { display: none !important; }
+    .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
+    .back-link { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); font-size: 0.85rem; cursor: pointer; margin-bottom: 1.5rem; }
+    .back-link:hover { color: var(--text); }
+    .info-row { display: flex; justify-content: space-between; padding: 0.6rem 0; border-bottom: 1px solid var(--border); font-size: 0.875rem; }
+    .info-row:last-child { border-bottom: none; }
+    .info-row span:first-child { color: var(--muted); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 0.35rem; }
+    .dot-green { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+    .dot-red { background: var(--danger); }
+    .dot-warn { background: var(--warning); }
+    .dot-gray { background: var(--muted); }
+    .pagination { display: flex; gap: 0.5rem; align-items: center; padding: 1rem 1.5rem; }
+    .pagination button { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 0.35rem 0.75rem; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pagination span { color: var(--muted); font-size: 0.8rem; }
+    .loading { color: var(--muted); padding: 1.5rem; text-align: center; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <img src="/assets/logo2.png" alt="BromeoRemote">
+      <span>Admin</span>
+    </div>
+    <nav>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </div>
+      <div class="nav-item" data-page="users" onclick="navigate('users')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Gebruikers
+      </div>
+      <div class="nav-item" data-page="sessions" onclick="navigate('sessions')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Sessies
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info" id="adminEmail">—</div>
+      <button class="logout-btn" onclick="logout()">Uitloggen</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Dashboard Page -->
+    <div id="page-dashboard">
+      <div class="topbar"><h1>Dashboard</h1></div>
+      <div class="content">
+        <div class="stats-grid" id="statsGrid">
+          <div class="stat-card"><div class="stat-label">Totaal gebruikers</div><div class="stat-value accent" id="stat-users">–</div></div>
+          <div class="stat-card"><div class="stat-label">Actieve licenties</div><div class="stat-value blue" id="stat-active">–</div></div>
+          <div class="stat-card"><div class="stat-label">Trial licenties</div><div class="stat-value warn" id="stat-trials">–</div></div>
+          <div class="stat-card"><div class="stat-label">Sessies (7 dagen)</div><div class="stat-value" id="stat-sessions">–</div></div>
+          <div class="stat-card"><div class="stat-label">Downloads (7 dagen)</div><div class="stat-value" id="stat-downloads">–</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users Page -->
+    <div id="page-users" class="page-hidden">
+      <div class="topbar">
+        <h1>Gebruikers & Licenties</h1>
+        <button class="btn btn-primary" onclick="openModal('newUser')">+ Nieuw account</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Alle gebruikers</h2>
+            <input class="search-input" id="userSearch" type="text" placeholder="Zoek op e-mail of bedrijf..." oninput="debounceSearch()">
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>E-mail</th><th>Bedrijf</th><th>Plan</th><th>Status</th><th>Verloopdatum</th><th>Laatst gezien</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="7" class="loading">Laden...</td></tr>
+            </tbody>
+          </table>
+          <div class="pagination" id="usersPagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Detail Page -->
+    <div id="page-user-detail" class="page-hidden">
+      <div class="topbar">
+        <div class="back-link" onclick="navigate('users')">← Terug naar gebruikers</div>
+        <h1 id="detailTitle">Gebruiker</h1>
+      </div>
+      <div class="content">
+        <div class="detail-grid">
+          <div>
+            <div class="card">
+              <div class="card-header"><h2>Accountgegevens</h2></div>
+              <div style="padding:1.25rem 1.5rem;" id="userInfoBox"></div>
+            </div>
+            <div class="card">
+              <div class="card-header">
+                <h2>Licenties</h2>
+                <button class="btn btn-primary btn-sm" id="addLicenseBtn">+ Licentie toevoegen</button>
+              </div>
+              <div id="licensesBox"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <div class="card-header"><h2>Sessiehistorie</h2></div>
+              <div id="sessionsBox"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sessions Page -->
+    <div id="page-sessions" class="page-hidden">
+      <div class="topbar"><h1>Alle Sessies</h1></div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header"><h2>Sessie-activiteit</h2></div>
+          <table>
+            <thead><tr><th>Gebruiker</th><th>Platform</th><th>Type</th><th>Duur</th><th>IP</th><th>Tijdstip</th></tr></thead>
+            <tbody id="sessionsTableBody"><tr><td colspan="6" class="loading">Laden...</td></tr></tbody>
+          </table>
+          <div class="pagination" id="sessionsPagination"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal: Nieuw gebruiker -->
+  <div class="modal-overlay hidden" id="modal-newUser">
+    <div class="modal">
+      <h2>Nieuw account aanmaken</h2>
+      <div class="form-group"><label>E-mailadres *</label><input type="email" id="nu-email" placeholder="user@bedrijf.nl"></div>
+      <div class="form-group"><label>Bedrijf</label><input type="text" id="nu-company" placeholder="Bedrijf BV"></div>
+      <div class="form-group"><label>Notities</label><textarea id="nu-notes" rows="3" placeholder="Interne notities..."></textarea></div>
+      <div style="margin-top:1rem;"><label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.85rem;color:var(--text);">
+        <input type="checkbox" id="nu-addLicense" style="width:auto;margin:0;"> Direct trial licentie toevoegen (14 dagen)
+      </label></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('newUser')">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitNewUser()">Account aanmaken</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Licentie bewerken -->
+  <div class="modal-overlay hidden" id="modal-editLicense">
+    <div class="modal">
+      <h2>Licentie bewerken</h2>
+      <input type="hidden" id="el-id">
+      <div class="form-row">
+        <div class="form-group"><label>Plan</label>
+          <select id="el-plan">
+            <option value="Personal">Personal</option>
+            <option value="Professional">Professional</option>
+            <option value="Enterprise">Enterprise</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="el-status">
+            <option value="Active">Actief</option>
+            <option value="Trial">Trial</option>
+            <option value="Expired">Verlopen</option>
+            <option value="Blocked">Geblokkeerd</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Verloopdatum</label><input type="date" id="el-expires"></div>
+        <div class="form-group"><label>Is Trial?</label>
+          <select id="el-trial">
+            <option value="false">Nee</option>
+            <option value="true">Ja</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Notities</label><textarea id="el-notes" rows="2"></textarea></div>
+      <div class="form-group"><label>HWID Hash</label><input type="text" id="el-hwid" placeholder="Leeg = niet gekoppeld (alleen lezen)" readonly style="opacity:0.6"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger btn-sm" onclick="resetHwid()">HWID Resetten</button>
+        <button class="btn btn-outline" onclick="closeModal('editLicense')">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitEditLicense()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Licentie toevoegen -->
+  <div class="modal-overlay hidden" id="modal-addLicense">
+    <div class="modal">
+      <h2>Licentie toevoegen</h2>
+      <input type="hidden" id="al-userId">
+      <div class="form-row">
+        <div class="form-group"><label>Plan</label>
+          <select id="al-plan">
+            <option value="Personal">Personal</option>
+            <option value="Professional">Professional</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="al-status">
+            <option value="Active">Actief</option>
+            <option value="Trial">Trial</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Trial?</label>
+          <select id="al-trial">
+            <option value="false">Nee</option>
+            <option value="true">Ja</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Trial dagen</label><input type="number" id="al-trialDays" value="14" min="1" max="365"></div>
+      </div>
+      <div class="form-group"><label>Verloopdatum (optioneel)</label><input type="date" id="al-expires"></div>
+      <div class="form-group"><label>Notities</label><textarea id="al-notes" rows="2" placeholder="Bijv: gratis trial aangevraagd via contact"></textarea></div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('addLicense')">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitAddLicense()">Toevoegen</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────────
+let currentPage = 'dashboard';
+let usersPage = 1;
+let searchTimer;
+let currentUserId = null;
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function navigate(page, id) {
+  document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('page-hidden'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const nav = document.querySelector(`[data-page="${page === 'user-detail' ? 'users' : page}"]`);
+  if (nav) nav.classList.add('active');
+  const el = document.getElementById(`page-${page}`);
+  if (el) el.classList.remove('page-hidden');
+  currentPage = page;
+  history.pushState({}, '', page === 'dashboard' ? '/admin' : page === 'user-detail' ? `/admin/users/${id}` : `/admin/${page}`);
+  if (page === 'dashboard') loadStats();
+  if (page === 'users') loadUsers();
+  if (page === 'user-detail' && id) loadUserDetail(id);
+  if (page === 'sessions') loadSessions();
+}
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+async function init() {
+  try {
+    const res = await fetch('/admin/api/me');
+    const data = await res.json();
+    if (!data.ok) { window.location.href = '/admin/login'; return; }
+    document.getElementById('adminEmail').textContent = data.email;
+    navigate('dashboard');
+  } catch { window.location.href = '/admin/login'; }
+}
+
+async function logout() {
+  await fetch('/admin/api/logout', { method: 'POST' });
+  window.location.href = '/admin/login';
+}
+
+// ── Stats ──────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  const res = await fetch('/admin/api/stats');
+  const data = await res.json();
+  if (!data.ok) return;
+  const s = data.stats;
+  document.getElementById('stat-users').textContent = s.totalUsers;
+  document.getElementById('stat-active').textContent = s.activeLicenses;
+  document.getElementById('stat-trials').textContent = s.trialLicenses;
+  document.getElementById('stat-sessions').textContent = s.sessions7d;
+  document.getElementById('stat-downloads').textContent = s.downloads7d;
+}
+
+// ── Users ──────────────────────────────────────────────────────────────────────
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => { usersPage = 1; loadUsers(); }, 400);
+}
+
+async function loadUsers() {
+  const search = document.getElementById('userSearch')?.value || '';
+  document.getElementById('usersTableBody').innerHTML = '<tr><td colspan="7" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/users?page=${usersPage}&search=${encodeURIComponent(search)}`);
+  const data = await res.json();
+  if (!data.ok) return;
+  const tbody = document.getElementById('usersTableBody');
+  if (!data.users.length) { tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Geen gebruikers gevonden.</td></tr>'; return; }
+  tbody.innerHTML = data.users.map(u => `
+    <tr class="clickable" onclick="navigate('user-detail','${u.id}')">
+      <td>${u.email}</td>
+      <td>${u.company || '–'}</td>
+      <td>${u.plan ? planBadge(u.plan, u.is_trial) : '<span class="badge badge-gray">Geen</span>'}</td>
+      <td>${u.status ? statusBadge(u.status) : '–'}</td>
+      <td>${u.expires_at ? new Date(u.expires_at).toLocaleDateString('nl-NL') : '–'}</td>
+      <td>${u.last_seen ? timeAgo(u.last_seen) : '<span style="color:var(--muted)">Nooit</span>'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="event.stopPropagation();navigate('user-detail','${u.id}')">Bewerken →</button></td>
+    </tr>
+  `).join('');
+  // Pagination
+  const total = data.total;
+  const totalPages = Math.ceil(total / data.limit);
+  document.getElementById('usersPagination').innerHTML = `
+    <button onclick="usersPage--;loadUsers()" ${usersPage <= 1 ? 'disabled' : ''}>← Vorige</button>
+    <span>Pagina ${usersPage} van ${totalPages} (${total} totaal)</span>
+    <button onclick="usersPage++;loadUsers()" ${usersPage >= totalPages ? 'disabled' : ''}>Volgende →</button>
+  `;
+}
+
+// ── User Detail ───────────────────────────────────────────────────────────────
+async function loadUserDetail(userId) {
+  currentUserId = userId;
+  const res = await fetch(`/admin/api/users/${userId}`);
+  const data = await res.json();
+  if (!data.ok) { navigate('users'); return; }
+  const u = data.user;
+  document.getElementById('detailTitle').textContent = u.email;
+  document.getElementById('addLicenseBtn').onclick = () => openAddLicense(userId);
+  document.getElementById('userInfoBox').innerHTML = `
+    <div class="info-row"><span>E-mail</span><span>${u.email}</span></div>
+    <div class="info-row"><span>Bedrijf</span><span>${u.company || '–'}</span></div>
+    <div class="info-row"><span>Geregistreerd</span><span>${new Date(u.created_at).toLocaleDateString('nl-NL')}</span></div>
+    ${u.notes ? `<div class="info-row"><span>Notities</span><span>${u.notes}</span></div>` : ''}
+  `;
+  // Licenses
+  const lb = document.getElementById('licensesBox');
+  if (!data.licenses.length) {
+    lb.innerHTML = '<div class="empty-state">Geen licenties gevonden.</div>';
+  } else {
+    lb.innerHTML = `<table><thead><tr><th>Plan</th><th>Status</th><th>Verloopt</th><th>HWID</th><th></th></tr></thead><tbody>
+      ${data.licenses.map(l => `<tr>
+        <td>${planBadge(l.plan, l.is_trial)}</td>
+        <td>${statusBadge(l.status)}</td>
+        <td>${l.expires_at ? new Date(l.expires_at).toLocaleDateString('nl-NL') : '–'}</td>
+        <td><span class="badge ${l.hwid_hash ? 'badge-green' : 'badge-gray'}">${l.hwid_hash ? '✓ Gekoppeld' : 'Vrij'}</span></td>
+        <td><button class="btn btn-outline btn-sm" onclick="openEditLicense(${JSON.stringify(l).replace(/"/g,'&quot;')})">Bewerken</button></td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+  // Sessions
+  const sb = document.getElementById('sessionsBox');
+  if (!data.sessions.length) {
+    sb.innerHTML = '<div class="empty-state">Nog geen sessies geregistreerd.</div>';
+  } else {
+    sb.innerHTML = `<table><thead><tr><th>Type</th><th>Platform</th><th>Duur</th><th>Tijdstip</th></tr></thead><tbody>
+      ${data.sessions.map(s => `<tr>
+        <td><span class="badge ${s.event_type === 'connect' ? 'badge-green' : s.event_type === 'disconnect' ? 'badge-gray' : 'badge-blue'}">${s.event_type}</span></td>
+        <td>${s.platform}</td>
+        <td>${s.session_duration_seconds ? formatDuration(s.session_duration_seconds) : '–'}</td>
+        <td>${new Date(s.created_at).toLocaleString('nl-NL')}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+}
+
+// ── Sessions overview ─────────────────────────────────────────────────────────
+let sessionsPage = 1;
+async function loadSessions() {
+  const res = await fetch(`/admin/api/sessions?page=${sessionsPage}`);
+  const data = await res.json();
+  const tbody = document.getElementById('sessionsTableBody');
+  if (!data.ok || !data.sessions.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Geen sessies gevonden.</td></tr>'; return; }
+  tbody.innerHTML = data.sessions.map(s => `<tr>
+    <td>${s.email || '<span style="color:var(--muted)">Onbekend</span>'}</td>
+    <td>${s.platform}</td>
+    <td><span class="badge ${s.event_type === 'connect' ? 'badge-green' : 'badge-gray'}">${s.event_type}</span></td>
+    <td>${s.session_duration_seconds ? formatDuration(s.session_duration_seconds) : '–'}</td>
+    <td>${s.ip_address || '–'}</td>
+    <td>${new Date(s.created_at).toLocaleString('nl-NL')}</td>
+  </tr>`).join('');
+}
+
+// ── Modals ────────────────────────────────────────────────────────────────────
+function openModal(name) { document.getElementById(`modal-${name}`).classList.remove('hidden'); }
+function closeModal(name) { document.getElementById(`modal-${name}`).classList.add('hidden'); }
+
+async function submitNewUser() {
+  const email = document.getElementById('nu-email').value;
+  const company = document.getElementById('nu-company').value;
+  const notes = document.getElementById('nu-notes').value;
+  const addLicense = document.getElementById('nu-addLicense').checked;
+  if (!email) return alert('E-mail is verplicht.');
+  const res = await fetch('/admin/api/users', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, company, notes }) });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  if (addLicense) {
+    const expires = new Date(); expires.setDate(expires.getDate() + 14);
+    await fetch(`/admin/api/users/${data.user.id}/licenses`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'Personal', status: 'Trial', isTrial: true, trialDays: 14, expiresAt: expires.toISOString(), notes: 'Trial aangemaakt door admin' }) });
+  }
+  closeModal('newUser');
+  navigate('user-detail', data.user.id);
+}
+
+function openAddLicense(userId) {
+  document.getElementById('al-userId').value = userId;
+  openModal('addLicense');
+}
+
+async function submitAddLicense() {
+  const userId = document.getElementById('al-userId').value;
+  const plan = document.getElementById('al-plan').value;
+  const status = document.getElementById('al-status').value;
+  const isTrial = document.getElementById('al-trial').value === 'true';
+  const trialDays = document.getElementById('al-trialDays').value;
+  const expiresAt = document.getElementById('al-expires').value || null;
+  const notes = document.getElementById('al-notes').value;
+  const res = await fetch(`/admin/api/users/${userId}/licenses`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan, status, isTrial, trialDays, expiresAt, notes }) });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  closeModal('addLicense');
+  loadUserDetail(userId);
+}
+
+function openEditLicense(license) {
+  document.getElementById('el-id').value = license.id;
+  document.getElementById('el-plan').value = license.plan;
+  document.getElementById('el-status').value = license.status;
+  document.getElementById('el-trial').value = license.is_trial ? 'true' : 'false';
+  document.getElementById('el-expires').value = license.expires_at ? license.expires_at.slice(0,10) : '';
+  document.getElementById('el-notes').value = license.notes || '';
+  document.getElementById('el-hwid').value = license.hwid_hash || '';
+  openModal('editLicense');
+}
+
+async function submitEditLicense() {
+  const id = document.getElementById('el-id').value;
+  const plan = document.getElementById('el-plan').value;
+  const status = document.getElementById('el-status').value;
+  const isTrial = document.getElementById('el-trial').value === 'true';
+  const expiresAt = document.getElementById('el-expires').value || null;
+  const notes = document.getElementById('el-notes').value;
+  const res = await fetch(`/admin/api/licenses/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan, status, isTrial, expiresAt, notes }) });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  closeModal('editLicense');
+  if (currentUserId) loadUserDetail(currentUserId);
+}
+
+async function resetHwid() {
+  const id = document.getElementById('el-id').value;
+  if (!confirm('HWID resetten? De gebruiker kan dan opnieuw inloggen op een andere pc.')) return;
+  const res = await fetch(`/admin/api/licenses/${id}/reset-hwid`, { method: 'POST' });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  document.getElementById('el-hwid').value = '';
+  alert('HWID succesvol gereset.');
+  if (currentUserId) loadUserDetail(currentUserId);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function planBadge(plan, isTrial) {
+  const cls = plan === 'Professional' ? 'badge-blue' : isTrial ? 'badge-warn' : 'badge-gray';
+  const label = isTrial ? `${plan} (Trial)` : plan;
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+function statusBadge(status) {
+  const map = { Active: 'badge-green', Trial: 'badge-warn', Expired: 'badge-red', Blocked: 'badge-red' };
+  return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
+}
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return '<span class="badge badge-green"><span class="status-dot dot-green"></span>Nu online</span>';
+  if (mins < 60) return `${mins} min geleden`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours} uur geleden`;
+  return new Date(dateStr).toLocaleDateString('nl-NL');
+}
+function formatDuration(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 3600) return `${Math.floor(seconds/60)}m ${seconds%60}s`;
+  return `${Math.floor(seconds/3600)}u ${Math.floor((seconds%3600)/60)}m`;
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.add('hidden'); });
+});
+
+init();
+</script>
+</body>
+</html>

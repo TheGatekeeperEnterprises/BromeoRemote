@@ -11,9 +11,11 @@ const {
   saveContactRequest,
   saveDownloadEvent,
   saveNewsletterSignup,
+  recordSessionEvent,
 } = require("./database");
 const { sendContactNotification } = require("./mailer");
 const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
+const { router: adminRouter, createAdminSession } = require("./admin");
 
 const app = express();
 const publicDir = path.join(__dirname, "..", "public");
@@ -33,8 +35,9 @@ app.use(
         frameAncestors: ["'none'"],
         imgSrc: ["'self'", "data:"],
         objectSrc: ["'none'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'"],
+        // Allow inline scripts for admin panel
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
   }),
@@ -42,6 +45,10 @@ app.use(
 app.use(compression());
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
+
+// Admin panel (session + router)
+app.use(createAdminSession());
+app.use("/admin", adminRouter);
 
 const apiLimiter = rateLimit({
   windowMs: 60_000,

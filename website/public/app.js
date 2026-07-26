@@ -34,10 +34,9 @@
         if (!config.downloads[configKey]) {
           link.classList.add("is-pending");
           link.setAttribute("href", "#contact");
-          const label = link.querySelector("span");
+          // Keep the platform name (span), only update the action label (strong)
           const title = link.querySelector("strong");
-          if (label) label.textContent = "Downloadlink";
-          if (title) title.textContent = "Aanvragen";
+          if (title) title.textContent = "Binnenkort beschikbaar";
         }
       });
     } catch {
