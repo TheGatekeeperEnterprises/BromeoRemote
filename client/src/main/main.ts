@@ -22,7 +22,10 @@ let activeMonitorId: string | null = null;
 let activeWindowId: string | null = null;
 let miniControllerState: MiniControllerState | null = null;
 
+let activeDualBounds: { x: number; y: number; width: number; height: number } | null = null;
+
 export function getActiveAppWindowBounds(): { x: number; y: number; width: number; height: number } | null {
+  if (activeDualWindows && activeDualBounds) return activeDualBounds;
   if (!activeWindowId) return null;
   const hwnd = hwndFromWindowSourceId(activeWindowId);
   if (hwnd == null) return null;
@@ -42,24 +45,39 @@ function hwndFromWindowSourceId(id: string): number | null {
 // shape the window already happened to be).
 let activeDualWindows: { windowId1: string; windowId2: string } | null = null;
 
-function tileDualWindows(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): boolean {
+function tileDualWindows(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): { x: number; y: number; width: number; height: number } | null {
   const hwnd1 = hwndFromWindowSourceId(windowId1);
   const hwnd2 = hwndFromWindowSourceId(windowId2);
-  if (hwnd1 == null || hwnd2 == null) return false;
+  if (hwnd1 == null || hwnd2 == null) return null;
   const work = screen.getPrimaryDisplay().workArea;
 
-  if (isPortrait) {
-    // Fill 100% of display area — top half & bottom half (zero desktop background)
-    const halfH = Math.floor(work.height / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfH);
-    resizeAndFocusWindow(hwnd2, work.x, work.y + halfH, work.width, work.height - halfH);
+  let totalW: number;
+  let totalH: number;
+  if (aspect <= work.width / work.height) {
+    totalH = work.height;
+    totalW = Math.round(totalH * aspect);
   } else {
-    // Fill 100% of display area — left half & right half (zero desktop background)
-    const halfW = Math.floor(work.width / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, halfW, work.height);
-    resizeAndFocusWindow(hwnd2, work.x + halfW, work.y, work.width - halfW, work.height);
+    totalW = work.width;
+    totalH = Math.round(totalW / aspect);
   }
-  return true;
+  totalW = Math.min(totalW, work.width);
+  totalH = Math.min(totalH, work.height);
+
+  const startX = Math.round((work.width - totalW) / 2);
+  const startY = Math.round((work.height - totalH) / 2);
+
+  if (isPortrait) {
+    const halfH = Math.floor(totalH / 2);
+    resizeAndFocusWindow(hwnd1, work.x + startX, work.y + startY, totalW, halfH);
+    resizeAndFocusWindow(hwnd2, work.x + startX, work.y + startY + halfH, totalW, totalH - halfH);
+  } else {
+    const halfW = Math.floor(totalW / 2);
+    resizeAndFocusWindow(hwnd1, work.x + startX, work.y + startY, halfW, totalH);
+    resizeAndFocusWindow(hwnd2, work.x + startX + halfW, work.y + startY, totalW - halfW, totalH);
+  }
+
+  activeDualBounds = { x: startX, y: startY, width: totalW, height: totalH };
+  return activeDualBounds;
 }
 
 function resizeActiveWindowToAspect(aspect: number): boolean {
@@ -486,6 +504,7 @@ ipcMain.handle("bromeo:set-active-window", (_e, windowId: string, aspect: number
     restoreSavedWindowBounds();
     activeWindowId = windowId;
     activeDualWindows = null;
+  activeDualBounds = null;
     const hwnd = hwndFromWindowSourceId(activeWindowId);
     if (hwnd != null) saveWindowBoundsForHwnd(hwnd);
   }
@@ -512,6 +531,7 @@ ipcMain.handle("bromeo:resize-dual-window", (_e, aspect: number, isPortrait: boo
 
 ipcMain.handle("bromeo:set-capture-desktop", () => {
   activeDualWindows = null;
+  activeDualBounds = null;
   restoreSavedWindowBounds();
   activeWindowId = null;
   return true;

@@ -70,8 +70,8 @@ export interface BromeoBridge {
   setActiveWindow(windowId: string, aspect: number): Promise<boolean>;
   resizeActiveWindow(aspect: number): Promise<boolean>;
   setCaptureDesktop(): Promise<boolean>;
-  setDualWindow(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): Promise<boolean>;
-  resizeDualWindow(aspect: number, isPortrait: boolean): Promise<boolean>;
+  setDualWindow(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): Promise<{ x: number; y: number; width: number; height: number } | null>;
+  resizeDualWindow(aspect: number, isPortrait: boolean): Promise<{ x: number; y: number; width: number; height: number } | null>;
 
   getAppVersion(): Promise<string>;
   checkForUpdates(): Promise<boolean>;

@@ -1,3 +1,35 @@
+let activeCropAnimFrame: number | null = null;
+
+function createCroppedStream(sourceStream: MediaStream, crop: { x: number; y: number; width: number; height: number }): MediaStream {
+  if (activeCropAnimFrame) cancelAnimationFrame(activeCropAnimFrame);
+
+  const video = document.createElement("video");
+  video.srcObject = sourceStream;
+  video.muted = true;
+  video.play().catch(() => {});
+
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  const ctx = canvas.getContext("2d")!;
+
+  function draw() {
+    if (video.videoWidth && video.videoHeight) {
+      const scaleX = video.videoWidth / (window.screen.width || 1920);
+      const scaleY = video.videoHeight / (window.screen.height || 1080);
+      const sx = crop.x * scaleX;
+      const sy = crop.y * scaleY;
+      const sw = crop.width * scaleX;
+      const sh = crop.height * scaleY;
+      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, crop.width, crop.height);
+    }
+    activeCropAnimFrame = requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  return canvas.captureStream(30);
+}
+
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "../shared/config.js";
 import type { ServerMessage } from "../shared/protocol.js";
 import type { CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, QualityLevel, SavedDevice, SessionPermissions, UpdateStatus } from "../shared/protocol.js";
@@ -1839,11 +1871,22 @@ function startHostSession(peerId: string, viewOnly: boolean, permissions = defau
         } else if (cmd.kind === "switch-window") {
           await window.bromeo.setActiveWindow(cmd.windowId, cmd.aspect);
         } else if (cmd.kind === "switch-dual-window") {
-          await window.bromeo.setDualWindow(cmd.windowId1, cmd.windowId2, cmd.aspect, cmd.isPortrait);
+          const crop = await window.bromeo.setDualWindow(cmd.windowId1, cmd.windowId2, cmd.aspect, cmd.isPortrait);
+          const rawStream = await navigator.mediaDevices.getDisplayMedia({ video: CAPTURE_VIDEO_CONSTRAINTS, audio: false });
+          const stream = crop ? createCroppedStream(rawStream, crop) : rawStream;
+          await currentSession?.replaceVideoTrack(stream);
+          if (crop) {
+            currentSession?.sendSystemCommand({ kind: "video-dimensions", width: crop.width, height: crop.height });
+          }
+          return;
         } else if (cmd.kind === "resize-dual-window") {
-          await window.bromeo.resizeDualWindow(cmd.aspect, cmd.isPortrait);
+          const crop = await window.bromeo.resizeDualWindow(cmd.aspect, cmd.isPortrait);
+          if (crop) {
+            currentSession?.sendSystemCommand({ kind: "video-dimensions", width: crop.width, height: crop.height });
+          }
           return;
         } else if (cmd.kind === "switch-to-desktop") {
+          if (activeCropAnimFrame) { cancelAnimationFrame(activeCropAnimFrame); activeCropAnimFrame = null; }
           await window.bromeo.setCaptureDesktop();
         }
 
