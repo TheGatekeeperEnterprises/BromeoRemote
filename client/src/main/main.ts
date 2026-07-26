@@ -48,29 +48,16 @@ function tileDualWindows(windowId1: string, windowId2: string, aspect: number, i
   if (hwnd1 == null || hwnd2 == null) return false;
   const work = screen.getPrimaryDisplay().workArea;
 
-  let totalW: number;
-  let totalH: number;
-  if (aspect <= work.width / work.height) {
-    totalH = work.height;
-    totalW = Math.round(totalH * aspect);
-  } else {
-    totalW = work.width;
-    totalH = Math.round(totalW / aspect);
-  }
-  totalW = Math.min(totalW, work.width);
-  totalH = Math.min(totalH, work.height);
-
-  const startX = work.x + Math.round((work.width - totalW) / 2);
-  const startY = work.y + Math.round((work.height - totalH) / 2);
-
   if (isPortrait) {
-    const halfH = Math.floor(totalH / 2);
-    resizeAndFocusWindow(hwnd1, startX, startY, totalW, halfH);
-    resizeAndFocusWindow(hwnd2, startX, startY + halfH, totalW, halfH);
+    // Fill 100% of display area — top half & bottom half (zero desktop background)
+    const halfH = Math.floor(work.height / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfH);
+    resizeAndFocusWindow(hwnd2, work.x, work.y + halfH, work.width, work.height - halfH);
   } else {
-    const halfW = Math.floor(totalW / 2);
-    resizeAndFocusWindow(hwnd1, startX, startY, halfW, totalH);
-    resizeAndFocusWindow(hwnd2, startX + halfW, startY, halfW, totalH);
+    // Fill 100% of display area — left half & right half (zero desktop background)
+    const halfW = Math.floor(work.width / 2);
+    resizeAndFocusWindow(hwnd1, work.x, work.y, halfW, work.height);
+    resizeAndFocusWindow(hwnd2, work.x + halfW, work.y, work.width - halfW, work.height);
   }
   return true;
 }

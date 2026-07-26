@@ -2150,13 +2150,13 @@ export default function App(): React.JSX.Element {
             </View>
           )}
           {qualityDegraded && (
-            <View pointerEvents="none" style={[styles.qualityBadge, activeAppWindow && styles.qualityBadgeBelowAppModeBar]}>
+            <View pointerEvents="none" style={[styles.qualityBadge, activeAppWindow && (isLandscape ? styles.qualityBadgeBelowAppModeBar : { top: 96 })]}>
               <WifiOff size={13} color="#fff" strokeWidth={2.4} />
               <Text style={styles.qualityBadgeText}>Zwakke verbinding</Text>
             </View>
           )}
           {activeAppWindow && (
-            <View style={styles.appModeBar} pointerEvents="box-none">
+            <View style={[styles.appModeBar, !isLandscape && { top: 48 }]} pointerEvents="box-none">
               <Text style={styles.appModeBarText} numberOfLines={1}>
                 {activeAppWindow.name}
               </Text>
