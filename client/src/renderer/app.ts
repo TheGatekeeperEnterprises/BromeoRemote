@@ -2949,6 +2949,8 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
   currentSession = new PeerSession("viewer", DEFAULT_ICE_SERVERS, signaling, peerId, {
     onRemoteStream: (stream) => {
       el.remoteVideo.srcObject = stream;
+      el.remoteVideo.play().catch(() => {});
+      el.sessionStats.textContent = "";
       el.sessionHint.classList.add("hidden");
       applyRemoteFitMode(el.fitModeSelect.value as RemoteFitMode);
       el.videoWrap.tabIndex = 0;
