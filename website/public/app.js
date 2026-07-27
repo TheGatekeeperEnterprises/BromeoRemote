@@ -24,24 +24,7 @@
   }
 
   async function loadSiteConfig() {
-    try {
-      const response = await fetch("/api/site-config");
-      if (!response.ok) return;
-      const config = await response.json();
-      document.querySelectorAll("[data-download]").forEach((link) => {
-        const key = link.getAttribute("data-download");
-        const configKey = key === "windows-portable" ? "windowsPortable" : key;
-        if (!config.downloads[configKey]) {
-          link.classList.add("is-pending");
-          link.setAttribute("href", "#contact");
-          // Keep the platform name (span), only update the action label (strong)
-          const title = link.querySelector("strong");
-          if (title) title.textContent = "Binnenkort beschikbaar";
-        }
-      });
-    } catch {
-      // Keep static links visible if the config endpoint is temporarily unreachable.
-    }
+    // Keep all download links active and pointing to /download/:platform
   }
 
   const contactForm = document.querySelector("#contactForm");

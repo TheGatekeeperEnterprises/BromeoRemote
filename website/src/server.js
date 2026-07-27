@@ -129,16 +129,12 @@ app.get("/health", async (_req, res) => {
 });
 
 app.get("/api/site-config", apiLimiter, (_req, res) => {
-  const winFile = getLocalReleaseFile("windows");
-  const portFile = getLocalReleaseFile("windows-portable");
-  const apkFile = getLocalReleaseFile("android");
-
   res.json({
     baseUrl: config.publicBaseUrl,
     downloads: {
-      windows: Boolean(config.downloads.windows || winFile),
-      windowsPortable: Boolean(config.downloads.windowsPortable || portFile),
-      android: Boolean(config.downloads.android || apkFile),
+      windows: true,
+      windowsPortable: true,
+      android: true,
       github: Boolean(config.downloads.github),
     },
     links: config.links,
