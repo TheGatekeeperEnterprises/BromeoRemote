@@ -82,7 +82,7 @@ android {
         applicationId = "com.bromeoremotemobile"
         minSdk = rootProject.ext.minSdkVersion
         targetSdk = rootProject.ext.targetSdkVersion
-        versionCode = 4
+        versionCode = 5
         versionName = "1.0.2"
     }
     signingConfigs {

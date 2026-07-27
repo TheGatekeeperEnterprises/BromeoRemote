@@ -9,9 +9,10 @@ export const DEFAULT_ICE_SERVERS = [
   { urls: "stun:stun4.l.google.com:19302" },
   { urls: "stun:global.stun.twilio.com:3478" },
 
-  // Primary BromeoRemote TURN Server (Hostname & Direct Public IP fallback)
+  // Primary BromeoRemote TURN Server — hostname only. See
+  // client/src/shared/config.ts's matching comment: a literal-IP fallback
+  // used to sit here too, but it bypasses the OPNsense split-DNS host
+  // override and hairpins for any client on the server's own home LAN.
   { urls: "turn:turn.bromeoremote.com:3478", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
   { urls: "turn:turn.bromeoremote.com:3478?transport=tcp", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
-  { urls: "turn:62.45.93.36:3478", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
-  { urls: "turn:62.45.93.36:3478?transport=tcp", username: "bromeo", credential: "pvyht0ejbJigBjAzTI6IVFJ0GGYVH29h" },
 ];
