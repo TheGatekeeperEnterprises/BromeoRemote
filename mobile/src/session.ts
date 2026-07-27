@@ -119,7 +119,12 @@ export class MobileSession {
   private sustainedHighRttTicks = 0;
   constructor(private iceServers: any[], private signaling: Signaling, private peerId: string, private callbacks: SessionCallbacks) {
     console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
-    this.pc = new RTCPeerConnection({ iceServers });
+    this.pc = new RTCPeerConnection({
+      iceServers: this.iceServers,
+      iceTransportPolicy: "all",
+      bundlePolicy: "max-bundle",
+      rtcpMuxPolicy: "require",
+    });
 
     this.pc.addEventListener("icecandidate", (event: any) => {
       if (event.candidate) {

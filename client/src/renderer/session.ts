@@ -175,7 +175,12 @@ export class PeerSession {
     private callbacks: SessionCallbacks
   ) {
     console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
-    this.pc = new RTCPeerConnection({ iceServers });
+    this.pc = new RTCPeerConnection({
+      iceServers: this.iceServers,
+      iceTransportPolicy: "all",
+      bundlePolicy: "max-bundle",
+      rtcpMuxPolicy: "require",
+    });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
         console.log("[ice] local candidate:", ev.candidate.type, ev.candidate.protocol, ev.candidate.candidate);
@@ -399,16 +404,27 @@ export class PeerSession {
   }
 
   async addRemoteCandidate(candidate: RTCIceCandidateInit): Promise<void> {
-    if (!this.pc.remoteDescription) {
+    if (!candidate || !candidate.candidate) return;
+    if (!this.pc.remoteDescription || !this.pc.remoteDescription.type) {
       this.candidateQueue.push(candidate);
       return;
     }
-    await this.pc.addIceCandidate(candidate);
+    try {
+      await this.pc.addIceCandidate(new RTCIceCandidate(candidate));
+    } catch (e) {
+      console.warn("[ice] error adding remote candidate:", e);
+    }
   }
 
   private async flushCandidateQueue(): Promise<void> {
-    for (const c of this.candidateQueue.splice(0)) {
-      await this.pc.addIceCandidate(c).catch(() => undefined);
+    const queue = this.candidateQueue.splice(0);
+    for (const c of queue) {
+      if (!c || !c.candidate) continue;
+      try {
+        await this.pc.addIceCandidate(new RTCIceCandidate(c));
+      } catch (e) {
+        console.warn("[ice] error flushing candidate:", e);
+      }
     }
   }
 
