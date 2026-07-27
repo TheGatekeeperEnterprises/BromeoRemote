@@ -111,28 +111,30 @@ function requestMeta(req) {
 
 function downloadUrlForPlatform(platform) {
   const fallbackUrls = {
-    windows: "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Installer.exe",
-    "windows-portable": "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Setup.exe",
-    android: "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v0.0.11.apk",
+    windows: [
+      config.downloads.windows,
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Installer.exe",
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-Installer.exe",
+    ],
+    "windows-portable": [
+      config.downloads.windowsPortable,
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Setup.exe",
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-Setup.exe",
+    ],
+    android: [
+      config.downloads.android,
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v0.0.11.apk",
+      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote.apk",
+    ],
   };
 
-  let configured = "";
-  switch (platform) {
-    case "windows":
-      configured = config.downloads.windows;
-      break;
-    case "windows-portable":
-      configured = config.downloads.windowsPortable;
-      break;
-    case "android":
-      configured = config.downloads.android;
-      break;
-    case "github":
-      configured = config.downloads.github;
-      break;
+  const list = fallbackUrls[platform] || [];
+  for (const url of list) {
+    if (url && url.trim().length > 0) {
+      return url;
+    }
   }
-
-  return configured || fallbackUrls[platform] || "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases";
+  return "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases";
 }
 
 app.get("/health", async (_req, res) => {
