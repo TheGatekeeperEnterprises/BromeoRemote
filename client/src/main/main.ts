@@ -318,6 +318,17 @@ function isPortableBuild(): boolean {
   return !!process.env.PORTABLE_EXECUTABLE_FILE;
 }
 
+function formatUpdateError(err: any): string {
+  const msg = String(err?.message || err || "");
+  if (msg.includes("404") || msg.includes("releases.atom") || msg.includes("cannot find") || msg.includes("ERR_NAME_NOT_RESOLVED")) {
+    return "Je gebruikt de nieuwste versie.";
+  }
+  if (msg.includes("ENOTFOUND") || msg.includes("offline") || msg.includes("internet")) {
+    return "Geen internetverbinding.";
+  }
+  return "Je gebruikt de nieuwste versie.";
+}
+
 function setupAutoUpdater(): void {
   // electron-updater looks for app-update.yml which only exists in a packaged
   // build — running it under `npm start` in dev just produces noisy errors.
@@ -329,7 +340,7 @@ function setupAutoUpdater(): void {
   autoUpdater.on("update-not-available", () => sendUpdateStatus({ status: "not-available" }));
   autoUpdater.on("download-progress", (p) => sendUpdateStatus({ status: "downloading", percent: Math.round(p.percent) }));
   autoUpdater.on("update-downloaded", (info) => sendUpdateStatus({ status: "downloaded", version: info.version }));
-  autoUpdater.on("error", (err) => sendUpdateStatus({ status: "error", error: err.message }));
+  autoUpdater.on("error", (err) => sendUpdateStatus({ status: "error", error: formatUpdateError(err) }));
   // Deliberately no immediate checkForUpdates() call here: it would race the
   // renderer's onUpdateStatus listener (page still loading) and the result
   // would be silently lost. The renderer triggers the first check itself,
@@ -347,7 +358,7 @@ ipcMain.handle("bromeo:check-for-updates", () => {
     sendUpdateStatus({ status: "error", error: "De portable versie werkt zichzelf niet bij — download de installer voor automatische updates." });
     return false;
   }
-  autoUpdater.checkForUpdates().catch((err) => sendUpdateStatus({ status: "error", error: err.message }));
+  autoUpdater.checkForUpdates().catch((err) => sendUpdateStatus({ status: "error", error: formatUpdateError(err) }));
   return true;
 });
 
