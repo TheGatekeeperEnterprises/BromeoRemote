@@ -1270,13 +1270,17 @@ function updateSessionState(state: RTCPeerConnectionState | "starting"): void {
     connecting: "Verbinden",
     connected: "Verbonden",
     disconnected: "Onderbroken",
-    failed: "Mislukt",
+    // "Herstellen" not "Mislukt" — session.ts now retries a "failed" state
+    // the same as "disconnected" for up to ~20s (see docs/WEBRTC-TURN-DEBUGGING.md)
+    // instead of it being an immediate dead end, so labeling it as a hard
+    // failure here would contradict the silent recovery actually happening.
+    failed: "Herstellen",
     closed: "Gesloten",
   };
   el.sessionState.textContent = labels[state];
   el.sessionState.classList.toggle("session-chip--ok", state === "connected");
-  el.sessionState.classList.toggle("session-chip--danger", state === "failed" || state === "closed");
-  el.sessionState.classList.toggle("session-chip--pending", state !== "connected" && state !== "failed" && state !== "closed");
+  el.sessionState.classList.toggle("session-chip--danger", state === "closed");
+  el.sessionState.classList.toggle("session-chip--pending", state !== "connected" && state !== "closed");
 }
 
 function setTotpUiState(enabled: boolean): void {
@@ -2529,7 +2533,15 @@ function onHostViewerConnectionState(peerId: string, state: RTCPeerConnectionSta
     // the same shared track too — otherwise they'd join a live intercom
     // silent-to-them until someone happened to toggle the mic again.
     if (hostMicStream) void entry.session.setMicrophoneTrack(hostMicStream.getAudioTracks()[0]);
-  } else if (["failed", "closed"].includes(state)) {
+  } else if (state === "closed") {
+    // Not "failed" — the host side is passive during ICE-restart recovery
+    // (only the viewer/offerer side calls restartIce, see session.ts), but
+    // still needs to hold this PeerSession open while that recovery is
+    // attempted, otherwise removeHostViewer would close the connection out
+    // from under an incoming renegotiated offer. session.ts's own recovery
+    // grace window closes the pc itself (producing this "closed" state) if
+    // the viewer's retries don't land within it — that's the real signal
+    // this viewer is actually gone, not the first "failed" blip.
     removeHostViewer(peerId, { sendBye: false, toastMessage: `${entry.label} heeft de verbinding verbroken.` });
   }
 }
@@ -2964,11 +2976,21 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     onConnectionState: (state) => {
       updateSessionState(state);
       if (state === "connected") sessionReachedConnectedOnce = true;
-      if (state === "disconnected") {
+      if (state === "disconnected" || state === "failed") {
+        // "failed" now gets the same treatment as "disconnected" — session.ts's
+        // internal ICE-restart recovery (see its scheduleDisconnectRecovery/
+        // restartIce, and docs/WEBRTC-TURN-DEBUGGING.md) actively retries for
+        // up to ~20s on both, including the case where the connection never
+        // succeeded in the first place (e.g. a flaky TURN allocate on this
+        // machine). Tearing the UI down the instant "failed" first appears
+        // would race that recovery and close the peer connection out from
+        // under it before it gets a chance to work. Only "closed" — which
+        // session.ts reaches either via an explicit close() elsewhere or by
+        // giving up after its own recovery window — means it's truly over.
         el.sessionStats.textContent = "Verbinding wordt hersteld";
         return;
       }
-      if (["failed", "closed"].includes(state)) {
+      if (state === "closed") {
         // currentPeerId is already null by the time a *deliberate* hangup
         // (disconnect button, idle timeout, peer-initiated bye, ...) reaches
         // here, since endSession() clears it before pc.close() — so this

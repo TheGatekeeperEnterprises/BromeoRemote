@@ -204,10 +204,19 @@ export class PeerSession {
         this.clearDisconnectTimer();
         this.startStatsLoop();
         this.startIceRefreshLoop();
-      } else if (this.pc.connectionState === "disconnected") {
+      } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
+        // "failed" (never reached "connected" at all — e.g. this machine's
+        // TURN allocate silently failing, see docs/WEBRTC-TURN-DEBUGGING.md
+        // §4) used to fall into the closed/failed branch below and get zero
+        // retry attempts, unlike a post-connect "disconnected" drop. Since
+        // the underlying TURN failure is intermittent rather than absolute
+        // (packets round-trip fine, Chromium's own STUN/TURN handling is
+        // what's flaky), a full ICE restart — fresh candidate gathering,
+        // fresh TURN allocate attempt — has a real chance of succeeding on
+        // a retry even when the first attempt didn't.
         this.stopStatsLoop();
         this.scheduleDisconnectRecovery();
-      } else if (["failed", "closed"].includes(this.pc.connectionState)) {
+      } else if (this.pc.connectionState === "closed") {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
         this.stopIceRefreshLoop();
@@ -626,8 +635,17 @@ export class PeerSession {
     this.iceRestartInFlight = false;
   }
 
+  // "disconnected" (was connected, lost it) and "failed" (never connected
+  // at all) both land here — same recovery treatment for both, see the
+  // connectionstatechange handler's comment on why "failed" needed to be
+  // added to the states that reach this function.
+  private isRecoveringState(): boolean {
+    return this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed";
+  }
+
   private scheduleDisconnectRecovery(): void {
-    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce("disconnected");
+    const reason = this.pc.connectionState === "failed" ? "failed" : "disconnected";
+    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce(reason);
     // A single restart attempt can itself fail to land (e.g. it starts while
     // signalingState isn't stable yet, or its own candidate gather stalls) —
     // keep retrying every few seconds for the whole grace window instead of
@@ -635,7 +653,7 @@ export class PeerSession {
     // safely if one is still in flight or the state isn't right for it.
     if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
       this.disconnectRetryTimer = setInterval(() => {
-        if (this.pc.connectionState === "disconnected") void this.restartIce("disconnected");
+        if (this.isRecoveringState()) void this.restartIce(this.pc.connectionState === "failed" ? "failed" : "disconnected");
       }, DISCONNECT_RETRY_INTERVAL_MS);
     }
     // The grace-period close below always runs regardless of the failsafe
@@ -646,8 +664,8 @@ export class PeerSession {
     this.disconnectTimer = setTimeout(() => {
       this.disconnectTimer = null;
       this.clearDisconnectRetryTimer();
-      if (this.pc.connectionState === "disconnected") {
-        console.warn("[ice] disconnected recovery timed out, closing peer connection");
+      if (this.isRecoveringState()) {
+        console.warn(`[ice] ${this.pc.connectionState} recovery timed out, closing peer connection`);
         this.pc.close();
       }
     }, DISCONNECTED_GRACE_MS);
@@ -664,7 +682,7 @@ export class PeerSession {
     this.disconnectRetryTimer = null;
   }
 
-  private async restartIce(reason: "scheduled" | "disconnected"): Promise<void> {
+  private async restartIce(reason: "scheduled" | "disconnected" | "failed"): Promise<void> {
     if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
     if (this.pc.signalingState !== "stable") return;
     this.iceRestartInFlight = true;

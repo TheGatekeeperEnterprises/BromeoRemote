@@ -150,10 +150,14 @@ export class MobileSession {
         this.clearDisconnectTimer();
         this.startStatsLoop();
         this.startIceRefreshLoop();
-      } else if (this.pc.connectionState === "disconnected") {
+      } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
+        // Mirrors client/src/renderer/session.ts's fix — "failed" (never
+        // reached "connected" at all) used to get zero retry attempts,
+        // unlike a post-connect "disconnected" drop. See
+        // docs/WEBRTC-TURN-DEBUGGING.md.
         this.stopStatsLoop();
         this.scheduleDisconnectRecovery();
-      } else if (["failed", "closed"].includes(this.pc.connectionState)) {
+      } else if (this.pc.connectionState === "closed") {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
         this.stopIceRefreshLoop();
@@ -482,8 +486,13 @@ export class MobileSession {
     this.iceRestartInFlight = false;
   }
 
+  private isRecoveringState(): boolean {
+    return this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed";
+  }
+
   private scheduleDisconnectRecovery(): void {
-    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce("disconnected");
+    const reason = this.pc.connectionState === "failed" ? "failed" : "disconnected";
+    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce(reason);
     // A single restart attempt can itself fail to land (e.g. it starts while
     // signalingState isn't stable yet, or its own candidate gather stalls) —
     // keep retrying every few seconds for the whole grace window instead of
@@ -491,7 +500,7 @@ export class MobileSession {
     // safely if one is still in flight or the state isn't right for it.
     if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
       this.disconnectRetryTimer = setInterval(() => {
-        if (this.pc.connectionState === "disconnected") void this.restartIce("disconnected");
+        if (this.isRecoveringState()) void this.restartIce(this.pc.connectionState === "failed" ? "failed" : "disconnected");
       }, DISCONNECT_RETRY_INTERVAL_MS);
     }
     // The grace-period close below always runs regardless of the failsafe
@@ -502,8 +511,8 @@ export class MobileSession {
     this.disconnectTimer = setTimeout(() => {
       this.disconnectTimer = null;
       this.clearDisconnectRetryTimer();
-      if (this.pc.connectionState === "disconnected") {
-        console.warn("[ice] disconnected recovery timed out, closing peer connection");
+      if (this.isRecoveringState()) {
+        console.warn(`[ice] ${this.pc.connectionState} recovery timed out, closing peer connection`);
         this.pc.close();
       }
     }, DISCONNECTED_GRACE_MS);
@@ -520,7 +529,7 @@ export class MobileSession {
     this.disconnectRetryTimer = null;
   }
 
-  private async restartIce(reason: "scheduled" | "disconnected"): Promise<void> {
+  private async restartIce(reason: "scheduled" | "disconnected" | "failed"): Promise<void> {
     if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
     if (this.pc.signalingState !== "stable") return;
     this.iceRestartInFlight = true;

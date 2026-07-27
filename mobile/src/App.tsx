@@ -1453,11 +1453,17 @@ export default function App(): React.JSX.Element {
       },
       onConnectionState: (state) => {
         if (state === "connected") sessionReachedConnectedOnceRef.current = true;
-        if (state === "disconnected") {
+        if (state === "disconnected" || state === "failed") {
+          // "failed" gets the same treatment as "disconnected" — session.ts's
+          // internal ICE-restart recovery retries for up to ~20s on both,
+          // including a connection that never succeeded in the first place.
+          // Only "closed" (session.ts giving up, or an explicit close())
+          // means it's truly over — see client's mirrored fix and
+          // docs/WEBRTC-TURN-DEBUGGING.md.
           setStatsText("Verbinding wordt hersteld");
           return;
         }
-        if (["failed", "closed"].includes(state)) {
+        if (state === "closed") {
           console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
           // sessionStartedAtRef is already null by the time a *deliberate*
           // hangup (disconnect button, peer-initiated bye, ...) reaches
@@ -1597,8 +1603,10 @@ export default function App(): React.JSX.Element {
     const translator = new RemoteInputTranslator();
     const session = new MobileSession(DEFAULT_ICE_SERVERS, signaling, peerId, {
       onConnectionState: (state) => {
-        if (state === "disconnected") return;
-        if (["failed", "closed"].includes(state)) endSession();
+        // "failed" is now recoverable too (see session.ts's scheduleDisconnectRecovery) —
+        // only "closed" means the viewer's recovery window has actually run out.
+        if (state === "disconnected" || state === "failed") return;
+        if (state === "closed") endSession();
       },
       onInputEvent: (event) => translator.handle(event),
     });
