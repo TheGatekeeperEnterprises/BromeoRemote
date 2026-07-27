@@ -19,6 +19,7 @@ const { router: adminRouter, createAdminSession } = require("./admin");
 
 const app = express();
 const publicDir = path.join(__dirname, "..", "public");
+const releasesDir = path.join(__dirname, "..", "..", "releases");
 
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
@@ -192,6 +193,8 @@ app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (
     next(error);
   }
 });
+
+app.use("/releases", express.static(releasesDir));
 
 app.use(
   express.static(publicDir, {
