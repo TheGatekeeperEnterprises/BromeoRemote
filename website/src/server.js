@@ -68,29 +68,35 @@ const contactLimiter = rateLimit({
 
 
 function getLocalReleaseFile(platform) {
-  const downloadsDir = path.join(__dirname, "..", "public", "downloads");
-  const releasesDir = path.join(__dirname, "..", "..", "releases");
+  const dirs = [
+    path.join(__dirname, "..", "public", "downloads"),
+    path.join(__dirname, "..", "..", "releases"),
+    path.join(__dirname, "..", "releases"),
+    "/app/releases",
+    "/app/public/downloads",
+  ];
 
-  const candidates = {
-    windows: [
-      path.join(downloadsDir, "BromeoRemote-Installer.exe"),
-      path.join(releasesDir, "BromeoRemote-v1.0.8-Installer.exe"),
-    ],
-    "windows-portable": [
-      path.join(downloadsDir, "BromeoRemote-Setup.exe"),
-      path.join(releasesDir, "BromeoRemote-v1.0.8-Setup.exe"),
-    ],
-    android: [
-      path.join(downloadsDir, "BromeoRemote.apk"),
-      path.join(releasesDir, "BromeoRemote-v0.0.11.apk"),
-    ],
+  const patterns = {
+    windows: [/installer/i, /installer\.exe$/i, /\.exe$/i],
+    "windows-portable": [/setup/i, /portable/i, /setup\.exe$/i],
+    android: [/\.apk$/i],
   };
 
-  const filePaths = candidates[platform] || [];
-  for (const filePath of filePaths) {
-    if (fs.existsSync(filePath)) {
-      const filename = path.basename(filePath);
-      return { path: filePath, filename };
+  const currentPatterns = patterns[platform] || [];
+
+  for (const dir of dirs) {
+    if (!fs.existsSync(dir)) continue;
+    try {
+      const files = fs.readdirSync(dir);
+      for (const pattern of currentPatterns) {
+        const match = files.find((f) => pattern.test(f));
+        if (match) {
+          const fullPath = path.join(dir, match);
+          return { path: fullPath, filename: match };
+        }
+      }
+    } catch {
+      // Ignore read errors
     }
   }
   return null;
