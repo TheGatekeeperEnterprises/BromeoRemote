@@ -1,7 +1,7 @@
 {
   "name": "bromeoremote",
   "productName": "BromeoRemote",
-  "version": "1.0.2",
+  "version": "1.0.8",
   "description": "BromeoRemote — Access Anywhere. Cross-platform remote desktop access & support.",
   "private": true,
   "main": "dist/main/main.js",
@@ -51,8 +51,9 @@
       "allowToChangeInstallationDirectory": true
     },
     "publish": {
-      "provider": "generic",
-      "url": "https://updates.jouwdomein.nl/bromeoremote/"
+      "provider": "github",
+      "owner": "TheGatekeeperEnterprises",
+      "repo": "BromeoRemote"
     }
   }
 }
