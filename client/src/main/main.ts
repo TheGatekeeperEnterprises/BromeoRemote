@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session, desktopCapturer, ipcMain, dialog, clipboard, nativeImage, Tray, Menu, Notification, screen } from "electron";
 import { join } from "path";
 import { writeFile, readFile, stat } from "fs/promises";
+import { appendFileSync, writeFileSync } from "fs";
 import { store, hashPassword, randomPassword } from "./store";
 import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
@@ -24,6 +25,22 @@ let activeWindowId: string | null = null;
 let miniControllerState: MiniControllerState | null = null;
 
 let activeDualBounds: { x: number; y: number; width: number; height: number } | null = null;
+
+// Temporary diagnostic for the desktop-to-desktop cross-network black-screen
+// investigation (see docs/WEBRTC-TURN-DEBUGGING.md) — renderer console.log
+// output isn't visible anywhere without DevTools open, so mirror every
+// "[ice] ..." line to a plain-text file that can be read after a repro
+// without needing to walk the user through opening DevTools themselves.
+// Truncated fresh on every launch (see createWindow) so a log always
+// corresponds to just the most recent run.
+const iceLogPath = join(app.getPath("userData"), "ice-debug.log");
+function logIceLine(message: string): void {
+  try {
+    appendFileSync(iceLogPath, `[${new Date().toISOString()}] ${message}\n`, "utf-8");
+  } catch {
+    // Best-effort diagnostic only — never let a logging failure affect the app.
+  }
+}
 
 export function getActiveAppWindowBounds(): { x: number; y: number; width: number; height: number } | null {
   if (activeDualWindows && activeDualBounds) return activeDualBounds;
@@ -199,6 +216,15 @@ function createWindow(): void {
   });
   mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+
+  try {
+    writeFileSync(iceLogPath, "", "utf-8"); // fresh log per launch, see logIceLine's comment
+  } catch {
+    // Non-fatal — logIceLine's own try/catch handles the rest.
+  }
+  mainWindow.webContents.on("console-message", (_event, _level, message) => {
+    if (message.startsWith("[ice]")) logIceLine(message);
+  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
