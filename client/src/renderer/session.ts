@@ -180,7 +180,14 @@ export class PeerSession {
       iceTransportPolicy: "all",
       bundlePolicy: "max-bundle",
       rtcpMuxPolicy: "require",
-      iceCandidatePoolSize: 10,
+      // Pooled pre-gathering was added for mobile's 4G-hotspot connect speed
+      // (see git history) and mobile's WebRTC engine has never shown any
+      // TURN-gathering trouble. Desktop's Chromium, on this machine at
+      // least, has a confirmed-broken TURN relay/response handling path
+      // (see docs/WEBRTC-TURN-DEBUGGING.md) that was never verified against
+      // eagerly gathering a pool of candidates at construction time, before
+      // the offer/role is even known — removed here as an untested variable
+      // while chasing that bug, not because pooling itself is known-bad.
     });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
