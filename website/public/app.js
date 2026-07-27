@@ -101,3 +101,42 @@
     });
   }
 })();
+
+
+  function initDownloadModal() {
+    const modal = document.querySelector("#downloadModal");
+    if (!modal) return;
+
+    function openModal(e) {
+      if (e) e.preventDefault();
+      modal.classList.add("is-active");
+      modal.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeModal() {
+      modal.classList.remove("is-active");
+      modal.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
+
+    const modalTriggers = document.querySelectorAll(
+      ".header-cta, .primary-action, .download-action.secondary, [href='#downloads']"
+    );
+
+    modalTriggers.forEach((btn) => {
+      btn.addEventListener("click", openModal);
+    });
+
+    modal.querySelectorAll("[data-close-modal]").forEach((btn) => {
+      btn.addEventListener("click", closeModal);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && modal.classList.contains("is-active")) {
+        closeModal();
+      }
+    });
+  }
+
+  initDownloadModal();

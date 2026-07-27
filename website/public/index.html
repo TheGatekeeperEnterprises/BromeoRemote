@@ -297,5 +297,88 @@
     </footer>
 
     <script src="/app.js?v=20260726-1" defer></script>
-  </body>
+  
+    <!-- DOWNLOAD MODAL POPUP -->
+    <div id="downloadModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
+      <div class="download-modal-backdrop" data-close-modal></div>
+      <div class="download-modal-card">
+        <button class="download-modal-close" data-close-modal aria-label="Sluit venster">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        
+        <div class="download-modal-header">
+          <div class="modal-badge-wrapper">
+            <span class="modal-chip">Direct gratis starten</span>
+          </div>
+          <h2 id="modal-title" class="download-modal-title">Download BromeoRemote</h2>
+          <p class="download-modal-subtitle">Kies je platform hieronder. Gratis voor persoonlijk en zakelijk testen.</p>
+        </div>
+
+        <div class="download-modal-grid">
+          <!-- Windows Installer -->
+          <a class="modal-download-card primary" href="/download/windows" data-download="windows">
+            <div class="card-tag">Aanbevolen</div>
+            <div class="card-icon-wrap windows">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="#00adef">
+                <path d="M0 3.449L9.75 2.1v9.451H0m0 1.049h9.75v9.451L0 20.7V12.6zm10.55-10.65L24 0v11.4h-13.455V1.95zM24 12.6V24l-13.45-1.95V12.6H24z"/>
+              </svg>
+            </div>
+            <div class="card-info">
+              <h3>Windows Installer</h3>
+              <p>Met automatische updates & snelkoppeling (.exe installer)</p>
+            </div>
+            <div class="card-button primary">
+              <span>Installer downloaden</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+          </a>
+
+          <!-- Windows Portable -->
+          <a class="modal-download-card" href="/download/windows-portable" data-download="windows-portable">
+            <div class="card-icon-wrap portable">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="12" rx="2"/>
+                <path d="M6 20h12"/>
+                <path d="M10 16v4"/>
+                <path d="M14 16v4"/>
+              </svg>
+            </div>
+            <div class="card-info">
+              <h3>Windows Portable</h3>
+              <p>Direct starten zonder installatie (.exe standalone)</p>
+            </div>
+            <div class="card-button secondary">
+              <span>Direct starten</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+          </a>
+
+          <!-- Android App -->
+          <a class="modal-download-card android" href="/download/android" data-download="android">
+            <div class="card-tag android">Android App</div>
+            <div class="card-icon-wrap android">
+              <svg width="38" height="38" viewBox="0 0 24 24" fill="#3DDC84">
+                <path d="M17.523 15.341c-.551 0-.999-.448-.999-.999s.448-.999.999-.999c.551 0 .999.448.999.999s-.448.999-.999.999zm-11.046 0c-.551 0-.999-.448-.999-.999s.448-.999.999-.999c.551 0 .999.448.999.999s-.448.999-.999.999zm11.405-6.03l1.997-3.459c.148-.256.06-.583-.196-.731-.256-.148-.583-.06-.731.196l-2.035 3.525c-1.482-.676-3.155-1.071-4.947-1.071s-3.465.395-4.947 1.071l-2.035-3.525c-.148-.256-.475-.344-.731-.196-.256.148-.344.475-.196.731l1.997 3.459c-3.329 1.838-5.612 5.215-5.91 9.208h23.708c-.298-3.993-2.581-7.37-5.91-9.208z"/>
+              </svg>
+            </div>
+            <div class="card-info">
+              <h3>Android App</h3>
+              <p>Voor telefoons en tablets (.apk mobiele app)</p>
+            </div>
+            <div class="card-button android">
+              <span>Mobiele app</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+          </a>
+        </div>
+
+        <div class="download-modal-footer">
+          <span>🔒 End-to-end versleuteld</span>
+          <span>🛡️ 100% Virusvrij</span>
+          <span>⚡ Geen registratie verplicht</span>
+        </div>
+      </div>
+    </div>
+
+</body>
 </html>
