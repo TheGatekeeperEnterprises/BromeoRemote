@@ -124,6 +124,7 @@ export class MobileSession {
       iceTransportPolicy: "all",
       bundlePolicy: "max-bundle",
       rtcpMuxPolicy: "require",
+      iceCandidatePoolSize: 10,
     });
 
     this.pc.addEventListener("icecandidate", (event: any) => {

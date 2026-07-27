@@ -180,6 +180,7 @@ export class PeerSession {
       iceTransportPolicy: "all",
       bundlePolicy: "max-bundle",
       rtcpMuxPolicy: "require",
+      iceCandidatePoolSize: 10,
     });
     this.pc.onicecandidate = (ev) => {
       if (ev.candidate) {
