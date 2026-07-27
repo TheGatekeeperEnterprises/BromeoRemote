@@ -31,10 +31,10 @@ const config = {
     to: cleanUrl(process.env.SMTP_TO) || cleanUrl(process.env.SMTP_FROM) || cleanUrl(process.env.SMTP_USER),
   },
   downloads: {
-    windows: cleanUrl(process.env.DOWNLOAD_WINDOWS_URL) || "/releases/BromeoRemote-v1.0.8-Installer.exe",
-    windowsPortable: cleanUrl(process.env.DOWNLOAD_WINDOWS_PORTABLE_URL) || "/releases/BromeoRemote-v1.0.8-Setup.exe",
-    android: cleanUrl(process.env.DOWNLOAD_ANDROID_URL) || "/releases/BromeoRemote-v0.0.11.apk",
-    github: cleanUrl(process.env.DOWNLOAD_GITHUB_URL),
+    windows: cleanUrl(process.env.DOWNLOAD_WINDOWS_URL),
+    windowsPortable: cleanUrl(process.env.DOWNLOAD_WINDOWS_PORTABLE_URL),
+    android: cleanUrl(process.env.DOWNLOAD_ANDROID_URL),
+    github: cleanUrl(process.env.DOWNLOAD_GITHUB_URL) || "https://github.com/TheGatekeeperEnterprises/BromeoRemote",
   },
   links: {
     signalingStatus: cleanUrl(process.env.SIGNALING_STATUS_URL),

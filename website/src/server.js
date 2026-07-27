@@ -1,3 +1,4 @@
+const fs = require("fs");
 const path = require("path");
 const compression = require("compression");
 const express = require("express");
@@ -65,6 +66,36 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
+function getLocalReleaseFile(platform) {
+  const downloadsDir = path.join(__dirname, "..", "public", "downloads");
+  const releasesDir = path.join(__dirname, "..", "..", "releases");
+
+  const candidates = {
+    windows: [
+      path.join(downloadsDir, "BromeoRemote-Installer.exe"),
+      path.join(releasesDir, "BromeoRemote-v1.0.8-Installer.exe"),
+    ],
+    "windows-portable": [
+      path.join(downloadsDir, "BromeoRemote-Setup.exe"),
+      path.join(releasesDir, "BromeoRemote-v1.0.8-Setup.exe"),
+    ],
+    android: [
+      path.join(downloadsDir, "BromeoRemote.apk"),
+      path.join(releasesDir, "BromeoRemote-v0.0.11.apk"),
+    ],
+  };
+
+  const filePaths = candidates[platform] || [];
+  for (const filePath of filePaths) {
+    if (fs.existsSync(filePath)) {
+      const filename = path.basename(filePath);
+      return { path: filePath, filename };
+    }
+  }
+  return null;
+}
+
 function requestMeta(req) {
   return {
     ip: req.ip,
@@ -98,12 +129,16 @@ app.get("/health", async (_req, res) => {
 });
 
 app.get("/api/site-config", apiLimiter, (_req, res) => {
+  const winFile = getLocalReleaseFile("windows");
+  const portFile = getLocalReleaseFile("windows-portable");
+  const apkFile = getLocalReleaseFile("android");
+
   res.json({
     baseUrl: config.publicBaseUrl,
     downloads: {
-      windows: Boolean(config.downloads.windows),
-      windowsPortable: Boolean(config.downloads.windowsPortable),
-      android: Boolean(config.downloads.android),
+      windows: Boolean(config.downloads.windows || winFile),
+      windowsPortable: Boolean(config.downloads.windowsPortable || portFile),
+      android: Boolean(config.downloads.android || apkFile),
       github: Boolean(config.downloads.github),
     },
     links: config.links,
@@ -149,14 +184,23 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
       return;
     }
 
-    const targetUrl = downloadUrlForPlatform(platform);
-    if (!targetUrl) {
-      res.status(503).json({ ok: false, error: "Deze download is nog niet gekoppeld." });
+    await saveDownloadEvent(platform, requestMeta(req));
+
+    // 1. Check if file is available locally on the server
+    const localFile = getLocalReleaseFile(platform);
+    if (localFile) {
+      res.download(localFile.path, localFile.filename);
       return;
     }
 
-    await saveDownloadEvent(platform, requestMeta(req));
-    res.redirect(302, targetUrl);
+    // 2. Redirect to configured or GitHub fallback URL
+    const targetUrl = downloadUrlForPlatform(platform);
+    if (targetUrl) {
+      res.redirect(302, targetUrl);
+      return;
+    }
+
+    res.status(503).json({ ok: false, error: "Deze download is nog niet gekoppeld." });
   } catch (error) {
     next(error);
   }
