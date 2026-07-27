@@ -110,18 +110,29 @@ function requestMeta(req) {
 }
 
 function downloadUrlForPlatform(platform) {
+  const fallbackUrls = {
+    windows: "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Installer.exe",
+    "windows-portable": "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Setup.exe",
+    android: "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v0.0.11.apk",
+  };
+
+  let configured = "";
   switch (platform) {
     case "windows":
-      return config.downloads.windows;
+      configured = config.downloads.windows;
+      break;
     case "windows-portable":
-      return config.downloads.windowsPortable;
+      configured = config.downloads.windowsPortable;
+      break;
     case "android":
-      return config.downloads.android;
+      configured = config.downloads.android;
+      break;
     case "github":
-      return config.downloads.github;
-    default:
-      return "";
+      configured = config.downloads.github;
+      break;
   }
+
+  return configured || fallbackUrls[platform] || "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases";
 }
 
 app.get("/health", async (_req, res) => {
