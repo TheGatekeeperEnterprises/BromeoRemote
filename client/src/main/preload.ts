@@ -1,10 +1,15 @@
 import { contextBridge, ipcRenderer } from "electron";
 import type { AiBuddyMessage, InputEvent, NotificationPayload, SavedDevice, UpdateStatus } from "../shared/protocol";
 
-interface MiniControllerState {
-  peer: string;
-  status: string;
+interface MiniControllerViewer {
+  peerId: string;
+  label: string;
   permissions: string;
+  viewOnly: boolean;
+}
+
+interface MiniControllerState {
+  viewers: MiniControllerViewer[];
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
@@ -14,7 +19,8 @@ contextBridge.exposeInMainWorld("bromeo", {
   getConfig: () => ipcRenderer.invoke("bromeo:get-config"),
   setUnattended: (enabled: boolean, password: string | null) =>
     ipcRenderer.invoke("bromeo:set-unattended", enabled, password),
-  checkPassword: (passwordHash: string, totpCode?: string) => ipcRenderer.invoke("bromeo:check-password", passwordHash, totpCode),
+  checkPassword: (passwordHash: string, totpCode?: string, fromId?: string, fromLabel?: string, trustDevice?: boolean) =>
+    ipcRenderer.invoke("bromeo:check-password", passwordHash, totpCode, fromId, fromLabel, trustDevice),
   regeneratePassword: () => ipcRenderer.invoke("bromeo:regenerate-password"),
   setTheme: (theme: "dark" | "light") => ipcRenderer.invoke("bromeo:set-theme", theme),
 
@@ -40,6 +46,8 @@ contextBridge.exposeInMainWorld("bromeo", {
   generateTotpSecret: () => ipcRenderer.invoke("bromeo:generate-totp-secret"),
   enableTotp: (code: string) => ipcRenderer.invoke("bromeo:enable-totp", code),
   disableTotp: () => ipcRenderer.invoke("bromeo:disable-totp"),
+  getTrustedDevices: () => ipcRenderer.invoke("bromeo:get-trusted-devices"),
+  removeTrustedDevice: (id: string) => ipcRenderer.invoke("bromeo:remove-trusted-device", id),
   getSavedDevices: () => ipcRenderer.invoke("bromeo:get-saved-devices"),
   saveDevice: (device: SavedDevice) => ipcRenderer.invoke("bromeo:save-device", device),
   removeSavedDevice: (id: string) => ipcRenderer.invoke("bromeo:remove-saved-device", id),
@@ -82,9 +90,9 @@ contextBridge.exposeInMainWorld("bromeo", {
   updateMiniController: (state: MiniControllerState) => ipcRenderer.invoke("bromeo:update-mini-controller", state),
   hideMiniController: () => ipcRenderer.invoke("bromeo:hide-mini-controller"),
   restoreMainWindow: () => ipcRenderer.invoke("bromeo:restore-main-window"),
-  miniControllerAction: (action: string) => ipcRenderer.invoke("bromeo:mini-controller-action", action),
-  onMiniControllerAction: (cb: (action: string) => void) => {
-    const listener = (_e: unknown, action: string) => cb(action);
+  miniControllerAction: (action: string, peerId?: string) => ipcRenderer.invoke("bromeo:mini-controller-action", action, peerId),
+  onMiniControllerAction: (cb: (action: string, peerId?: string) => void) => {
+    const listener = (_e: unknown, action: string, peerId?: string) => cb(action, peerId);
     ipcRenderer.on("mini-controller-action", listener);
     return () => ipcRenderer.removeListener("mini-controller-action", listener);
   },

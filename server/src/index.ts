@@ -72,6 +72,7 @@ wss.on("connection", (socket: WebSocket) => {
           viewOnly: msg.viewOnly,
           permissions: msg.permissions,
           totpCode: msg.totpCode,
+          trustDevice: msg.trustDevice,
         });
         break;
       }

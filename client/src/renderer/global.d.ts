@@ -12,10 +12,15 @@ export interface BromeoConfig {
   sessionPassword: string;
 }
 
-export interface MiniControllerState {
-  peer: string;
-  status: string;
+export interface MiniControllerViewer {
+  peerId: string;
+  label: string;
   permissions: string;
+  viewOnly: boolean;
+}
+
+export interface MiniControllerState {
+  viewers: MiniControllerViewer[];
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
@@ -24,7 +29,13 @@ export interface MiniControllerState {
 export interface BromeoBridge {
   getConfig(): Promise<BromeoConfig>;
   setUnattended(enabled: boolean, password: string | null): Promise<{ unattendedEnabled: boolean; hasUnattendedPassword: boolean }>;
-  checkPassword(passwordHash: string, totpCode?: string): Promise<{ ok: boolean; mode?: "session" | "unattended"; reason?: string }>;
+  checkPassword(
+    passwordHash: string,
+    totpCode?: string,
+    fromId?: string,
+    fromLabel?: string,
+    trustDevice?: boolean
+  ): Promise<{ ok: boolean; mode?: "session" | "unattended"; reason?: string }>;
   regeneratePassword(): Promise<string>;
   setTheme(theme: "dark" | "light"): Promise<boolean>;
 
@@ -45,9 +56,11 @@ export interface BromeoBridge {
   setOpenAiKey(key: string | null): Promise<boolean>;
   getOpenAiKeyStatus(): Promise<boolean>;
   askAiBuddy(history: AiBuddyMessage[]): Promise<AiBuddyResult>;
-  generateTotpSecret(): Promise<{ secret: string; otpauthUri: string }>;
+  generateTotpSecret(): Promise<{ secret: string; otpauthUri: string; qrDataUrl: string | null }>;
   enableTotp(code: string): Promise<{ ok: boolean }>;
   disableTotp(): Promise<boolean>;
+  getTrustedDevices(): Promise<{ id: string; label: string; trustedUntil: number }[]>;
+  removeTrustedDevice(id: string): Promise<boolean>;
   sendBridgeDecision(id: string, decision: "allow" | "deny"): Promise<boolean>;
   onBridgeNotification(cb: (notification: NotificationPayload) => void): () => void;
 
@@ -82,8 +95,8 @@ export interface BromeoBridge {
   updateMiniController(state: MiniControllerState): Promise<boolean>;
   hideMiniController(): Promise<boolean>;
   restoreMainWindow(): Promise<boolean>;
-  miniControllerAction(action: string): Promise<boolean>;
-  onMiniControllerAction(cb: (action: string) => void): () => void;
+  miniControllerAction(action: string, peerId?: string): Promise<boolean>;
+  onMiniControllerAction(cb: (action: string, peerId?: string) => void): () => void;
   onMiniControllerState(cb: (state: MiniControllerState) => void): () => void;
 }
 

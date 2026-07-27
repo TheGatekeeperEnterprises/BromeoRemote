@@ -26,11 +26,12 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RTCView, MediaStream, mediaDevices } from "react-native-webrtc";
+import Svg, { Polyline } from "react-native-svg";
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "./shared/config";
-import type { CursorShapeName, MonitorInfo, NotificationPayload, QualityLevel, SavedDevice, ServerMessage, WindowInfo } from "./shared/protocol";
+import type { CursorShapeName, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, ServerMessage, WindowInfo } from "./shared/protocol";
 import { sha256Hex } from "./crypto";
 import { Signaling } from "./signaling";
-import { MobileSession } from "./session";
+import { MobileSession, type CodecPreferenceMode } from "./session";
 import { requestNotificationPermission, getPushToken, onPushTokenRefresh, onForegroundPush } from "./push";
 import { ensureNotificationChannels, onNotificationPress, getInitialNotificationPress, openConfirmNotificationSettings } from "./notifications";
 import { getOpenAiApiKey, setOpenAiApiKey, captureRemoteVideoFrame, askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
@@ -74,10 +75,13 @@ import {
   Keyboard,
   Lock,
   MessageCircle,
+  Mic,
+  MicOff,
   MoreHorizontal,
   Move,
   MousePointer2,
   MousePointerClick,
+  Pencil,
   Power,
   RotateCw,
   Save,
@@ -98,6 +102,10 @@ const DEVICE_ID_KEY = "bromeoremote_device_id";
 const QUALITY_LEVEL_KEY = "bromeoremote_quality_level";
 const FAILSAFE_RECONNECT_KEY = "bromeoremote_failsafe_reconnect";
 const RENDER_QUALITY_MODE_KEY = "bromeoremote_render_quality_mode";
+const CODEC_PREFERENCE_KEY = "bromeoremote_codec_preference";
+const RESOLUTION_PREFERENCE_KEY = "bromeoremote_resolution_preference";
+const ANNOTATION_COLOR = "#ff3b3b";
+const ANNOTATION_STROKE_TTL_MS = 6000;
 const SHOW_CURSOR_KEY = "bromeoremote_show_remote_cursor";
 const THEME_KEY = "bromeoremote_theme";
 
@@ -291,6 +299,7 @@ export default function App(): React.JSX.Element {
   const filesTransferredCountRef = useRef(0);
   const [totpRequired, setTotpRequired] = useState<"totp-required" | "bad-totp" | null>(null);
   const [totpCode, setTotpCode] = useState("");
+  const [trustThisDevice, setTrustThisDevice] = useState(false);
   const [monitors, setMonitors] = useState<MonitorInfo[]>([]);
   const [activeMonitorId, setActiveMonitorId] = useState<string | null>(null);
   const [inSession, setInSession] = useState(false);
@@ -355,6 +364,12 @@ export default function App(): React.JSX.Element {
   const [selectedSplitWindows, setSelectedSplitWindows] = useState<WindowInfo[]>([]);
   const [activeDualWindows, setActiveDualWindows] = useState<{ win1: WindowInfo; win2: WindowInfo } | null>(null);
   const [activeAppWindow, setActiveAppWindow] = useState<{ id: string; name: string } | null>(null);
+  // View two whole monitors simultaneously (composited side-by-side/stacked
+  // by the host — see "switch-dual-monitor" in shared/protocol.ts), same
+  // toggle-then-select-2 UX pattern as splitMode/selectedSplitWindows above.
+  const [monitorSplitMode, setMonitorSplitMode] = useState<boolean>(false);
+  const [selectedSplitMonitors, setSelectedSplitMonitors] = useState<MonitorInfo[]>([]);
+  const [activeDualMonitors, setActiveDualMonitors] = useState<{ m1: MonitorInfo; m2: MonitorInfo } | null>(null);
   const [chatMessages, setChatMessages] = useState<{ text: string; timestamp: number; fromMe: boolean }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [hasUnreadChat, setHasUnreadChat] = useState(false);
@@ -567,6 +582,74 @@ export default function App(): React.JSX.Element {
   // session.ts) — surfaced so a soft/blurry picture reads as "your
   // connection is struggling" rather than an unexplained quality bug.
   const [qualityDegraded, setQualityDegraded] = useState(false);
+  // --- Annotation/whiteboard overlay (lightweight, ephemeral pointing —
+  // see the SystemCommand's own comment in shared/protocol.ts). Phase 1
+  // simplification: entering draw mode resets zoom to 1x and stays there,
+  // since correctly reverse-mapping a drawn point through the live pinch-
+  // zoom transform (getContentRect + scale/panX/panY) back to a stable
+  // normalized video-frame coordinate is a real correctness problem this
+  // phase deliberately doesn't take on — draw at the default (unzoomed)
+  // view only. ---
+  const [annotateModeActive, setAnnotateModeActive] = useState(false);
+  const [annotationStrokes, setAnnotationStrokes] = useState<
+    { id: string; points: { x: number; y: number }[]; color: string; createdAt: number }[]
+  >([]);
+  const currentStrokeRef = useRef<{ id: string; points: { x: number; y: number }[] } | null>(null);
+  // Forces a re-render on a timer so fading/expiring strokes actually
+  // disappear without needing a touch event to trigger it.
+  const [, setAnnotationTick] = useState(0);
+  useEffect(() => {
+    if (annotationStrokes.length === 0) return;
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setAnnotationStrokes((prev) => prev.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS));
+      setAnnotationTick((t) => t + 1);
+    }, 150);
+    return () => clearInterval(timer);
+  }, [annotationStrokes.length]);
+  function toggleAnnotateMode(): void {
+    setAnnotateModeActive((active) => {
+      if (!active) setZoom({ scale: 1, panX: 0, panY: 0 });
+      return !active;
+    });
+  }
+  function clearAnnotationsLocally(): void {
+    annotationStrokes.length && setAnnotationStrokes([]);
+    currentStrokeRef.current = null;
+  }
+  // --- Voice intercom — talk to the person at the host machine, separate
+  // from the host's one-way system audio (see voiceTransceiver in
+  // session.ts). Incoming voice needs no explicit playback wiring here:
+  // react-native-webrtc renders any received audio track automatically
+  // once it's part of the peer connection, the same way the existing
+  // system-audio track already does without any dedicated <audio>-style
+  // element in this file. ---
+  const [micActive, setMicActive] = useState(false);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  async function toggleMicrophone(): Promise<void> {
+    if (micStreamRef.current) {
+      await sessionRef.current?.setMicrophoneTrack(null);
+      micStreamRef.current.getTracks().forEach((t: any) => t.stop());
+      micStreamRef.current = null;
+      setMicActive(false);
+      showToast("Microfoon uitgeschakeld.");
+      return;
+    }
+    try {
+      const stream = await mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream as unknown as MediaStream;
+      await sessionRef.current?.setMicrophoneTrack(stream.getAudioTracks()[0]);
+      setMicActive(true);
+      showToast("Microfoon ingeschakeld.");
+    } catch {
+      showToast("Kon microfoon niet gebruiken.");
+    }
+  }
+  function resetMicrophoneState(): void {
+    micStreamRef.current?.getTracks().forEach((t: any) => t.stop());
+    micStreamRef.current = null;
+    setMicActive(false);
+  }
   function setQualityLevel(level: QualityLevel): void {
     setQualityLevelState(level);
     AsyncStorage.setItem(QUALITY_LEVEL_KEY, level).catch(() => undefined);
@@ -596,6 +679,25 @@ export default function App(): React.JSX.Element {
     renderQualityModeRef.current = mode;
     setRenderQualityModeState(mode);
     AsyncStorage.setItem(RENDER_QUALITY_MODE_KEY, mode).catch(() => undefined);
+  }
+  // Codec order is only settled once, at the offer that starts a session
+  // (see session.ts's startAsViewer/preferScreenContentCodecs) — WebRTC
+  // doesn't support changing it live without a full renegotiation, so this
+  // is a "pick before connecting" setting, not a live toggle like quality.
+  const [codecPreference, setCodecPreferenceState] = useState<CodecPreferenceMode>("sharp");
+  function setCodecPreference(mode: CodecPreferenceMode): void {
+    setCodecPreferenceState(mode);
+    AsyncStorage.setItem(CODEC_PREFERENCE_KEY, mode).catch(() => undefined);
+  }
+  // Unlike codec, capture resolution isn't settled at connect time — the host
+  // just re-runs its screen capture at the new size and swaps the track (same
+  // mechanism as switching windows), so this can be a live toggle sent
+  // immediately, the same as quality.
+  const [resolutionPreference, setResolutionPreferenceState] = useState<ResolutionMode>("sharp");
+  function setResolutionPreference(mode: ResolutionMode): void {
+    setResolutionPreferenceState(mode);
+    AsyncStorage.setItem(RESOLUTION_PREFERENCE_KEY, mode).catch(() => undefined);
+    sessionRef.current?.sendSystemCommand({ kind: "resolution-preference", mode });
   }
 
   // Branded loading screen shown while the initial signaling connection
@@ -627,6 +729,11 @@ export default function App(): React.JSX.Element {
   // of the wrapping panHandler View under the new architecture), so mapping
   // uses pageX/Y minus this known origin instead.
   const videoLayoutRef = useRef({ x: 0, y: 0, width: 0, height: 0 });
+  // Set by the rotation effect below, consumed by videoWrap's onLayout once
+  // videoLayoutRef has actually been re-measured for the new orientation —
+  // see that effect's own comment for why this can't just send the resize
+  // command immediately when rotation is detected.
+  const pendingRotationResizeRef = useRef<{ isPortrait: boolean } | null>(null);
   // The actual decoded frame's resolution (from RTCView's onDimensionsChange)
   // — needed to size the video box correctly for the current orientation
   // (see getContentRect below), since the video's aspect ratio can be
@@ -638,6 +745,10 @@ export default function App(): React.JSX.Element {
   // mouse-mode cursor dot and the real remote cursor (baked into the video)
   // would land in different spots.
   const videoDimsRef = useRef({ width: 0, height: 0 });
+  // Diagnostic-only, from the host's own encoder stats (see
+  // "encoder-limitation" in shared/protocol.ts) — read inside onStats to
+  // append to the stats line without waiting for its own re-render.
+  const encoderLimitationRef = useRef<string | null>(null);
   const videoWrapRef = useRef<View>(null);
   // Whichever RTCView branch is currently mounted (see the three render
   // branches below) — needed so AI Buddy's screenshot button can resolve
@@ -1119,6 +1230,12 @@ export default function App(): React.JSX.Element {
         setRenderQualityModeState(v);
       }
     });
+    AsyncStorage.getItem(CODEC_PREFERENCE_KEY).then((v) => {
+      if (v === "sharp" || v === "fast") setCodecPreferenceState(v);
+    });
+    AsyncStorage.getItem(RESOLUTION_PREFERENCE_KEY).then((v) => {
+      if (v === "sharp" || v === "fast") setResolutionPreferenceState(v);
+    });
     AsyncStorage.getItem(SHOW_CURSOR_KEY).then((v) => {
       if (v !== null) setShowRemoteCursorState(v === "1");
     });
@@ -1233,21 +1350,30 @@ export default function App(): React.JSX.Element {
     showNextConfirm();
   }
 
-  function connectTo(id: string, passwordHash: string, remember: boolean, label: string, totpCodeValue?: string): void {
+  function connectTo(id: string, passwordHash: string, remember: boolean, label: string, totpCodeValue?: string, trustDeviceValue?: boolean): void {
     console.log("[connectTo] called, id=", id);
     console.trace("[connectTo] call stack");
     pendingConnectRef.current = { targetId: id, passwordHash, remember, label };
     lastConnectRef.current = { targetId: id, passwordHash };
     setConnectStatus("Verbinding maken…");
-    signalingRef.current?.send({ type: "connect-request", targetId: id, fromId: myId, passwordHash, totpCode: totpCodeValue });
+    signalingRef.current?.send({
+      type: "connect-request",
+      targetId: id,
+      fromId: myId,
+      passwordHash,
+      totpCode: totpCodeValue,
+      trustDevice: trustDeviceValue,
+    });
   }
 
   function submitTotpCode(): void {
     if (!lastConnectRef.current) return;
     const { targetId: retryId, passwordHash } = lastConnectRef.current;
     const code = totpCode.trim();
+    const trust = trustThisDevice;
     setTotpRequired(null);
-    connectTo(retryId, passwordHash, false, formatId(retryId), code);
+    setTrustThisDevice(false);
+    connectTo(retryId, passwordHash, false, formatId(retryId), code, trust);
   }
 
   async function onConnectPress(): Promise<void> {
@@ -1366,16 +1492,30 @@ export default function App(): React.JSX.Element {
         // getStats' inbound-rtp report already carries frameWidth/
         // frameHeight regardless, and this callback already fires every 2s
         // (see startStatsLoop) — piggybacking on it here is a reliable
-        // source for the video's real resolution instead. A couple of
-        // seconds' lag before the fit-per-orientation math (re)applies
-        // after a resolution change (e.g. switching monitors/windows) is a
-        // fine trade for actually working.
-        if (stats.width != null && stats.height != null) videoDimsRef.current = { width: stats.width, height: stats.height };
+        // source for the video's *initial* resolution (before any explicit
+        // "video-dimensions" command has ever arrived) instead. Only used
+        // as that one-time fallback, not kept live afterward: the host
+        // sends an explicit "video-dimensions" command on every real
+        // resolution change (switch-window, switch-monitor,
+        // switch-dual-window, resize-dual-window, ...), and that's
+        // authoritative from then on. Letting this keep overwriting on
+        // every 2s poll used to clobber a correct dual-window crop size
+        // moments after it arrived — getStats' reported track resolution
+        // didn't reliably reflect a just-cropped canvas stream's real
+        // dimensions right away, so "briefly correct, then wrong again"
+        // was this fallback re-firing on its normal schedule, not a bug in
+        // the crop itself.
+        if (stats.width != null && stats.height != null && !videoDimsRef.current.width) {
+          videoDimsRef.current = { width: stats.width, height: stats.height };
+        }
         const parts: string[] = [];
         if (stats.width != null && stats.height != null) parts.push(`${stats.width}Ãƒâ€”${stats.height}`);
         if (stats.fps != null) parts.push(`${stats.fps} fps`);
         if (stats.bitrateKbps != null) parts.push(`${stats.bitrateKbps} kbps`);
         if (stats.rttMs != null) parts.push(`${stats.rttMs} ms`);
+        if (encoderLimitationRef.current && encoderLimitationRef.current !== "none") {
+          parts.push(`limiet: ${encoderLimitationRef.current}`);
+        }
         setStatsText(parts.join(" · "));
       },
       onChatMessage: receiveChatMessage,
@@ -1404,19 +1544,34 @@ export default function App(): React.JSX.Element {
           setCursorShape(cmd.shape);
         } else if (cmd.kind === "adaptive-status") {
           setQualityDegraded(cmd.resolutionScaled);
+        } else if (cmd.kind === "encoder-limitation") {
+          encoderLimitationRef.current = cmd.reason;
+          setStatsText((prev) => prev + " "); // force a re-render, same trick as video-dimensions below
         } else if (cmd.kind === "video-dimensions") {
           videoDimsRef.current = { width: cmd.width, height: cmd.height };
           // Trigger a re-render so the new aspect ratio applies instantly
           // instead of waiting up to 2s for the next getStats poll.
           setStatsText((prev) => prev + " ");
+        } else if (cmd.kind === "permissions-update") {
+          // Multi-viewer-hosting promotion/demotion on the desktop host's
+          // side (desktop-only feature) — mobile doesn't gate its own UI by
+          // permission today (the host enforces control server-side
+          // regardless), so this is just a heads-up toast, not a UI change.
+          showToast(cmd.permissions.control ? "Je hebt nu de besturing." : "Je bent nu alleen-lezen.");
+        } else if (cmd.kind === "annotation-stroke") {
+          setAnnotationStrokes((prev) => [...prev, { id: cmd.id, points: cmd.points, color: cmd.color, createdAt: Date.now() }]);
+        } else if (cmd.kind === "annotation-clear") {
+          setAnnotationStrokes([]);
+          currentStrokeRef.current = null;
         }
       },
     });
     sessionRef.current = session;
-    session.startAsViewer();
+    session.startAsViewer(codecPreference);
     // Apply the persisted quality preference to this session too — mirrors
     // the desktop viewer applying its own saved setting right after connecting.
     session.sendSystemCommand({ kind: "quality-request", level: qualityLevel });
+    session.sendSystemCommand({ kind: "resolution-preference", mode: resolutionPreference });
     session.setFailsafeEnabled(failsafeReconnect);
     setConnectStatus("Verbonden.");
   }
@@ -1465,6 +1620,10 @@ export default function App(): React.JSX.Element {
   }
 
   function endSession(): void {
+    setAnnotateModeActive(false);
+    setAnnotationStrokes([]);
+    currentStrokeRef.current = null;
+    resetMicrophoneState();
     // Mirrors client/src/renderer/app.ts's showSessionSummary() (same
     // wording and the same saved history entry).
     if (sessionStartedAtRef.current != null) {
@@ -1505,6 +1664,9 @@ export default function App(): React.JSX.Element {
     setActiveMonitorId(null);
     setWindowList([]);
     setActiveAppWindow(null);
+    setActiveDualMonitors(null);
+    setSelectedSplitMonitors([]);
+    setMonitorSplitMode(false);
     setAiBuddyLog([]);
     setAiBuddyScreenshot(null);
     setAiBuddySending(false);
@@ -1829,12 +1991,68 @@ export default function App(): React.JSX.Element {
   }
   function switchMonitor(monitorId: string): void {
     setActiveMonitorId(monitorId);
+    setActiveDualMonitors(null);
+    setActiveAppWindow(null);
     sessionRef.current?.sendSystemCommand({ kind: "switch-monitor", monitorId });
     resetZoomAndCursorForNewSource();
+  }
+  function toggleSplitMonitorSelection(m: MonitorInfo): void {
+    const isAlreadySelected = selectedSplitMonitors.some((x) => x.id === m.id);
+    let updated: MonitorInfo[];
+    if (isAlreadySelected) {
+      updated = selectedSplitMonitors.filter((x) => x.id !== m.id);
+    } else if (selectedSplitMonitors.length >= 2) {
+      updated = [selectedSplitMonitors[1], m];
+    } else {
+      updated = [...selectedSplitMonitors, m];
+    }
+    setSelectedSplitMonitors(updated);
+
+    if (updated.length === 2) {
+      const m1 = updated[0];
+      const m2 = updated[1];
+      const isPort = windowHeight > windowWidth;
+      sessionRef.current?.sendSystemCommand({
+        kind: "switch-dual-monitor",
+        monitorId1: m1.id,
+        monitorId2: m2.id,
+        aspect: videoContainerAspect(),
+        isPortrait: isPort,
+      });
+      setActiveDualMonitors({ m1, m2 });
+      // Reuses the same "close" affordance/reset path as single/dual-window
+      // mode (activeAppWindow && <close button> -> closeProgramMode) rather
+      // than building a separate one.
+      setActiveAppWindow({ id: "dual-monitor", name: `${m1.label} + ${m2.label}` });
+      resetZoomAndCursorForNewSource();
+    }
   }
   function currentPhoneAspect(): number {
     const { width, height } = Dimensions.get("window");
     return width / height;
+  }
+  // The aspect the host should actually crop/size a shared window to — the
+  // *video container's own* measured size (videoLayoutRef, from its
+  // onLayout), not the full device screen. Dimensions.get("window") always
+  // includes the top/bottom toolbars, which are shorter than a full-height
+  // bar but still real space the video never actually renders into — a
+  // "perfectly phone-shaped" crop based on the full screen therefore always
+  // came out slightly taller than the space it had to fit into, spilling a
+  // sliver behind the (opaque) toolbars top and bottom. Falls back to the
+  // full-device aspect only before the container has ever been laid out
+  // (e.g. the very first frame of a session).
+  // The aspect the host should actually crop/size a shared window to — the
+  // *video container's own* measured size (videoLayoutRef, from its
+  // onLayout), not the full device screen. Dimensions.get("window") always
+  // includes the top/bottom bars; videoWrap now correctly excludes them too
+  // (they're real flex siblings, not overlays — see portraitTopBar/
+  // portraitBottomBar's own style comments), so this can just use the
+  // container's measured size directly. Falls back to the full-device
+  // aspect only before the container has ever been laid out (e.g. the very
+  // first frame of a session).
+  function videoContainerAspect(): number {
+    const { width, height } = videoLayoutRef.current;
+    return width && height ? width / height : currentPhoneAspect();
   }
   // Window lists change far more often than monitor lists (programs
   // open/close constantly), so unlike monitors this is fetched fresh
@@ -1846,7 +2064,7 @@ export default function App(): React.JSX.Element {
   }
   function selectProgram(win: WindowInfo): void {
     setActiveDualWindows(null);
-    sessionRef.current?.sendSystemCommand({ kind: "switch-window", windowId: win.id, aspect: currentPhoneAspect() });
+    sessionRef.current?.sendSystemCommand({ kind: "switch-window", windowId: win.id, aspect: videoContainerAspect() });
     setActiveAppWindow({ id: win.id, name: win.name });
     setActivePanel(null);
     resetZoomAndCursorForNewSource();
@@ -1874,7 +2092,7 @@ export default function App(): React.JSX.Element {
         kind: "switch-dual-window",
         windowId1: win1.id,
         windowId2: win2.id,
-        aspect: currentPhoneAspect(),
+        aspect: videoContainerAspect(),
         isPortrait: isPort,
       });
       setActiveDualWindows({ win1, win2 });
@@ -1889,23 +2107,31 @@ export default function App(): React.JSX.Element {
     setActiveAppWindow(null);
     setActiveDualWindows(null);
     setSelectedSplitWindows([]);
+    setActiveDualMonitors(null);
+    setSelectedSplitMonitors([]);
     resetZoomAndCursorForNewSource();
   }
   // While controlling a specific program, keep asking the host to resize
   // that window to match the phone's current aspect ratio as it's rotated —
   // "portrait houd = portrait venster, opzij houd = landscape venster".
+  // Deliberately doesn't send the resize command from here directly: at the
+  // moment this "change" event fires, videoLayoutRef is still whatever it
+  // was for the *previous* orientation — its own update (videoWrap's
+  // onLayout, below) goes through an async measureInWindow round-trip that
+  // hasn't necessarily completed yet. Sending videoContainerAspect() right
+  // here was computing it from stale (pre-rotation) numbers — right
+  // isPortrait flag, wrong aspect, which is exactly what produced a
+  // portrait-shaped crop while already rotated to landscape. Recording the
+  // *intent* here and letting videoWrap's onLayout fire the actual command
+  // once it has genuinely fresh numbers fixes that race.
   useEffect(() => {
     if (!activeAppWindow && !activeDualWindows) return;
     const sub = Dimensions.addEventListener("change", ({ window }) => {
       const isPort = window.height > window.width;
-      if (activeDualWindows) {
-        sessionRef.current?.sendSystemCommand({ kind: "resize-dual-window", aspect: window.width / window.height, isPortrait: isPort });
-      } else if (activeAppWindow) {
-        sessionRef.current?.sendSystemCommand({ kind: "resize-active-window", aspect: window.width / window.height });
-      }
+      pendingRotationResizeRef.current = { isPortrait: isPort };
     });
     return () => sub.remove();
-  }, [activeAppWindow, activeDualWindows]);
+  }, [activeAppWindow, activeDualWindows, activeDualMonitors]);
   function toggleBlockInput(): void {
     const enabling = !inputBlocked;
     sessionRef.current?.sendSystemCommand({ kind: "block-input", enabled: enabling });
@@ -2027,6 +2253,60 @@ export default function App(): React.JSX.Element {
       <SafeAreaView style={[styles.sessionRoot, { marginBottom: keyboardHeight }]} edges={["top"]}>
         <StatusBar barStyle="light-content" />
         <View style={{ flex: 1, flexDirection: "column" }}>
+          {/* ── Portrait: TOP bar (Vensters · AI Buddy · Opties · Stop) ─────
+              A real flex sibling now (see portraitTopBar's own style comment
+              for why it wasn't before), placed here so it's first in the
+              column and actually pushes sessionContainer/videoWrap down
+              instead of floating on top of it. */}
+          {!isLandscape && (
+            <View style={[styles.portraitTopBar, { paddingLeft: insets.left, paddingRight: insets.right }]}>
+              {/* Vensters dropdown */}
+              <TouchableOpacity
+                style={[styles.portraitTopBtn, activePanel === "programs" && styles.portraitTopBtnActive]}
+                onPress={openProgramsPanel}
+                accessibilityRole="button"
+                accessibilityLabel="Vensters"
+              >
+                <AppWindow size={20} color={activePanel === "programs" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "programs" && styles.portraitTopBtnLabelActive]}>Vensters</Text>
+              </TouchableOpacity>
+
+              <View style={styles.portraitTopSpacer} />
+
+              {/* AI Buddy */}
+              <TouchableOpacity
+                style={[styles.portraitTopBtn, activePanel === "aiBuddy" && styles.portraitTopBtnActive]}
+                onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
+                accessibilityRole="button"
+                accessibilityLabel="AI Buddy"
+              >
+                <Sparkles size={20} color={activePanel === "aiBuddy" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "aiBuddy" && styles.portraitTopBtnLabelActive]}>AI Buddy</Text>
+              </TouchableOpacity>
+
+              {/* Opties */}
+              <TouchableOpacity
+                style={[styles.portraitTopBtn, activePanel === "settings" && styles.portraitTopBtnActive]}
+                onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
+                accessibilityRole="button"
+                accessibilityLabel="Opties"
+              >
+                <Settings size={20} color={activePanel === "settings" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "settings" && styles.portraitTopBtnLabelActive]}>Opties</Text>
+              </TouchableOpacity>
+
+              {/* Stop */}
+              <TouchableOpacity
+                style={[styles.portraitTopBtn, styles.portraitTopBtnDanger]}
+                onPress={disconnectSession}
+                accessibilityRole="button"
+                accessibilityLabel="Verbinding verbreken"
+              >
+                <Power size={20} color="#fff" strokeWidth={2.2} />
+                <Text style={[styles.portraitTopBtnLabel, styles.portraitTopBtnLabelActive]}>Stop</Text>
+              </TouchableOpacity>
+            </View>
+          )}
           <View style={[styles.sessionContainer, isLandscape && styles.sessionContainerLandscape]}>
           {isLandscape && isAiBuddyOpen && (
             <View style={[styles.aiBuddyLandscapePanel, { paddingTop: insets.top, paddingLeft: Math.max(insets.left, 12), paddingBottom: Math.max(insets.bottom, 12) }]}>
@@ -2039,6 +2319,23 @@ export default function App(): React.JSX.Element {
             onLayout={() => {
               videoWrapRef.current?.measureInWindow((x, y, width, height) => {
                 videoLayoutRef.current = { x, y, width, height };
+                // See the rotation effect's own comment — this is the first
+                // point after a rotation where videoContainerAspect() is
+                // actually trustworthy (genuinely re-measured, not stale),
+                // so this is where a pending rotation-triggered resize
+                // command actually gets sent, not from the rotation event
+                // itself.
+                const pending = pendingRotationResizeRef.current;
+                if (pending && width && height) {
+                  pendingRotationResizeRef.current = null;
+                  if (activeDualWindows) {
+                    sessionRef.current?.sendSystemCommand({ kind: "resize-dual-window", aspect: videoContainerAspect(), isPortrait: pending.isPortrait });
+                  } else if (activeDualMonitors) {
+                    sessionRef.current?.sendSystemCommand({ kind: "resize-dual-monitor", aspect: videoContainerAspect(), isPortrait: pending.isPortrait });
+                  } else if (activeAppWindow) {
+                    sessionRef.current?.sendSystemCommand({ kind: "resize-active-window", aspect: videoContainerAspect() });
+                  }
+                }
               });
             }}
           >
@@ -2142,28 +2439,94 @@ export default function App(): React.JSX.Element {
                 );
               })()}
           </View>
+          {(annotateModeActive || annotationStrokes.length > 0) &&
+            (() => {
+              const rect = getContentRect();
+              const now = Date.now();
+              const fadeStart = ANNOTATION_STROKE_TTL_MS * 0.7;
+              const current = currentStrokeRef.current;
+              return (
+                <View
+                  pointerEvents={annotateModeActive ? "auto" : "none"}
+                  style={[styles.annotationOverlay, { left: rect.x, top: rect.y, width: rect.width, height: rect.height }]}
+                  onStartShouldSetResponder={() => annotateModeActive}
+                  onResponderGrant={(e) => {
+                    const { locationX, locationY } = e.nativeEvent;
+                    currentStrokeRef.current = {
+                      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+                      points: [{ x: locationX / rect.width, y: locationY / rect.height }],
+                    };
+                    setAnnotationTick((t) => t + 1);
+                  }}
+                  onResponderMove={(e) => {
+                    if (!currentStrokeRef.current) return;
+                    const { locationX, locationY } = e.nativeEvent;
+                    currentStrokeRef.current.points.push({ x: locationX / rect.width, y: locationY / rect.height });
+                    setAnnotationTick((t) => t + 1);
+                  }}
+                  onResponderRelease={() => {
+                    const stroke = currentStrokeRef.current;
+                    currentStrokeRef.current = null;
+                    if (!stroke || stroke.points.length < 2) return;
+                    setAnnotationStrokes((prev) => [...prev, { ...stroke, color: ANNOTATION_COLOR, createdAt: Date.now() }]);
+                    sessionRef.current?.sendSystemCommand({ kind: "annotation-stroke", id: stroke.id, points: stroke.points, color: ANNOTATION_COLOR });
+                  }}
+                >
+                  <Svg width="100%" height="100%">
+                    {annotationStrokes.map((s) => {
+                      const age = now - s.createdAt;
+                      const opacity = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / (ANNOTATION_STROKE_TTL_MS - fadeStart)) : 1;
+                      return (
+                        <Polyline
+                          key={s.id}
+                          points={s.points.map((p) => `${p.x * rect.width},${p.y * rect.height}`).join(" ")}
+                          fill="none"
+                          stroke={s.color}
+                          strokeOpacity={opacity}
+                          strokeWidth={3}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      );
+                    })}
+                    {current && current.points.length >= 2 && (
+                      <Polyline
+                        points={current.points.map((p) => `${p.x * rect.width},${p.y * rect.height}`).join(" ")}
+                        fill="none"
+                        stroke={ANNOTATION_COLOR}
+                        strokeWidth={3}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    )}
+                  </Svg>
+                </View>
+              );
+            })()}
           {toastMessage && (
-            // Nudged down when the program-mode bar is showing — both
-            // anchor to top:16 by default and would otherwise overlap.
-            <View pointerEvents="none" style={[styles.toast, activeAppWindow && styles.toastBelowAppModeBar]}>
+            <View pointerEvents="none" style={styles.toast}>
               <Text style={styles.toastText}>{toastMessage}</Text>
             </View>
           )}
           {qualityDegraded && (
-            <View pointerEvents="none" style={[styles.qualityBadge, activeAppWindow && (isLandscape ? styles.qualityBadgeBelowAppModeBar : { top: 96 })]}>
+            <View pointerEvents="none" style={styles.qualityBadge}>
               <WifiOff size={13} color="#fff" strokeWidth={2.4} />
               <Text style={styles.qualityBadgeText}>Zwakke verbinding</Text>
             </View>
           )}
           {activeAppWindow && (
-            <View style={[styles.appModeBar, !isLandscape && { top: 48 }]} pointerEvents="box-none">
-              <Text style={styles.appModeBarText} numberOfLines={1}>
-                {activeAppWindow.name}
-              </Text>
-              <TouchableOpacity style={styles.appModeCloseBtn} onPress={closeProgramMode} accessibilityRole="button" accessibilityLabel="Programma sluiten, terug naar bureaublad">
-                <X size={16} color="#fff" strokeWidth={2.5} />
-              </TouchableOpacity>
-            </View>
+            // Just the close action — no name label/bar. videoWrap now
+            // correctly starts below the real top bar (see its own comment),
+            // so this only needs to clear qualityBadge (top-right); placing
+            // it top-left avoids that without needing any nudge logic.
+            <TouchableOpacity
+              style={styles.appModeCloseBtn}
+              onPress={closeProgramMode}
+              accessibilityRole="button"
+              accessibilityLabel={`Programma sluiten (${activeAppWindow.name}), terug naar bureaublad`}
+            >
+              <X size={16} color="#fff" strokeWidth={2.5} />
+            </TouchableOpacity>
           )}
           {/* Floating overlay toolbar */}
         </View>
@@ -2173,57 +2536,6 @@ export default function App(): React.JSX.Element {
           </View>
         )}
         </View>
-
-        {/* ── Portrait: TOP bar (Vensters · AI Buddy · Opties · Stop) ───── */}
-        {!isLandscape && (
-          <View style={[styles.portraitTopBar, { paddingLeft: insets.left, paddingRight: insets.right }]}>
-            {/* Vensters dropdown */}
-            <TouchableOpacity
-              style={[styles.portraitTopBtn, activePanel === "programs" && styles.portraitTopBtnActive]}
-              onPress={openProgramsPanel}
-              accessibilityRole="button"
-              accessibilityLabel="Vensters"
-            >
-              <AppWindow size={20} color={activePanel === "programs" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text style={[styles.portraitTopBtnLabel, activePanel === "programs" && styles.portraitTopBtnLabelActive]}>Vensters</Text>
-            </TouchableOpacity>
-
-            <View style={styles.portraitTopSpacer} />
-
-            {/* AI Buddy */}
-            <TouchableOpacity
-              style={[styles.portraitTopBtn, activePanel === "aiBuddy" && styles.portraitTopBtnActive]}
-              onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
-              accessibilityRole="button"
-              accessibilityLabel="AI Buddy"
-            >
-              <Sparkles size={20} color={activePanel === "aiBuddy" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text style={[styles.portraitTopBtnLabel, activePanel === "aiBuddy" && styles.portraitTopBtnLabelActive]}>AI Buddy</Text>
-            </TouchableOpacity>
-
-            {/* Opties */}
-            <TouchableOpacity
-              style={[styles.portraitTopBtn, activePanel === "settings" && styles.portraitTopBtnActive]}
-              onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
-              accessibilityRole="button"
-              accessibilityLabel="Opties"
-            >
-              <Settings size={20} color={activePanel === "settings" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text style={[styles.portraitTopBtnLabel, activePanel === "settings" && styles.portraitTopBtnLabelActive]}>Opties</Text>
-            </TouchableOpacity>
-
-            {/* Stop */}
-            <TouchableOpacity
-              style={[styles.portraitTopBtn, styles.portraitTopBtnDanger]}
-              onPress={disconnectSession}
-              accessibilityRole="button"
-              accessibilityLabel="Verbinding verbreken"
-            >
-              <Power size={20} color="#fff" strokeWidth={2.2} />
-              <Text style={[styles.portraitTopBtnLabel, styles.portraitTopBtnLabelActive]}>Stop</Text>
-            </TouchableOpacity>
-          </View>
-        )}
 
         {/* ── Portrait: BOTTOM bar (Muis · Bestand · Snel · Bord · Chat) ── */}
         {!isLandscape && (
@@ -2338,6 +2650,35 @@ export default function App(): React.JSX.Element {
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity
+                  style={[styles.toolbarBtn, annotateModeActive && styles.toolbarBtnActive]}
+                  onPress={toggleAnnotateMode}
+                  accessibilityRole="button"
+                  accessibilityLabel="Tekenen op het beeld"
+                >
+                  {toolbarIcon(Pencil, "Teken", annotateModeActive)}
+                </TouchableOpacity>
+                {annotateModeActive && (
+                  <TouchableOpacity
+                    style={styles.toolbarBtn}
+                    onPress={() => {
+                      clearAnnotationsLocally();
+                      sessionRef.current?.sendSystemCommand({ kind: "annotation-clear" });
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Tekeningen wissen"
+                  >
+                    {toolbarIcon(Trash2, "Wis")}
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={[styles.toolbarBtn, micActive && styles.toolbarBtnActive]}
+                  onPress={() => void toggleMicrophone()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Microfoon delen"
+                >
+                  {toolbarIcon(micActive ? Mic : MicOff, "Mic", micActive)}
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "quickActions" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "quickActions" ? null : "quickActions"))}
                   accessibilityRole="button"
@@ -2446,6 +2787,44 @@ export default function App(): React.JSX.Element {
                   "Altijd scherp" houdt tijdens de hele sessie de scherpst mogelijke weergave aan, ook helemaal uitgezoomd — dat kost continu meer batterij/geheugen. "Gebalanceerd" (aanbevolen) verhoogt de scherpte alleen in stappen naarmate je verder inzoomt.
                 </Text>
                 <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Video-codec</Text>
+                  <View style={styles.modeToggle}>
+                    {(["sharp", "fast"] as const).map((mode) => (
+                      <TouchableOpacity
+                        key={mode}
+                        style={[styles.modeToggleBtn, codecPreference === mode && styles.modeToggleBtnActive]}
+                        onPress={() => setCodecPreference(mode)}
+                      >
+                        <Text style={[styles.settingsQualityText, codecPreference === mode && styles.settingsQualityTextActive]}>
+                          {mode === "sharp" ? "Scherp" : "Snel"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <Text style={styles.muted}>
+                  "Scherp" (standaard) geeft prioriteit aan een codec die tekst het scherpst weergeeft, maar draait meestal in software en kan de cursor in beeld iets trager laten aanvoelen. "Snel" geeft prioriteit aan een codec die op de meeste pc's hardwareversnelling gebruikt — merkbaar sneller, iets minder scherpe tekst bij inzoomen. Geldt pas vanaf de eerstvolgende keer verbinden, niet voor de huidige sessie.
+                </Text>
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>Resolutie</Text>
+                  <View style={styles.modeToggle}>
+                    {(["sharp", "fast"] as const).map((mode) => (
+                      <TouchableOpacity
+                        key={mode}
+                        style={[styles.modeToggleBtn, resolutionPreference === mode && styles.modeToggleBtnActive]}
+                        onPress={() => setResolutionPreference(mode)}
+                      >
+                        <Text style={[styles.settingsQualityText, resolutionPreference === mode && styles.settingsQualityTextActive]}>
+                          {mode === "sharp" ? "Scherp" : "Snel"}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                <Text style={styles.muted}>
+                  "Scherp" (standaard) neemt het scherm op in de volledige, originele resolutie — het scherpst bij inzoomen, maar kan op tragere pc's de opgevraagde framerate niet bijhouden (merkbaar als vertraging van de cursor in beeld). "Snel" beperkt de opname tot maximaal 1080p, zodat de pc de framerate makkelijker bijhoudt. Geldt direct, ook tijdens een lopende sessie.
+                </Text>
+                <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Verbindingsfailsafe</Text>
                   <Switch
                     value={failsafeReconnect}
@@ -2482,17 +2861,51 @@ export default function App(): React.JSX.Element {
                 {monitors.length > 1 && (
                   <View style={styles.settingsRow}>
                     <Text style={styles.settingsLabel}>Scherm</Text>
+                    <View style={styles.modeToggle}>
+                      <TouchableOpacity
+                        style={[styles.modeToggleBtn, !monitorSplitMode && styles.modeToggleBtnActive]}
+                        onPress={() => { setMonitorSplitMode(false); setSelectedSplitMonitors([]); }}
+                      >
+                        <Text style={[styles.settingsQualityText, !monitorSplitMode && styles.settingsQualityTextActive]}>1 scherm</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modeToggleBtn, monitorSplitMode && styles.modeToggleBtnActive]}
+                        onPress={() => { setMonitorSplitMode(true); setSelectedSplitMonitors([]); }}
+                      >
+                        <Text style={[styles.settingsQualityText, monitorSplitMode && styles.settingsQualityTextActive]}>2 schermen</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+                {monitors.length > 1 && monitorSplitMode && (
+                  <Text style={[styles.muted, { marginBottom: 8, fontSize: 12 }]}>
+                    {selectedSplitMonitors.length === 0
+                      ? "Kies 2 schermen: tik op het 1e scherm"
+                      : selectedSplitMonitors.length === 1
+                      ? `1e: ${selectedSplitMonitors[0].label} — tik nu op het 2e scherm`
+                      : "2 schermen geselecteerd"}
+                  </Text>
+                )}
+                {monitors.length > 1 && (
+                  <View style={styles.settingsRow}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monitorScroll}>
                       <View style={styles.modeToggle}>
-                        {monitors.map((m) => (
-                          <TouchableOpacity
-                            key={m.id}
-                            style={[styles.modeToggleBtn, activeMonitorId === m.id && styles.modeToggleBtnActive]}
-                            onPress={() => switchMonitor(m.id)}
-                          >
-                            <Text style={[styles.settingsQualityText, activeMonitorId === m.id && styles.settingsQualityTextActive]}>{m.label}</Text>
-                          </TouchableOpacity>
-                        ))}
+                        {monitors.map((m) => {
+                          const isSelected = monitorSplitMode && selectedSplitMonitors.some((sm) => sm.id === m.id);
+                          const idx = selectedSplitMonitors.findIndex((sm) => sm.id === m.id);
+                          const active = monitorSplitMode ? isSelected : activeMonitorId === m.id;
+                          return (
+                            <TouchableOpacity
+                              key={m.id}
+                              style={[styles.modeToggleBtn, active && styles.modeToggleBtnActive]}
+                              onPress={() => (monitorSplitMode ? toggleSplitMonitorSelection(m) : switchMonitor(m.id))}
+                            >
+                              <Text style={[styles.settingsQualityText, active && styles.settingsQualityTextActive]}>
+                                {monitorSplitMode && isSelected ? `${idx + 1}. ${m.label}` : m.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
                       </View>
                     </ScrollView>
                   </View>
@@ -3080,6 +3493,15 @@ export default function App(): React.JSX.Element {
               maxLength={6}
               autoFocus
             />
+            <View style={styles.settingsRow}>
+              <Text style={styles.settingsLabel}>30 dagen onthouden</Text>
+              <Switch
+                value={trustThisDevice}
+                onValueChange={setTrustThisDevice}
+                trackColor={{ false: colors.switchOff, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => setTotpRequired(null)}>
                 <Text style={styles.outlineBtnText}>Annuleren</Text>
@@ -3221,17 +3643,14 @@ function createStyles(theme: AppTheme) {
       paddingTop: 12,
     },
     aiBuddyCardInner: { flex: 1, paddingHorizontal: 12 },
-    // Floats over the bottom of the video (inside videoWrap) instead of taking
-    // up its own dedicated row — matches TeamViewer's full-screen-video-with-
-    // floating-toolbar layout instead of eating vertical space permanently.
-    // Portrait mode: fixed top bar during session
+    // A real flex sibling of sessionContainer (see its JSX placement) —
+    // deliberately *not* a floating overlay: video must never render behind
+    // it, so it needs to actually take its own row and push the video down,
+    // not just visually sit on top while the video still occupies that space.
     portraitTopBar: {
-      position: "absolute",
-      top: 0, left: 0, right: 0,
       flexDirection: "row",
       alignItems: "center",
       backgroundColor: colors.overlayBg,
-      zIndex: 30,
       borderBottomWidth: 1,
       borderBottomColor: "rgba(255,255,255,0.08)",
     },
@@ -3260,14 +3679,14 @@ function createStyles(theme: AppTheme) {
     portraitTopSpacer: { flex: 1 },
 
     // Portrait mode: fixed bottom bar during session
+    // Same reasoning as portraitTopBar above — a real flex sibling, not an
+    // overlay, so it actually reserves its own space instead of floating on
+    // top of the video.
     portraitBottomBar: {
-      position: "absolute",
-      bottom: 0, left: 0, right: 0,
       flexDirection: "row",
       alignItems: "center",
       justifyContent: "space-around",
       backgroundColor: colors.overlayBg,
-      zIndex: 30,
       borderTopWidth: 1,
       borderTopColor: "rgba(255,255,255,0.08)",
       paddingTop: 4,
@@ -3336,7 +3755,6 @@ function createStyles(theme: AppTheme) {
       zIndex: 20,
     },
     toastText: { color: "#fff", fontSize: 13, fontWeight: "600", textAlign: "center" },
-    toastBelowAppModeBar: { top: 64 },
     qualityBadge: {
       position: "absolute",
       top: 16,
@@ -3350,23 +3768,20 @@ function createStyles(theme: AppTheme) {
       zIndex: 20,
     },
     qualityBadgeText: { color: "#fff", fontSize: 11, fontWeight: "600", marginLeft: 5 },
-    qualityBadgeBelowAppModeBar: { top: 64 },
-    appModeBar: {
+    // Top-left, deliberately the opposite corner from qualityBadge
+    // (top-right) so the two can never overlap without needing nudge logic.
+    appModeCloseBtn: {
       position: "absolute",
       top: 16,
       left: 16,
-      right: 16,
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: colors.overlayBg,
-      borderRadius: 20,
-      paddingLeft: 16,
-      paddingRight: 8,
-      paddingVertical: 6,
       zIndex: 20,
+      backgroundColor: colors.danger,
+      borderRadius: 14,
+      width: 28,
+      height: 28,
+      alignItems: "center",
+      justifyContent: "center",
     },
-    appModeBarText: { flex: 1, color: colors.text, fontSize: 13, fontWeight: "600", marginRight: 8 },
-    appModeCloseBtn: { backgroundColor: colors.danger, borderRadius: 14, width: 28, height: 28, alignItems: "center", justifyContent: "center" },
     settingsRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 10 },
     settingsQualityText: { color: colors.segmentText, fontSize: 12, fontWeight: "700", paddingHorizontal: 4 },
     settingsQualityTextActive: { color: "#fff" },
@@ -3398,6 +3813,7 @@ function createStyles(theme: AppTheme) {
     video: { flex: 1 },
     videoZoomed: { position: "absolute" },
     cursorDot: { position: "absolute", width: 24, height: 24 },
+    annotationOverlay: { position: "absolute" },
     hiddenInput: { position: "absolute", bottom: 0, left: 0, right: 0, height: 40, backgroundColor: colors.card, color: colors.text, paddingHorizontal: 10 },
   });
 }

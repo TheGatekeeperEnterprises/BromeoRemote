@@ -49,6 +49,7 @@ export type ClientMessage =
       viewOnly?: boolean;
       permissions?: SessionPermissions;
       totpCode?: string;
+      trustDevice?: boolean;
     }
   | { type: "connect-response"; targetId: string; accept: boolean; reason?: string }
   | { type: "signal"; targetId: string; payload: unknown }
@@ -60,7 +61,16 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "welcome"; id: string }
   | { type: "error"; message: string }
-  | { type: "incoming-request"; fromId: string; fromLabel?: string; passwordHash: string; viewOnly?: boolean; permissions?: SessionPermissions; totpCode?: string }
+  | {
+      type: "incoming-request";
+      fromId: string;
+      fromLabel?: string;
+      passwordHash: string;
+      viewOnly?: boolean;
+      permissions?: SessionPermissions;
+      totpCode?: string;
+      trustDevice?: boolean;
+    }
   | { type: "connect-response"; fromId: string; accept: boolean; reason?: string }
   | { type: "signal"; fromId: string; payload: unknown }
   | { type: "peer-disconnected"; peerId: string }
@@ -93,6 +103,15 @@ export interface WindowInfo {
 
 export type QualityLevel = "auto" | "high" | "low";
 
+// "sharp" = native capture resolution (current default) — the encoder has to
+// push every source pixel, which is what lets pinch-zoom reach real detail,
+// but on weaker/loaded hardware the encoder can't sustain the requested
+// frame rate at that pixel count, so delivered fps (and therefore cursor
+// responsiveness) drops well below what was asked for. "fast" caps the
+// capture at 1080p so the encoder can actually keep up and hit close to the
+// real frame rate, at the cost of that native-resolution zoom sharpness.
+export type ResolutionMode = "sharp" | "fast";
+
 // Which standard OS cursor is currently showing on the host, detected via
 // GetCursorInfo/LoadCursor comparison (see getCursorShape in
 // client/src/main/system.ts) — Windows itself doesn't expose "what shape is
@@ -118,6 +137,7 @@ export type SystemCommand =
   | { kind: "restart-request" }
   | { kind: "lock-request" }
   | { kind: "quality-request"; level: QualityLevel }
+  | { kind: "resolution-preference"; mode: ResolutionMode }
   | { kind: "block-input"; enabled: boolean }
   | { kind: "block-input-status"; enabled: boolean; ok: boolean }
   // Hides just the desktop wallpaper image (blank background color instead)
@@ -138,8 +158,20 @@ export type SystemCommand =
   | { kind: "switch-window"; windowId: string; aspect: number }
   | { kind: "resize-active-window"; aspect: number }
   | { kind: "switch-to-desktop" }
-| { kind: "switch-dual-window"; windowId1: string; windowId2: string; aspect: number; isPortrait: boolean }
+  // Immediately tells the viewer the new video stream dimensions — mirrors
+  // client/src/shared/protocol.ts exactly. Was missing here (protocol.ts is
+  // manually kept in sync between client/mobile, not shared/imported) while
+  // App.tsx's consumer of it was left in place, which is a genuine compile
+  // error, not a style choice — restoring it, not reverting anything
+  // intentional.
+  | { kind: "video-dimensions"; width: number; height: number }
+  | { kind: "switch-dual-window"; windowId1: string; windowId2: string; aspect: number; isPortrait: boolean }
   | { kind: "resize-dual-window"; aspect: number; isPortrait: boolean }
+  // View two whole monitors simultaneously, composited side-by-side or
+  // stacked into one video feed — see client/src/shared/protocol.ts's copy
+  // of this type for the full explanation.
+  | { kind: "switch-dual-monitor"; monitorId1: string; monitorId2: string; aspect: number; isPortrait: boolean }
+  | { kind: "resize-dual-monitor"; aspect: number; isPortrait: boolean }
   // Sent host->viewer whenever the host's actual OS cursor shape changes
   // (only while a session is connected — see the poll loop in app.ts),
   // so the viewer's own on-screen cursor overlay can match it, the way a
@@ -156,7 +188,32 @@ export type SystemCommand =
   // scale-down (see ADAPTIVE_RESOLUTION_SCALE_DOWN) turns on or off, so the
   // viewer can show *why* things look softer instead of it looking like an
   // unexplained quality bug.
-  | { kind: "adaptive-status"; resolutionScaled: boolean };
+  | { kind: "adaptive-status"; resolutionScaled: boolean }
+  // Sent host->viewer every stats tick with the encoder's own
+  // qualityLimitationReason (from RTCOutboundRtpStreamStats — "cpu",
+  // "bandwidth", "other", or "none"/null). Only meaningful on the host's own
+  // outbound-rtp stats, which the viewer has no way to read directly (each
+  // side's getStats() only sees its own local sender/receiver reports) —
+  // this is diagnostic-only, surfaced in the viewer's stats line to show
+  // *why* delivered fps is capped instead of leaving it unexplained.
+  | { kind: "encoder-limitation"; reason: string | null }
+  // Sent host->every viewer whenever the set of connected viewers changes
+  // (join/leave) during multi-viewer hosting (desktop-only in phase 1 — see
+  // docs/features.md and the multi-viewer plan doc). Mirrored here for
+  // protocol consistency; mobile doesn't emit it yet, but a mobile viewer
+  // connected to a desktop host may receive it.
+  | { kind: "viewer-list"; viewers: { label: string; viewOnly: boolean }[] }
+  // Sent host->viewer whenever that specific viewer's own permissions change
+  // mid-session (currently: promoting/demoting who has control — see
+  // promoteViewerToControl in the desktop host's renderer/app.ts). Lets the
+  // viewer re-apply its own UI live instead of requiring a reconnect.
+  | { kind: "permissions-update"; permissions: SessionPermissions }
+  // Lightweight annotation/whiteboard overlay drawn on top of the shared
+  // video — see client/src/shared/protocol.ts's copy of this type for the
+  // full explanation. Points are normalized [0,1] coordinates relative to
+  // the video frame.
+  | { kind: "annotation-stroke"; id: string; points: { x: number; y: number }[]; color: string }
+  | { kind: "annotation-clear" };
 
 export type FileMessage =
   | { kind: "file-offer"; id: string; name: string; size: number }

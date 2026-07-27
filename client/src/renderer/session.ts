@@ -3,15 +3,28 @@ import { Signaling } from "./signaling.js";
 
 export type Role = "host" | "viewer";
 
-// VP8 (the usual negotiated default) has no tools for sharp text/UI edges —
-// it's built for motion video. VP9 adds screen-content-coding (palette
-// prediction, intra block copy) specifically for mostly-static, high-detail
-// content like a desktop share, and should render text noticeably better at
-// the same bitrate. Reordering (not filtering) preserves fallback to
-// whatever the other side actually supports.
-function preferScreenContentCodecs<T extends { mimeType: string }>(codecs: T[]): T[] {
+// "sharp" (default): VP8 has no tools for sharp text/UI edges — it's built
+// for motion video. VP9 adds screen-content-coding (palette prediction,
+// intra block copy) specifically for mostly-static, high-detail content
+// like a desktop share, and should render text noticeably better at the
+// same bitrate. But VP9 encoding in Chromium is effectively always
+// software (no mature hardware encoder path the way H264 has via Windows
+// Media Foundation) — under real load (native/4K capture, 60fps) that can
+// add real per-frame encode latency, felt as the video's own cursor
+// lagging. "fast" ranks H264 first instead, trading some text sharpness
+// for a real shot at hardware-accelerated encoding. Reordering (not
+// filtering) preserves fallback to whatever the other side actually
+// supports either way.
+export type CodecPreferenceMode = "sharp" | "fast";
+function preferScreenContentCodecs<T extends { mimeType: string }>(codecs: T[], mode: CodecPreferenceMode): T[] {
   const rank = (mimeType: string): number => {
     const type = mimeType.toLowerCase();
+    if (mode === "fast") {
+      if (type.includes("h264")) return 0;
+      if (type.includes("vp8")) return 1;
+      if (type.includes("vp9")) return 2;
+      return 3; // AV1 and anything else
+    }
     if (type.includes("vp9")) return 0;
     if (type.includes("av1")) return 1;
     if (type.includes("h264")) return 2;
@@ -20,12 +33,12 @@ function preferScreenContentCodecs<T extends { mimeType: string }>(codecs: T[]):
   return [...codecs].sort((a, b) => rank(a.mimeType) - rank(b.mimeType));
 }
 
-function applyScreenContentCodecPreference(transceiver: RTCRtpTransceiver | undefined): void {
+function applyScreenContentCodecPreference(transceiver: RTCRtpTransceiver | undefined, mode: CodecPreferenceMode = "sharp"): void {
   if (!transceiver) return;
   try {
     const capabilities = RTCRtpSender.getCapabilities("video");
     if (capabilities?.codecs?.length) {
-      transceiver.setCodecPreferences(preferScreenContentCodecs(capabilities.codecs));
+      transceiver.setCodecPreferences(preferScreenContentCodecs(capabilities.codecs, mode));
     }
   } catch {
     // Not fatal — falls back to whatever codec order gets negotiated by default.
@@ -46,6 +59,12 @@ export interface SessionStats {
 
 export interface SessionCallbacks {
   onRemoteStream?(stream: MediaStream): void;
+  // Fires when the *other* side's microphone track arrives on the
+  // dedicated voice transceiver (see voiceTransceiver) — kept structurally
+  // separate from onRemoteStream so an incoming voice-only stream can never
+  // get mistaken for the video+system-audio stream and attached to the
+  // wrong <video>/<audio> element.
+  onVoiceStream?(stream: MediaStream): void;
   onConnectionState?(state: RTCPeerConnectionState): void;
   onStats?(stats: SessionStats): void;
   onClipboard?(text: string): void;
@@ -115,6 +134,12 @@ export class PeerSession {
   private chatChannel: RTCDataChannel | null = null;
   private systemChannel: RTCDataChannel | null = null;
   private captureStream: MediaStream | null = null;
+  // Bidirectional, always present from connect (see startAsViewer/
+  // acceptAsHost) but silent (no attached track) until either side opts
+  // into voice intercom via setMicrophoneTrack — pre-declaring it up front
+  // means turning the mic on/off later is just replaceTrack, never a
+  // renegotiation.
+  private voiceTransceiver: RTCRtpTransceiver | null = null;
   private candidateQueue: RTCIceCandidateInit[] = [];
   private pendingSystemCommands: SystemCommand[] = [];
   private statsTimer: ReturnType<typeof setInterval> | null = null;
@@ -140,6 +165,7 @@ export class PeerSession {
   private viewerZoomedIn = false;
   private currentResolutionScale = 1;
   private sustainedFloorTicks = 0;
+  private lastSentLimitationReason: string | null | undefined = undefined; // undefined = never sent yet
 
   constructor(
     private role: Role,
@@ -182,6 +208,10 @@ export class PeerSession {
       }
     };
     this.pc.ontrack = (ev) => {
+      if (this.voiceTransceiver && ev.transceiver === this.voiceTransceiver) {
+        this.callbacks.onVoiceStream?.(ev.streams[0] ?? new MediaStream([ev.track]));
+        return;
+      }
       if (ev.streams[0]) this.callbacks.onRemoteStream?.(ev.streams[0]);
     };
     this.pc.ondatachannel = (ev) => this.bindChannel(ev.channel);
@@ -220,10 +250,13 @@ export class PeerSession {
   }
 
   /** Viewer: initiates the offer, requests a recvonly video transceiver, opens data channels. */
-  async startAsViewer(): Promise<void> {
+  async startAsViewer(codecPreference: CodecPreferenceMode = "sharp"): Promise<void> {
     const videoTransceiver = this.pc.addTransceiver("video", { direction: "recvonly" });
-    applyScreenContentCodecPreference(videoTransceiver);
-    this.pc.addTransceiver("audio", { direction: "recvonly" });
+    applyScreenContentCodecPreference(videoTransceiver, codecPreference);
+    this.pc.addTransceiver("audio", { direction: "recvonly" }); // host's system audio, one-way
+    // Voice intercom — sendrecv from the start (see voiceTransceiver's own
+    // comment), no track attached yet.
+    this.voiceTransceiver = this.pc.addTransceiver("audio", { direction: "sendrecv" });
     this.bindChannel(this.pc.createDataChannel("control", { ordered: true }));
     this.bindChannel(this.pc.createDataChannel("files", { ordered: true }));
     this.bindChannel(this.pc.createDataChannel("clipboard", { ordered: true }));
@@ -249,8 +282,21 @@ export class PeerSession {
     // should be encoded for spatial sharpness rather than smooth motion.
     const videoTrack = captureStream.getVideoTracks()[0];
     if (videoTrack) videoTrack.contentHint = "detail";
+    // addTrack — not explicit per-transceiver replaceTrack — deliberately:
+    // this is the exact mechanism proven reliable for this whole project
+    // before voice intercom added a second audio transceiver. Its
+    // insertion-order-based "first transceiver whose sender has no track
+    // yet" matching is a foundational, well-specified part of addTrack
+    // (unlike relying on RTCRtpReceiver.track's kind/timing, which isn't
+    // something this could be verified live before shipping — see the plan
+    // doc's own callout on this). video and system-audio were both
+    // addTransceiver'd before voice in startAsViewer, so they're filled
+    // first, in that order, leaving voice's sender the only one still
+    // empty afterward.
     captureStream.getTracks().forEach((track) => this.pc.addTrack(track, captureStream));
-    applyScreenContentCodecPreference(this.pc.getTransceivers().find((t) => t.sender.track?.kind === "video"));
+    const videoTransceiver = this.pc.getTransceivers().find((t) => t.sender.track?.kind === "video");
+    this.voiceTransceiver = this.pc.getTransceivers().find((t) => t.sender.track === null) ?? null;
+    applyScreenContentCodecPreference(videoTransceiver);
 
     // Under bandwidth pressure, WebRTC's default ("balanced") sacrifices
     // both resolution and frame rate. For a screen share full of text,
@@ -289,16 +335,28 @@ export class PeerSession {
     return this.captureStream != null;
   }
 
-  /** Host: swaps in a newly captured monitor's track without renegotiating the connection. */
+  // Voice intercom on/off — swaps the sender's track on the pre-declared
+  // sendrecv voice transceiver (see its own comment). No renegotiation:
+  // that transceiver already exists from connect, this just changes what
+  // it transmits, same replaceTrack mechanism as replaceVideoTrack. Pass
+  // null to stop sending (mic muted/off) without tearing anything down.
+  async setMicrophoneTrack(track: MediaStreamTrack | null): Promise<void> {
+    await this.voiceTransceiver?.sender.replaceTrack(track);
+  }
+
+  // Host: swaps in a newly captured monitor's track without renegotiating
+  // the connection. Deliberately does NOT stop the old stream's tracks —
+  // with multi-viewer hosting the same "old" stream may still be attached to
+  // other PeerSessions that haven't swapped yet. The caller (app.ts) is
+  // responsible for stopping a stream's tracks once nothing references it
+  // anymore, after looping this over every connected viewer.
   async replaceVideoTrack(newStream: MediaStream): Promise<void> {
     const sender = this.pc.getSenders().find((s) => s.track?.kind === "video");
     const newTrack = newStream.getVideoTracks()[0];
     if (!sender || !newTrack) return;
     newTrack.contentHint = "detail"; // see acceptAsHost — lost otherwise on every monitor switch
-    const oldStream = this.captureStream;
     await sender.replaceTrack(newTrack);
     this.captureStream = newStream;
-    oldStream?.getTracks().forEach((t) => t.stop());
   }
 
   /** Host: caps (or uncaps, when null) the outgoing video bitrate for the shared screen. */
@@ -460,8 +518,17 @@ export class PeerSession {
         }
       });
       this.callbacks.onStats?.({ fps, bitrateKbps, rttMs });
-      if (this.role === "host" && this.adaptiveQualityEnabled) {
-        await this.updateAdaptiveBitrate(availableOutgoingBps, qualityLimitationReason, fractionLost);
+      if (this.role === "host") {
+        // Diagnostic-only — the viewer has no way to read this itself (see
+        // "encoder-limitation" in shared/protocol.ts). Deduped so it's only
+        // sent when it actually changes, not every 2s tick.
+        if (qualityLimitationReason !== this.lastSentLimitationReason) {
+          this.lastSentLimitationReason = qualityLimitationReason;
+          this.sendSystemCommand({ kind: "encoder-limitation", reason: qualityLimitationReason });
+        }
+        if (this.adaptiveQualityEnabled) {
+          await this.updateAdaptiveBitrate(availableOutgoingBps, qualityLimitationReason, fractionLost);
+        }
       }
     }, 2000);
   }
@@ -666,7 +733,13 @@ export class PeerSession {
     this.lastVideoBytesTimestamp = null;
   }
 
-  close(): void {
+  // stopCaptureTracks defaults to true (matches the single-viewer case: this
+  // session owns the capture stream outright). Multi-viewer hosting shares
+  // one capture stream across several PeerSessions — closing any one of them
+  // must not stop tracks the others are still sending, so that caller passes
+  // false and takes explicit responsibility for stopping the shared stream
+  // itself once the last viewer is gone (see app.ts's hostViewers teardown).
+  close(stopCaptureTracks = true): void {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
     this.stopIceRefreshLoop();
@@ -676,7 +749,7 @@ export class PeerSession {
     this.clipboardChannel?.close();
     this.chatChannel?.close();
     this.systemChannel?.close();
-    this.captureStream?.getTracks().forEach((t) => t.stop());
+    if (stopCaptureTracks) this.captureStream?.getTracks().forEach((t) => t.stop());
     this.pc.close();
   }
 }

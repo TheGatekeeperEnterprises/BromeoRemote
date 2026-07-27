@@ -5,11 +5,12 @@ import { store, hashPassword, randomPassword } from "./store";
 import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
 import { sendMagicPacket } from "./wol";
-import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, hideWallpaper, restoreWallpaper, getCursorShape, getWindowBounds } from "./system";
+import { lockComputer, restartComputer, setBlockInput, resizeAndFocusWindow, bringWindowToFront, hideWallpaper, restoreWallpaper, getCursorShape, getWindowBounds } from "./system";
 import { askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { installSas, isSasInstalled, sendCtrlAltDel, uninstallSas } from "./sasControl";
 import { setMonitorPower } from "./display";
 import { generateSecret, buildOtpauthUri, verifyTotp } from "./totp";
+import QRCode from "qrcode";
 import { autoUpdater } from "electron-updater";
 import type { InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
 
@@ -45,25 +46,88 @@ function hwndFromWindowSourceId(id: string): number | null {
 // shape the window already happened to be).
 let activeDualWindows: { windowId1: string; windowId2: string } | null = null;
 
+// resizeAndFocusWindow only brings a window forward once, at the moment
+// it's called (initial switch, or a rotation-triggered resize) — nothing
+// re-asserts it afterward, so any other window the user (or another app)
+// clicks locally can cover it again a moment later, even though the viewer
+// is still supposed to be seeing exactly this window. This loop keeps
+// re-stacking whichever window(s) are the current share target to the top
+// for as long as single/dual-window mode is active, so what the viewer
+// sees always matches what's actually in front on the real screen.
+let keepForegroundTimer: ReturnType<typeof setInterval> | null = null;
+
+function startKeepForegroundLoop(): void {
+  if (keepForegroundTimer) return;
+  keepForegroundTimer = setInterval(() => {
+    if (activeDualWindows) {
+      const hwnd1 = hwndFromWindowSourceId(activeDualWindows.windowId1);
+      const hwnd2 = hwndFromWindowSourceId(activeDualWindows.windowId2);
+      if (hwnd1 != null) bringWindowToFront(hwnd1);
+      if (hwnd2 != null) bringWindowToFront(hwnd2);
+    } else if (activeWindowId) {
+      const hwnd = hwndFromWindowSourceId(activeWindowId);
+      if (hwnd != null) bringWindowToFront(hwnd);
+    } else {
+      stopKeepForegroundLoop();
+    }
+  }, 1500);
+}
+
+function stopKeepForegroundLoop(): void {
+  if (keepForegroundTimer) clearInterval(keepForegroundTimer);
+  keepForegroundTimer = null;
+}
+
 function tileDualWindows(windowId1: string, windowId2: string, aspect: number, isPortrait: boolean): { x: number; y: number; width: number; height: number } | null {
   const hwnd1 = hwndFromWindowSourceId(windowId1);
   const hwnd2 = hwndFromWindowSourceId(windowId2);
   if (hwnd1 == null || hwnd2 == null) return null;
   const work = screen.getPrimaryDisplay().workArea;
 
-  if (isPortrait) {
-    // PORTRAIT MODE: Window 1 is TOP half, Window 2 is BOTTOM half
-    const halfH = Math.floor(work.height / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, work.width, halfH);
-    resizeAndFocusWindow(hwnd2, work.x, work.y + halfH, work.width, work.height - halfH);
+  // Same aspect-locked sizing as resizeActiveWindowToAspect (single-window
+  // mode below) — fit a box matching the viewer's own aspect ratio within
+  // the work area, centered, instead of splitting the whole (arbitrarily
+  // monitor-shaped, e.g. 16:9) work area in half. Without this, the
+  // captured region stayed whatever shape the monitor happened to be
+  // regardless of the phone's orientation — a portrait phone had to
+  // letterbox it heavily, so the two tiled windows ended up small in the
+  // middle of a mostly-black screen instead of filling it edge to edge.
+  let boxWidth: number;
+  let boxHeight: number;
+  if (aspect <= work.width / work.height) {
+    boxHeight = work.height;
+    boxWidth = Math.round(boxHeight * aspect);
   } else {
-    // LANDSCAPE MODE: Window 1 is LEFT half, Window 2 is RIGHT half
-    const halfW = Math.floor(work.width / 2);
-    resizeAndFocusWindow(hwnd1, work.x, work.y, halfW, work.height);
-    resizeAndFocusWindow(hwnd2, work.x + halfW, work.y, work.width - halfW, work.height);
+    boxWidth = work.width;
+    boxHeight = Math.round(boxWidth / aspect);
+  }
+  boxWidth = Math.min(boxWidth, work.width);
+  boxHeight = Math.min(boxHeight, work.height);
+  const boxX = work.x + Math.round((work.width - boxWidth) / 2);
+  const boxY = work.y + Math.round((work.height - boxHeight) / 2);
+
+  if (isPortrait) {
+    // PORTRAIT MODE: Window 1 is TOP half, Window 2 is BOTTOM half — of the
+    // aspect-locked box, not the raw work area.
+    const halfH = Math.floor(boxHeight / 2);
+    resizeAndFocusWindow(hwnd1, boxX, boxY, boxWidth, halfH);
+    resizeAndFocusWindow(hwnd2, boxX, boxY + halfH, boxWidth, boxHeight - halfH);
+  } else {
+    // LANDSCAPE MODE: Window 1 is LEFT half, Window 2 is RIGHT half.
+    const halfW = Math.floor(boxWidth / 2);
+    resizeAndFocusWindow(hwnd1, boxX, boxY, halfW, boxHeight);
+    resizeAndFocusWindow(hwnd2, boxX + halfW, boxY, boxWidth - halfW, boxHeight);
   }
 
-  activeDualBounds = { x: 0, y: 0, width: work.width, height: work.height };
+  // This box (not the full work area) is both the input-coordinate-mapping
+  // bounds (getActiveAppWindowBounds, used by input.ts) and, via the
+  // returned value here, the exact region the renderer crops the raw
+  // full-monitor capture down to (see createCroppedStream's call sites in
+  // app.ts) — the two windows exactly fill it, so cropping to it is what
+  // makes the final video "locked" to just the two windows at the phone's
+  // own aspect ratio, matching how single-window mode's window capture is
+  // naturally already cropped to just that one window by Chromium itself.
+  activeDualBounds = { x: boxX, y: boxY, width: boxWidth, height: boxHeight };
   return activeDualBounds;
 }
 
@@ -88,10 +152,15 @@ function resizeActiveWindowToAspect(aspect: number): boolean {
   return resizeAndFocusWindow(hwnd, x, y, width, height);
 }
 
-interface MiniControllerState {
-  peer: string;
-  status: string;
+interface MiniControllerViewer {
+  peerId: string;
+  label: string;
   permissions: string;
+  viewOnly: boolean;
+}
+
+interface MiniControllerState {
+  viewers: MiniControllerViewer[];
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
@@ -117,6 +186,15 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
+      // The whole point of this app is running while its own window sits
+      // unfocused/minimized in the background (the user is controlling it
+      // from their phone) — Chromium's default background throttling would
+      // slow requestAnimationFrame down to near-zero in that exact state,
+      // which is what dual-window mode's canvas-based crop loop
+      // (createCroppedStream, app.ts) runs on. Without this, the shared
+      // video visibly freezes the moment the window loses focus, even
+      // though the real desktop keeps updating normally underneath it.
+      backgroundThrottling: false,
     },
   });
   mainWindow.setMenuBarVisibility(false);
@@ -299,9 +377,9 @@ ipcMain.handle("bromeo:restore-main-window", () => {
   return true;
 });
 
-ipcMain.handle("bromeo:mini-controller-action", (_e, action: string) => {
+ipcMain.handle("bromeo:mini-controller-action", (_e, action: string, peerId?: string) => {
   if (action === "open") restoreMainWindow();
-  else mainWindow?.webContents.send("mini-controller-action", action);
+  else mainWindow?.webContents.send("mini-controller-action", action, peerId);
   return true;
 });
 
@@ -381,9 +459,21 @@ ipcMain.handle("bromeo:ask-ai-buddy", (_e, history: AiBuddyMessage[]) => askAiBu
 // user proves their authenticator app produces a matching code.
 let pendingTotpSecret: string | null = null;
 
-ipcMain.handle("bromeo:generate-totp-secret", () => {
+ipcMain.handle("bromeo:generate-totp-secret", async () => {
   pendingTotpSecret = generateSecret();
-  return { secret: pendingTotpSecret, otpauthUri: buildOtpauthUri(pendingTotpSecret, store.get().deviceId) };
+  const otpauthUri = buildOtpauthUri(pendingTotpSecret, store.get().deviceId);
+  // Generated here (main process) rather than the renderer — the renderer
+  // has no bundler/node_modules resolution for its ES module imports (see
+  // tsconfig.renderer.json), so an npm package like `qrcode` can only run
+  // in the main/Node context. Passed over IPC as a data: URL, same pattern
+  // as any other main->renderer payload.
+  let qrDataUrl: string | null = null;
+  try {
+    qrDataUrl = await QRCode.toDataURL(otpauthUri, { margin: 1, width: 220 });
+  } catch {
+    // Non-fatal — the renderer still shows the secret for manual entry.
+  }
+  return { secret: pendingTotpSecret, otpauthUri, qrDataUrl };
 });
 
 ipcMain.handle("bromeo:enable-totp", (_e, code: string) => {
@@ -396,6 +486,13 @@ ipcMain.handle("bromeo:enable-totp", (_e, code: string) => {
 
 ipcMain.handle("bromeo:disable-totp", () => {
   store.setTotpSecret(null);
+  return true;
+});
+
+ipcMain.handle("bromeo:get-trusted-devices", () => store.getTrustedDevices());
+
+ipcMain.handle("bromeo:remove-trusted-device", (_e, id: string) => {
+  store.removeTrustedDevice(id);
   return true;
 });
 
@@ -470,9 +567,12 @@ function restoreSavedWindowBounds() {
 }
 
 ipcMain.handle("bromeo:set-active-monitor", (_e, monitorId: string) => {
+  stopKeepForegroundLoop();
   restoreSavedWindowBounds();
   activeMonitorId = monitorId;
   activeWindowId = null;
+  activeDualWindows = null;
+  activeDualBounds = null;
   return true;
 });
 
@@ -495,6 +595,7 @@ ipcMain.handle("bromeo:set-active-window", (_e, windowId: string, aspect: number
     const hwnd = hwndFromWindowSourceId(activeWindowId);
     if (hwnd != null) saveWindowBoundsForHwnd(hwnd);
   }
+  startKeepForegroundLoop();
   return resizeActiveWindowToAspect(aspect);
 });
 
@@ -508,6 +609,7 @@ ipcMain.handle("bromeo:set-dual-window", (_e, windowId1: string, windowId2: stri
   const hwnd2 = hwndFromWindowSourceId(windowId2);
   if (hwnd1 != null) saveWindowBoundsForHwnd(hwnd1);
   if (hwnd2 != null) saveWindowBoundsForHwnd(hwnd2);
+  startKeepForegroundLoop();
   return tileDualWindows(windowId1, windowId2, aspect, isPortrait);
 });
 
@@ -517,6 +619,7 @@ ipcMain.handle("bromeo:resize-dual-window", (_e, aspect: number, isPortrait: boo
 });
 
 ipcMain.handle("bromeo:set-capture-desktop", () => {
+  stopKeepForegroundLoop();
   activeDualWindows = null;
   activeDualBounds = null;
   restoreSavedWindowBounds();
@@ -532,19 +635,26 @@ ipcMain.handle("bromeo:set-unattended", (_e, enabled: boolean, password: string 
   return { unattendedEnabled: updated.unattendedEnabled, hasUnattendedPassword: !!updated.unattendedPasswordHash };
 });
 
-ipcMain.handle("bromeo:check-password", (_e, passwordHash: string, totpCode?: string) => {
-  const cfg = store.get();
-  if (passwordHash === hashPassword(sessionPassword)) return { ok: true, mode: "session" };
-  if (cfg.unattendedEnabled && cfg.unattendedPasswordHash && passwordHash === cfg.unattendedPasswordHash) {
-    if (cfg.totpEnabled) {
-      const secret = store.getTotpSecret();
-      if (!totpCode) return { ok: false, reason: "totp-required" };
-      if (!secret || !verifyTotp(secret, totpCode)) return { ok: false, reason: "bad-totp" };
+ipcMain.handle(
+  "bromeo:check-password",
+  (_e, passwordHash: string, totpCode?: string, fromId?: string, fromLabel?: string, trustDevice?: boolean) => {
+    const cfg = store.get();
+    if (passwordHash === hashPassword(sessionPassword)) return { ok: true, mode: "session" };
+    if (cfg.unattendedEnabled && cfg.unattendedPasswordHash && passwordHash === cfg.unattendedPasswordHash) {
+      if (cfg.totpEnabled && !(fromId && store.isDeviceTrusted(fromId))) {
+        const secret = store.getTotpSecret();
+        if (!totpCode) return { ok: false, reason: "totp-required" };
+        if (!secret || !verifyTotp(secret, totpCode)) return { ok: false, reason: "bad-totp" };
+        // Opted into per-device at the moment the code is verified — never
+        // automatic, and only takes effect on this and future attempts, not
+        // retroactively.
+        if (trustDevice && fromId) store.trustDevice(fromId, fromLabel?.trim() || fromId);
+      }
+      return { ok: true, mode: "unattended" };
     }
-    return { ok: true, mode: "unattended" };
+    return { ok: false };
   }
-  return { ok: false };
-});
+);
 
 ipcMain.handle("bromeo:regenerate-password", () => {
   sessionPassword = randomPassword(6);

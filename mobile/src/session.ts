@@ -20,9 +20,24 @@ const DISCONNECT_RETRY_INTERVAL_MS = 4_000;
 // content, and should render text noticeably better at the same bitrate.
 // Reordering (not filtering) preserves fallback to whatever the other side
 // actually supports.
-function preferScreenContentCodecs(codecs: { mimeType: string }[]): { mimeType: string }[] {
+// "sharp" (default) ranks VP9 first for its screen-content-coding tools —
+// but VP9 encoding in Chromium is effectively always software (no mature
+// hardware encoder path the way H264 has via Windows Media Foundation),
+// which under real load (native/4K capture, 60fps) can add real per-frame
+// encode latency — reported as the video's own cursor feeling laggier than
+// TeamViewer's, even with the local cursor overlay already removing most
+// perceived lag elsewhere. "fast" ranks H264 first instead, trading some
+// text sharpness for a real shot at hardware-accelerated encoding.
+export type CodecPreferenceMode = "sharp" | "fast";
+function preferScreenContentCodecs(codecs: { mimeType: string }[], mode: CodecPreferenceMode): { mimeType: string }[] {
   const rank = (mimeType: string): number => {
     const type = mimeType.toLowerCase();
+    if (mode === "fast") {
+      if (type.includes("h264")) return 0;
+      if (type.includes("vp8")) return 1;
+      if (type.includes("vp9")) return 2;
+      return 3; // AV1 and anything else
+    }
     if (type.includes("vp9")) return 0;
     if (type.includes("av1")) return 1;
     if (type.includes("h264")) return 2;
@@ -47,6 +62,11 @@ export interface SessionStats {
 
 export interface SessionCallbacks {
   onRemoteStream?(stream: MediaStream): void;
+  // Fires when the *other* side's microphone track arrives on the
+  // dedicated voice transceiver (see voiceTransceiver) — kept structurally
+  // separate from onRemoteStream so it can never get mistaken for the
+  // video+system-audio stream.
+  onVoiceStream?(stream: MediaStream): void;
   onConnectionState?(state: string): void;
   onStats?(stats: SessionStats): void;
   onClipboard?(text: string): void;
@@ -81,6 +101,12 @@ export class MobileSession {
   private lastVideoBytesTimestamp: number | null = null;
   private lastMouseMoveSent = 0;
   private captureStream: MediaStream | null = null;
+  // Bidirectional, always present from connect (see startAsViewer/
+  // acceptAsHost) but silent until either side opts into voice intercom via
+  // setMicrophoneTrack — pre-declaring it up front means turning the mic
+  // on/off later is just replaceTrack, never a renegotiation. `any` to
+  // match this file's established pattern for react-native-webrtc types.
+  private voiceTransceiver: any = null;
   // See docs/47seconds.md — this is the mitigation for the mid-session
   // TURN-relay drop, not a fix for its root cause. It's genuinely active by
   // default (kept true here) since most users are better served by a
@@ -128,6 +154,10 @@ export class MobileSession {
       }
     });
     this.pc.addEventListener("track", (event: any) => {
+      if (this.voiceTransceiver && event.transceiver === this.voiceTransceiver) {
+        this.callbacks.onVoiceStream?.(event.streams?.[0] ?? new MediaStream([event.track]));
+        return;
+      }
       if (event.streams && event.streams[0]) this.callbacks.onRemoteStream?.(event.streams[0]);
     });
     this.pc.addEventListener("datachannel", (event: any) => this.bindChannel(event.channel));
@@ -168,18 +198,21 @@ export class MobileSession {
   }
 
   /** Initiates the offer, requests recvonly video/audio transceivers, opens data channels. */
-  async startAsViewer(): Promise<void> {
+  async startAsViewer(codecPreference: CodecPreferenceMode = "sharp"): Promise<void> {
     this.role = "viewer";
     const videoTransceiver = this.pc.addTransceiver("video", { direction: "recvonly" });
     try {
       const capabilities = RTCRtpSender.getCapabilities("video");
       if (capabilities?.codecs?.length) {
-        videoTransceiver.setCodecPreferences(preferScreenContentCodecs(capabilities.codecs) as any);
+        videoTransceiver.setCodecPreferences(preferScreenContentCodecs(capabilities.codecs, codecPreference) as any);
       }
     } catch {
       // Not fatal — falls back to whatever codec order the platform negotiates by default.
     }
-    this.pc.addTransceiver("audio", { direction: "recvonly" });
+    this.pc.addTransceiver("audio", { direction: "recvonly" }); // host's system audio, one-way
+    // Voice intercom — sendrecv from the start (see voiceTransceiver's own
+    // comment), no track attached yet.
+    this.voiceTransceiver = this.pc.addTransceiver("audio", { direction: "sendrecv" });
     this.bindChannel(this.pc.createDataChannel("control", { ordered: true }));
     this.bindChannel(this.pc.createDataChannel("clipboard", { ordered: true }));
     this.bindChannel(this.pc.createDataChannel("chat", { ordered: true }));
@@ -215,6 +248,17 @@ export class MobileSession {
       }
     }
     captureStream.getTracks().forEach((track: any) => this.pc.addTrack(track, captureStream));
+    // Identify the voice transceiver *after* addTrack above has filled
+    // video + system-audio's senders (in that insertion order from
+    // startAsViewer) — whichever transceiver's sender still has no track
+    // is voice. Mirrors client/src/renderer/session.ts's acceptAsHost;
+    // avoids relying on receiver.track's kind/timing, which react-native-
+    // webrtc's own bridge doesn't reliably guarantee (this file's typed
+    // `any` throughout for exactly that kind of typing/behavior gap).
+    // mobile-as-host doesn't wire up sending its own voice in this phase,
+    // but still needs the reference so an incoming viewer voice track is
+    // routed to onVoiceStream instead of being mistaken for onRemoteStream.
+    this.voiceTransceiver = this.pc.getTransceivers().find((t: any) => t.sender.track === null) ?? null;
 
     // Best-effort — react-native-webrtc's setParameters support varies by
     // version. Mirrors client/src/renderer/session.ts's acceptAsHost: under
@@ -248,6 +292,13 @@ export class MobileSession {
 
   hasCaptureStream(): boolean {
     return this.captureStream != null;
+  }
+
+  // Voice intercom on/off — swaps the sender's track on the pre-declared
+  // sendrecv voice transceiver. No renegotiation needed. Pass null to stop
+  // sending without tearing anything down.
+  async setMicrophoneTrack(track: any): Promise<void> {
+    await this.voiceTransceiver?.sender.replaceTrack(track);
   }
 
   async applyAnswer(answer: any): Promise<void> {

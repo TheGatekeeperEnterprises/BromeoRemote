@@ -1474,6 +1474,33 @@ hr {
   background: #000;
 }
 
+.annotation-canvas {
+  position: absolute;
+  z-index: 30;
+  pointer-events: none;
+  cursor: crosshair;
+}
+
+.annotation-canvas.drawing {
+  pointer-events: auto;
+}
+
+.annotate-toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 31;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  background: rgba(18, 24, 37, 0.88);
+  color: #d8dee9;
+}
+
 .session-hint {
   position: absolute;
   left: 50%;
@@ -1688,6 +1715,18 @@ hr {
   letter-spacing: 1.5px;
   word-break: break-all;
 }
+
+.totp-qr-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--radius-sm);
+  width: fit-content;
+}
+
+.totp-qr { width: 160px; height: 160px; display: block; }
 
 .totp-verify-row { margin-top: 10px; }
 .totp-enabled-text { margin: 0; color: var(--success); }

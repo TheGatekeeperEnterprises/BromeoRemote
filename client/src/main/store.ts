@@ -25,6 +25,13 @@ export interface StoreData {
   // Encrypted OpenAI API key for "AI Buddy" — a billable credential, same
   // safeStorage treatment as the TOTP secret above.
   openaiApiKeyEncrypted: string | null;
+  // Devices that skip the TOTP prompt for unattended access until
+  // trustedUntil (ms epoch) — opted into per-device at the moment a 2FA
+  // code is verified (see "trustDevice" in the connect-request protocol),
+  // never automatic. Not secret data (just a device id + label + a
+  // timestamp — device ids already travel in plaintext over signaling), so
+  // unlike savedDevices/totpSecret this isn't safeStorage-encrypted.
+  trustedDevices: { id: string; label: string; trustedUntil: number }[];
 }
 
 function randomDeviceId(): string {
@@ -82,6 +89,7 @@ class Store {
           savedDevicesEncrypted: raw.savedDevicesEncrypted ?? null,
           totpSecretEncrypted: raw.totpSecretEncrypted ?? null,
           openaiApiKeyEncrypted: raw.openaiApiKeyEncrypted ?? null,
+          trustedDevices: Array.isArray(raw.trustedDevices) ? raw.trustedDevices : [],
         };
       } catch {
         // fall through to defaults on corrupt file
@@ -99,6 +107,7 @@ class Store {
       savedDevicesEncrypted: null,
       totpSecretEncrypted: null,
       openaiApiKeyEncrypted: null,
+      trustedDevices: [],
     };
   }
 
@@ -146,6 +155,32 @@ class Store {
       const encrypted = safeStorage.encryptString(JSON.stringify(devices));
       this.update({ savedDevicesEncrypted: encrypted.toString("base64") });
     }
+  }
+
+  // 30 days — long enough to actually save the prompt across normal repeat
+  // use, short enough that a lost/stolen device's bypass expires on its own
+  // without needing to be manually revoked.
+  private static readonly TRUST_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+  getTrustedDevices(): { id: string; label: string; trustedUntil: number }[] {
+    const now = Date.now();
+    const fresh = this.data.trustedDevices.filter((d) => d.trustedUntil > now);
+    if (fresh.length !== this.data.trustedDevices.length) this.update({ trustedDevices: fresh });
+    return [...fresh];
+  }
+
+  isDeviceTrusted(id: string): boolean {
+    return this.getTrustedDevices().some((d) => d.id === id);
+  }
+
+  trustDevice(id: string, label: string): void {
+    const trustedUntil = Date.now() + Store.TRUST_DURATION_MS;
+    const existing = this.getTrustedDevices().filter((d) => d.id !== id);
+    this.update({ trustedDevices: [...existing, { id, label, trustedUntil }] });
+  }
+
+  removeTrustedDevice(id: string): void {
+    this.update({ trustedDevices: this.data.trustedDevices.filter((d) => d.id !== id) });
   }
 
   private totpSecretCache: string | null | undefined; // undefined = not loaded yet, null = none set

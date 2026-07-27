@@ -72,7 +72,7 @@ export class RemoteInputTranslator {
       case "keyup":
         break;
       case "text":
-        commitText(event.text);
+        commitText(event.value);
         break;
     }
   }

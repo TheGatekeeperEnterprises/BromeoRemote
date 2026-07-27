@@ -132,6 +132,51 @@
       color: #fff;
     }
     button.wide { grid-column: 1 / -1; }
+    .viewer-list {
+      max-height: 92px;
+      overflow-y: auto;
+      margin-bottom: 10px;
+      border: 1px solid #dbe5f5;
+      border-radius: 8px;
+      background: #f7faff;
+    }
+    .viewer-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-bottom: 1px solid #e5edf9;
+    }
+    .viewer-row:last-child { border-bottom: none; }
+    .viewer-row .viewer-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .viewer-row .viewer-perm {
+      font-size: 9.5px;
+      color: #64748b;
+      white-space: nowrap;
+    }
+    .viewer-row .viewer-kick,
+    .viewer-row .viewer-promote {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 13px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .viewer-row .viewer-kick:hover { background: #fde8ea; color: #dc3545; }
+    .viewer-row .viewer-promote:hover { background: #e5f0ff; color: #2f6fed; }
   </style>
 </head>
 <body>
@@ -146,15 +191,15 @@
         <button id="mini-open" class="open">Open</button>
       </header>
       <div class="body">
+        <div id="mini-viewer-list" class="viewer-list"></div>
         <div class="meta">
-          <div class="meta-box"><span>Rechten</span><strong id="mini-permissions">-</strong></div>
           <div class="meta-box"><span>Scherm</span><strong id="mini-screen">Aan</strong></div>
         </div>
         <div class="actions">
           <button id="mini-clipboard" class="action">Klembord</button>
           <button id="mini-chat" class="action">Chat</button>
           <button id="mini-screen-toggle" class="action">Scherm uit</button>
-          <button id="mini-end" class="action danger">Beëindigen</button>
+          <button id="mini-end" class="action danger wide">Alles beëindigen</button>
           <button id="mini-panic" class="action wide">Beëindigen + wachtwoord wijzigen</button>
         </div>
       </div>

@@ -29,6 +29,7 @@ export type ClientMessage =
       viewOnly?: boolean;
       permissions?: SessionPermissions;
       totpCode?: string;
+      trustDevice?: boolean;
     }
   | { type: "connect-response"; targetId: string; accept: boolean; reason?: string }
   | { type: "signal"; targetId: string; payload: unknown }
@@ -40,7 +41,16 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "welcome"; id: string }
   | { type: "error"; message: string }
-  | { type: "incoming-request"; fromId: string; fromLabel?: string; passwordHash: string; viewOnly?: boolean; permissions?: SessionPermissions; totpCode?: string }
+  | {
+      type: "incoming-request";
+      fromId: string;
+      fromLabel?: string;
+      passwordHash: string;
+      viewOnly?: boolean;
+      permissions?: SessionPermissions;
+      totpCode?: string;
+      trustDevice?: boolean;
+    }
   | { type: "connect-response"; fromId: string; accept: boolean; reason?: string }
   | { type: "signal"; fromId: string; payload: unknown }
   | { type: "peer-disconnected"; peerId: string }

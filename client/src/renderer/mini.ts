@@ -5,7 +5,7 @@ const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as 
 const el = {
   peer: $<HTMLElement>("mini-peer"),
   status: $<HTMLElement>("mini-status"),
-  permissions: $<HTMLElement>("mini-permissions"),
+  viewerList: $<HTMLDivElement>("mini-viewer-list"),
   screen: $<HTMLElement>("mini-screen"),
   open: $<HTMLButtonElement>("mini-open"),
   clipboard: $<HTMLButtonElement>("mini-clipboard"),
@@ -15,14 +15,44 @@ const el = {
   panic: $<HTMLButtonElement>("mini-panic"),
 };
 
-function send(action: string): void {
-  window.bromeo.miniControllerAction(action);
+function send(action: string, peerId?: string): void {
+  window.bromeo.miniControllerAction(action, peerId);
+}
+
+function escapeHtml(value: string): string {
+  const div = document.createElement("div");
+  div.textContent = value;
+  return div.innerHTML;
 }
 
 function update(state: MiniControllerState): void {
-  el.peer.textContent = state.peer;
-  el.status.textContent = state.status;
-  el.permissions.textContent = state.permissions;
+  const count = state.viewers.length;
+  el.peer.textContent = count === 1 ? state.viewers[0].label : `${count} kijkers`;
+  el.status.textContent =
+    count === 1
+      ? state.viewers[0].viewOnly
+        ? "Kijkt mee met dit apparaat"
+        : "Bekijkt en bestuurt dit apparaat"
+      : "Meerdere kijkers verbonden";
+  el.viewerList.innerHTML = state.viewers
+    .map(
+      (v) =>
+        `<div class="viewer-row">` +
+        `<span class="viewer-name">${escapeHtml(v.label)}</span>` +
+        `<span class="viewer-perm">${escapeHtml(v.permissions)}</span>` +
+        (v.viewOnly
+          ? `<button class="viewer-promote" data-peer="${escapeHtml(v.peerId)}" title="Besturing geven aan deze kijker">⇧</button>`
+          : "") +
+        `<button class="viewer-kick" data-peer="${escapeHtml(v.peerId)}" title="Deze kijker loskoppelen">×</button>` +
+        `</div>`
+    )
+    .join("");
+  el.viewerList.querySelectorAll<HTMLButtonElement>(".viewer-kick").forEach((btn) => {
+    btn.onclick = () => send("end", btn.dataset.peer);
+  });
+  el.viewerList.querySelectorAll<HTMLButtonElement>(".viewer-promote").forEach((btn) => {
+    btn.onclick = () => send("promote", btn.dataset.peer);
+  });
   el.screen.textContent = state.screenOff ? "Uit" : "Aan";
   el.screenToggle.textContent = state.screenOff ? "Scherm aan" : "Scherm uit";
   el.clipboard.disabled = !state.canClipboard;
@@ -33,7 +63,7 @@ el.open.onclick = () => send("open");
 el.clipboard.onclick = () => send("clipboard");
 el.chat.onclick = () => send("chat");
 el.screenToggle.onclick = () => send("screen-toggle");
-el.end.onclick = () => send("end");
+el.end.onclick = () => send("end"); // no peerId — ends the whole hosting session
 el.panic.onclick = () => send("panic");
 
 window.bromeo.onMiniControllerState(update);

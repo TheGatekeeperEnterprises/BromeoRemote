@@ -63,6 +63,8 @@ let windowPosFns: {
 } | null = null;
 const SW_RESTORE = 9;
 const SWP_SHOWWINDOW = 0x0040;
+const SWP_NOMOVE = 0x0002;
+const SWP_NOSIZE = 0x0001;
 const HWND_TOP = 0n;
 export function resizeAndFocusWindow(hwnd: number, x: number, y: number, width: number, height: number): boolean {
   if (process.platform !== "win32") return false;
@@ -91,6 +93,24 @@ export function resizeAndFocusWindow(hwnd: number, x: number, y: number, width: 
     // visually resize it.
     windowPosFns.showWindow(hwndPtr, SW_RESTORE);
     windowPosFns.setWindowPos(hwndPtr, HWND_TOP, x, y, width, height, SWP_SHOWWINDOW);
+    windowPosFns.setForegroundWindow(hwndPtr);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Re-asserts z-order/focus only — no resize, no un-maximize — so a periodic
+// "keep these windows on top" loop (see main.ts's keepForegroundLoop) can
+// call this often without fighting a window's current size/state, just its
+// stacking order. Split out from resizeAndFocusWindow (which does a real
+// SW_RESTORE + reposition, appropriate only for the one-time initial
+// switch/rotation, not for a tight repeat loop).
+export function bringWindowToFront(hwnd: number): boolean {
+  if (process.platform !== "win32" || !windowPosFns) return false;
+  try {
+    const hwndPtr = BigInt(hwnd);
+    windowPosFns.setWindowPos(hwndPtr, HWND_TOP, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOMOVE | SWP_NOSIZE);
     windowPosFns.setForegroundWindow(hwndPtr);
     return true;
   } catch {

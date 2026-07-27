@@ -66,6 +66,11 @@ export type ClientMessage =
       viewOnly?: boolean;
       permissions?: SessionPermissions;
       totpCode?: string;
+      // "Remember this device" for 2FA — see StoreData.trustedDevices and
+      // checkPassword's handling in main.ts. Only meaningful alongside a
+      // totpCode; the host decides whether to actually honor it (only after
+      // that code verifies).
+      trustDevice?: boolean;
     }
   | { type: "connect-response"; targetId: string; accept: boolean; reason?: string }
   | { type: "signal"; targetId: string; payload: unknown }
@@ -76,7 +81,16 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "welcome"; id: string }
   | { type: "error"; message: string }
-  | { type: "incoming-request"; fromId: string; fromLabel?: string; passwordHash: string; viewOnly?: boolean; permissions?: SessionPermissions; totpCode?: string }
+  | {
+      type: "incoming-request";
+      fromId: string;
+      fromLabel?: string;
+      passwordHash: string;
+      viewOnly?: boolean;
+      permissions?: SessionPermissions;
+      totpCode?: string;
+      trustDevice?: boolean;
+    }
   | { type: "connect-response"; fromId: string; accept: boolean; reason?: string }
   | { type: "signal"; fromId: string; payload: unknown }
   | { type: "peer-disconnected"; peerId: string }
@@ -109,6 +123,15 @@ export interface WindowInfo {
 
 export type QualityLevel = "auto" | "high" | "low";
 
+// "sharp" = native capture resolution (current default) — the encoder has to
+// push every source pixel, which is what lets pinch-zoom reach real detail,
+// but on weaker/loaded hardware the encoder can't sustain the requested
+// frame rate at that pixel count, so delivered fps (and therefore cursor
+// responsiveness) drops well below what was asked for. "fast" caps the
+// capture at 1080p so the encoder can actually keep up and hit close to the
+// real frame rate, at the cost of that native-resolution zoom sharpness.
+export type ResolutionMode = "sharp" | "fast";
+
 // Which standard OS cursor is currently showing on the host, detected via
 // GetCursorInfo/LoadCursor comparison (see getCursorShape in
 // client/src/main/system.ts) — Windows itself doesn't expose "what shape is
@@ -136,6 +159,7 @@ export type SystemCommand =
   | { kind: "lock-on-session-end"; enabled: boolean }
   | { kind: "lock-on-session-end-status"; enabled: boolean; ok: boolean }
   | { kind: "quality-request"; level: QualityLevel }
+  | { kind: "resolution-preference"; mode: ResolutionMode }
   | { kind: "block-input"; enabled: boolean }
   | { kind: "block-input-status"; enabled: boolean; ok: boolean }
   // Hides just the desktop wallpaper image (blank background color instead)
@@ -158,6 +182,15 @@ export type SystemCommand =
   | { kind: "switch-to-desktop" }
 | { kind: "switch-dual-window"; windowId1: string; windowId2: string; aspect: number; isPortrait: boolean }
   | { kind: "resize-dual-window"; aspect: number; isPortrait: boolean }
+  // View two whole monitors simultaneously, composited side-by-side
+  // (landscape) or stacked (portrait) into one video feed — unlike
+  // switch-dual-window, there's no window to reposition/crop; each monitor
+  // is already its own independent capturable source, so the host just
+  // captures both and draws them into halves of one canvas (see
+  // createDualMonitorStream in renderer/app.ts). aspect/isPortrait follow
+  // the same convention as the dual-window commands.
+  | { kind: "switch-dual-monitor"; monitorId1: string; monitorId2: string; aspect: number; isPortrait: boolean }
+  | { kind: "resize-dual-monitor"; aspect: number; isPortrait: boolean }
   // Immediately tells the viewer the new video stream dimensions
   | { kind: "video-dimensions"; width: number; height: number }
   // Sent host->viewer whenever the host's actual OS cursor shape changes
@@ -176,7 +209,40 @@ export type SystemCommand =
   // scale-down (see ADAPTIVE_RESOLUTION_SCALE_DOWN) turns on or off, so the
   // viewer can show *why* things look softer instead of it looking like an
   // unexplained quality bug.
-  | { kind: "adaptive-status"; resolutionScaled: boolean };
+  | { kind: "adaptive-status"; resolutionScaled: boolean }
+  // Sent host->viewer every stats tick with the encoder's own
+  // qualityLimitationReason (from RTCOutboundRtpStreamStats — "cpu",
+  // "bandwidth", "other", or "none"/null). Only meaningful on the host's own
+  // outbound-rtp stats, which the viewer has no way to read directly (each
+  // side's getStats() only sees its own local sender/receiver reports) —
+  // this is diagnostic-only, surfaced in the viewer's stats line to show
+  // *why* delivered fps is capped instead of leaving it unexplained.
+  | { kind: "encoder-limitation"; reason: string | null }
+  // Sent host->every viewer whenever the set of connected viewers changes
+  // (join/leave) during multi-viewer hosting, so anyone watching can see who
+  // else is watching too — a transparency guarantee for a remote-support
+  // tool, not just a UI nicety. See docs/features.md's scoring and
+  // hostViewers in renderer/app.ts.
+  | { kind: "viewer-list"; viewers: { label: string; viewOnly: boolean }[] }
+  // Sent host->viewer whenever that specific viewer's own permissions change
+  // mid-session (currently: promoting/demoting who has control — see
+  // promoteViewerToControl in renderer/app.ts). Lets the viewer re-apply its
+  // own UI (toolbar buttons, view-only badge, input capture) live instead of
+  // requiring a reconnect for a permission change to take visible effect.
+  | { kind: "permissions-update"; permissions: SessionPermissions }
+  // Lightweight annotation/whiteboard overlay drawn on top of the shared
+  // video, e.g. circling a button to explain what to click — not
+  // persistent markup, just temporary on-screen pointing. Points are
+  // normalized [0,1] coordinates relative to the video frame (same
+  // convention as InputEvent's xPct/yPct) so they translate correctly
+  // regardless of each client's own video render size. Sent whole-stroke
+  // (not per-point) once a drag gesture completes, viewer->host->other
+  // viewers (the host just relays, it doesn't render — see
+  // broadcastSystemCommand's excludePeerId in renderer/app.ts). Any
+  // connected viewer can draw, controlling or not — purely a
+  // communication aid, no security implication.
+  | { kind: "annotation-stroke"; id: string; points: { x: number; y: number }[]; color: string }
+  | { kind: "annotation-clear" };
 
 export type FileMessage =
   | { kind: "file-offer"; id: string; name: string; size: number }
