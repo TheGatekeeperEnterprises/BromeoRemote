@@ -67,6 +67,37 @@ const contactLimiter = rateLimit({
 });
 
 
+let latestReleaseCache = { data: null, expiresAt: 0 };
+
+async function fetchLatestGitHubReleaseAssets() {
+  const now = Date.now();
+  if (latestReleaseCache.data && now < latestReleaseCache.expiresAt) {
+    return latestReleaseCache.data;
+  }
+
+  try {
+    const response = await fetch("https://api.github.com/repos/TheGatekeeperEnterprises/BromeoRemote/releases/latest", {
+      headers: { "User-Agent": "BromeoRemote-Website-Server" },
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (!data || !Array.isArray(data.assets)) return null;
+
+    const assets = {
+      windows: data.assets.find((a) => /installer.*\.exe$/i.test(a.name) || /\.exe$/i.test(a.name))?.browser_download_url,
+      "windows-portable": data.assets.find((a) => /setup.*\.exe$/i.test(a.name) || /portable.*\.exe$/i.test(a.name))?.browser_download_url,
+      android: data.assets.find((a) => /\.apk$/i.test(a.name))?.browser_download_url,
+    };
+
+    latestReleaseCache = { data: assets, expiresAt: now + 3 * 60 * 1000 }; // 3 min cache
+    return assets;
+  } catch (err) {
+    console.error("[releases] error fetching GitHub latest release:", err.message);
+    return null;
+  }
+}
+
 function getLocalReleaseFile(platform) {
   const dirs = [
     path.join(__dirname, "..", "public", "downloads"),
@@ -89,10 +120,17 @@ function getLocalReleaseFile(platform) {
     try {
       const files = fs.readdirSync(dir);
       for (const pattern of currentPatterns) {
-        const match = files.find((f) => pattern.test(f));
-        if (match) {
-          const fullPath = path.join(dir, match);
-          return { path: fullPath, filename: match };
+        const matches = files.filter((f) => pattern.test(f));
+        if (matches.length > 0) {
+          const sorted = matches
+            .map((f) => {
+              const p = path.join(dir, f);
+              const stat = fs.statSync(p);
+              return { path: p, filename: f, mtime: stat.mtimeMs };
+            })
+            .sort((a, b) => b.mtime - a.mtime);
+
+          return { path: sorted[0].path, filename: sorted[0].filename };
         }
       }
     } catch {
@@ -109,31 +147,30 @@ function requestMeta(req) {
   };
 }
 
-function downloadUrlForPlatform(platform) {
-  const fallbackUrls = {
-    windows: [
-      config.downloads.windows,
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Installer.exe",
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-Installer.exe",
-    ],
-    "windows-portable": [
-      config.downloads.windowsPortable,
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v1.0.8-Setup.exe",
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-Setup.exe",
-    ],
-    android: [
-      config.downloads.android,
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote-v0.0.11.apk",
-      "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases/download/v1.0.8/BromeoRemote.apk",
-    ],
-  };
-
-  const list = fallbackUrls[platform] || [];
-  for (const url of list) {
-    if (url && url.trim().length > 0) {
-      return url;
-    }
+async function downloadUrlForPlatform(platform) {
+  let configured = "";
+  switch (platform) {
+    case "windows":
+      configured = config.downloads.windows;
+      break;
+    case "windows-portable":
+      configured = config.downloads.windowsPortable;
+      break;
+    case "android":
+      configured = config.downloads.android;
+      break;
+    case "github":
+      configured = config.downloads.github;
+      break;
   }
+
+  if (configured && configured.trim().length > 0) return configured;
+
+  const latestAssets = await fetchLatestGitHubReleaseAssets();
+  if (latestAssets && latestAssets[platform]) {
+    return latestAssets[platform];
+  }
+
   return "https://github.com/TheGatekeeperEnterprises/BromeoRemote/releases";
 }
 
@@ -209,7 +246,7 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
     }
 
     // 2. Redirect to configured or GitHub fallback URL
-    const targetUrl = downloadUrlForPlatform(platform);
+    const targetUrl = await downloadUrlForPlatform(platform);
     if (targetUrl) {
       res.redirect(302, targetUrl);
       return;
