@@ -2,6 +2,8 @@ import { app, BrowserWindow, session, desktopCapturer, ipcMain, dialog, clipboar
 import { join } from "path";
 import { writeFile, readFile, stat } from "fs/promises";
 import { appendFileSync, writeFileSync } from "fs";
+import { createHash } from "crypto";
+import { hostname, cpus, networkInterfaces } from "os";
 import { store, hashPassword, randomPassword } from "./store";
 import { applyInputEvent } from "./input";
 import { startBridge, resolvePending } from "./bridge";
@@ -443,6 +445,54 @@ function setupDisplayMediaHandler(): void {
   });
 }
 
+function getClientHwid(): string {
+  const cpuModel = cpus()[0]?.model || "";
+  const net = JSON.stringify(networkInterfaces());
+  const host = hostname();
+  return createHash("sha256").update(`${host}-${cpuModel}-${net}`, "utf8").digest("hex");
+}
+
+async function verifyClientLicense(licenseKey?: string, email?: string) {
+  try {
+    const hwid = getClientHwid();
+    const key = licenseKey !== undefined ? licenseKey.trim() : (store.get().licenseKey || "");
+    const mail = email !== undefined ? email.trim() : (store.get().licenseEmail || "");
+
+    if (!key && !mail) {
+      const res = { valid: false, reason: "Geen licentie of e-mail ingevoerd." };
+      store.setLicenseInfo(null, null, res);
+      return res;
+    }
+
+    const response = await fetch("https://bromeoremote.com/api/license/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        licenseKey: key,
+        email: mail,
+        hwid,
+        platform: process.platform,
+        appVersion: app.getVersion(),
+      }),
+    });
+
+    const data = await response.json();
+    if (data.valid) {
+      store.setLicenseInfo(key || null, mail || null, data);
+      return data;
+    } else {
+      store.setLicenseInfo(key || null, mail || null, { valid: false, reason: data.reason });
+      return { valid: false, reason: data.reason || "Ongeldige licentie." };
+    }
+  } catch (err: any) {
+    const cached = store.get().licenseStatus;
+    if (cached && cached.valid) {
+      return cached;
+    }
+    return { valid: false, reason: "Kan licentieserver niet bereiken: " + (err.message || err) };
+  }
+}
+
 ipcMain.handle("bromeo:get-config", () => {
   const cfg = store.get();
   return {
@@ -455,6 +505,23 @@ ipcMain.handle("bromeo:get-config", () => {
     curtainModeEnabled: cfg.curtainModeEnabled,
     totpEnabled: cfg.totpEnabled,
     sessionPassword,
+    licenseKey: cfg.licenseKey,
+    licenseEmail: cfg.licenseEmail,
+    licenseStatus: cfg.licenseStatus,
+  };
+});
+
+ipcMain.handle("bromeo:verify-license", (_e, key?: string, email?: string) => {
+  return verifyClientLicense(key, email);
+});
+
+ipcMain.handle("bromeo:get-license-status", () => {
+  const cfg = store.get();
+  return {
+    licenseKey: cfg.licenseKey,
+    licenseEmail: cfg.licenseEmail,
+    licenseStatus: cfg.licenseStatus,
+    hwid: getClientHwid(),
   };
 });
 

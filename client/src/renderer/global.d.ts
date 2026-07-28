@@ -28,6 +28,8 @@ export interface MiniControllerState {
 
 export interface BromeoBridge {
   getConfig(): Promise<BromeoConfig>;
+  verifyLicense(key?: string, email?: string): Promise<{ valid: boolean; plan?: string; expiresAt?: string | null; reason?: string; features?: any }>;
+  getLicenseStatus(): Promise<{ licenseKey: string | null; licenseEmail: string | null; licenseStatus: any; hwid: string }>;
   setUnattended(enabled: boolean, password: string | null): Promise<{ unattendedEnabled: boolean; hasUnattendedPassword: boolean }>;
   checkPassword(
     passwordHash: string,

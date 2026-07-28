@@ -45,42 +45,55 @@ function protectForStorage(normalizedDeviceId) {
  * @param {string} userId - The user's database UUID
  * @returns {Promise<string>} The checkout URL
  */
-async function createSubscriptionCheckout(email, userId) {
+async function createSubscriptionCheckout(email, userId, plan = 'Pro') {
   if (!mollieClient) {
-    throw new Error('Mollie is not configured. MOLLIE_API_KEY is missing.');
+    throw new Error('Mollie is niet geconfigureerd op de server. MOLLIE_API_KEY ontbreekt.');
   }
 
-  // 1. Create or get Mollie Customer (simplified for this demo)
+  const prices = {
+    Pro: '7.95',
+    Unlimited: '50.00'
+  };
+
+  const amountValue = prices[plan] || '7.95';
+  const planName = plan === 'Unlimited' ? 'Unlimited (€50,00/mnd)' : 'Pro (€7,95/mnd)';
+
   const customer = await mollieClient.customers.create({
-    name: 'BromeoRemote User',
+    name: 'BromeoRemote Gebruiker',
     email: email,
     metadata: { userId }
   });
 
-  // 2. Create the first mandate payment (recurring-first)
-  // According to Mollie, to start a subscription you first need a valid mandate.
-  // We do a small first payment or direct checkout.
   const payment = await mollieClient.payments.create({
     amount: {
-      value: '19.00',
+      value: amountValue,
       currency: 'EUR'
     },
     customerId: customer.id,
     sequenceType: 'first',
-    description: 'BromeoRemote Professional (1e maand)',
-    redirectUrl: (process.env.BASE_URL || 'http://localhost:3000') + '/dashboard?payment=success',
-    webhookUrl: (process.env.BASE_URL || 'http://localhost:3000') + '/api/webhooks/mollie',
+    description: `BromeoRemote ${planName}`,
+    redirectUrl: (process.env.PUBLIC_BASE_URL || 'http://localhost:3000') + '/dashboard.html?payment=success',
+    webhookUrl: (process.env.PUBLIC_BASE_URL || 'http://localhost:3000') + '/api/webhooks/mollie',
     metadata: {
       userId: userId,
-      plan: 'Professional'
+      plan: plan
     }
   });
 
   return payment.getCheckoutUrl();
 }
 
+const { verifyLicenseInDb } = require('./database');
+
+async function verifyLicense({ licenseKey, email, hwid, platform, appVersion, ipAddress }) {
+  const normHwid = normalizeDeviceId(hwid);
+  const hwidHash = normHwid ? protectForStorage(normHwid) : null;
+  return verifyLicenseInDb({ licenseKey, email, hwidHash, platform, appVersion, ipAddress });
+}
+
 module.exports = {
   normalizeDeviceId,
   protectForStorage,
-  createSubscriptionCheckout
+  createSubscriptionCheckout,
+  verifyLicense,
 };

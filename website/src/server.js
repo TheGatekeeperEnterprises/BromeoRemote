@@ -13,6 +13,9 @@ const {
   saveDownloadEvent,
   saveNewsletterSignup,
   recordSessionEvent,
+  userRegister,
+  userLogin,
+  userGetPortalData,
 } = require("./database");
 const { sendContactNotification } = require("./mailer");
 const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
@@ -258,17 +261,99 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
   }
 });
 
-const { createSubscriptionCheckout } = require("./licensing");
+const { createSubscriptionCheckout, verifyLicense } = require("./licensing");
+
+app.post("/api/license/verify", apiLimiter, async (req, res, next) => {
+  try {
+    const { licenseKey, email, hwid, platform, appVersion } = req.body;
+    const ipAddress = req.ip;
+    const result = await verifyLicense({ licenseKey, email, hwid, platform, appVersion, ipAddress });
+    if (!result.valid) {
+      return res.status(403).json(result);
+    }
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ── User Portal Auth API ───────────────────────────────────────────────────────
+app.post("/api/user/register", contactLimiter, async (req, res, next) => {
+  try {
+    const { email, password, company } = req.body;
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ ok: false, error: "Een geldig e-mailadres is verplicht." });
+    }
+    if (!password || password.length < 6) {
+      return res.status(400).json({ ok: false, error: "Wachtwoord moet minimaal 6 tekens bevatten." });
+    }
+
+    const { user, license } = await userRegister({ email, password, company });
+    req.session.userId = user.id;
+    req.session.userEmail = user.email;
+    res.json({ ok: true, user, license });
+  } catch (error) {
+    if (error.message && error.message.includes("al een account")) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+    next(error);
+  }
+});
+
+app.post("/api/user/login", contactLimiter, async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ ok: false, error: "E-mailadres en wachtwoord zijn verplicht." });
+    }
+
+    const data = await userLogin({ email, password });
+    if (!data) {
+      return res.status(401).json({ ok: false, error: "Onjuiste e-mail of wachtwoord." });
+    }
+
+    req.session.userId = data.user.id;
+    req.session.userEmail = data.user.email;
+    res.json({ ok: true, ...data });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/user/logout", (req, res) => {
+  req.session.destroy(() => res.json({ ok: true }));
+});
+
+app.get("/api/user/me", async (req, res, next) => {
+  try {
+    if (!req.session || !req.session.userId) {
+      return res.status(401).json({ ok: false, error: "Niet ingelogd." });
+    }
+    const data = await userGetPortalData(req.session.userId);
+    if (!data) {
+      return res.status(404).json({ ok: false, error: "Gebruiker niet gevonden." });
+    }
+    res.json({ ok: true, ...data });
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.post("/api/checkout", apiLimiter, async (req, res, next) => {
   try {
-    const { email } = req.body;
-    if (!email || !email.includes("@")) {
-      return res.status(400).json({ ok: false, error: "Geldig e-mailadres is verplicht." });
+    const plan = req.body.plan === "Unlimited" ? "Unlimited" : "Pro";
+    let email = req.body.email;
+    let userId = req.session && req.session.userId ? req.session.userId : "00000000-0000-0000-0000-000000000000";
+
+    if (!email && req.session && req.session.userEmail) {
+      email = req.session.userEmail;
     }
-    // TODO: Link with real users table, for now we pass a dummy user UUID
-    const dummyUserId = "00000000-0000-0000-0000-000000000000";
-    const checkoutUrl = await createSubscriptionCheckout(email, dummyUserId);
+
+    if (!email || !email.includes("@")) {
+      return res.status(400).json({ ok: false, error: "Geldig e-mailadres is verplicht om af te rekenen." });
+    }
+
+    const checkoutUrl = await createSubscriptionCheckout(email, userId, plan);
     res.json({ ok: true, url: checkoutUrl });
   } catch (error) {
     next(error);

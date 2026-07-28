@@ -3718,8 +3718,73 @@ function resetMicrophoneState(): void {
   el.voiceAudio.srcObject = null;
 }
 
+async function initLicenseSection(): Promise<void> {
+  const emailInput = document.getElementById("license-email-input") as HTMLInputElement | null;
+  const keyInput = document.getElementById("license-key-input") as HTMLInputElement | null;
+  const verifyBtn = document.getElementById("license-verify-btn") as HTMLButtonElement | null;
+  const statusText = document.getElementById("license-status-text") as HTMLElement | null;
+
+  if (!emailInput || !keyInput || !verifyBtn || !statusText) return;
+
+  if (window.bromeo?.getLicenseStatus) {
+    try {
+      const info = await window.bromeo.getLicenseStatus();
+      if (info.licenseEmail) emailInput.value = info.licenseEmail;
+      if (info.licenseKey) keyInput.value = info.licenseKey;
+
+      if (info.licenseStatus) {
+        if (info.licenseStatus.valid) {
+          statusText.style.color = "#0be881";
+          statusText.textContent = `Licentiestatus: Actief (${info.licenseStatus.plan || "Free"}) — HWID: ${info.hwid.slice(0, 12)}...`;
+        } else {
+          statusText.style.color = "#ff4d6d";
+          statusText.textContent = `Licentiestatus: ${info.licenseStatus.reason || "Ongeldig"}`;
+        }
+      } else {
+        statusText.textContent = `Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).`;
+      }
+    } catch {
+      statusText.textContent = `Licentiestatus: Standaard Gratis (15 min per sessie).`;
+    }
+  }
+
+  verifyBtn.onclick = async () => {
+    const email = emailInput.value.trim();
+    const key = keyInput.value.trim();
+    if (!email && !key) {
+      toast("Vul een e-mailadres of licentiesleutel in.");
+      return;
+    }
+
+    verifyBtn.disabled = true;
+    verifyBtn.textContent = "Controleren...";
+    statusText.style.color = "#8898aa";
+    statusText.textContent = "Licentie wordt gecontroleerd bij bromeoremote.com...";
+
+    try {
+      const res = await window.bromeo.verifyLicense(key, email);
+      if (res.valid) {
+        statusText.style.color = "#0be881";
+        statusText.textContent = `✅ Licentie Geactiveerd! Plan: ${res.plan || "Pro"}`;
+        toast(`Licentie succesvol geactiveerd voor ${res.userEmail || email}!`);
+      } else {
+        statusText.style.color = "#ff4d6d";
+        statusText.textContent = `❌ ${res.reason || "Licentie controle mislukt."}`;
+        toast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
+      }
+    } catch (err: any) {
+      statusText.style.color = "#ff4d6d";
+      statusText.textContent = `❌ Fout bij verbinden: ${err.message || err}`;
+    } finally {
+      verifyBtn.disabled = false;
+      verifyBtn.textContent = "Licentie Controleren & Activeren";
+    }
+  };
+}
+
 function wireVoiceIntercom(): void {
   el.voiceToggleBtn.onclick = () => void toggleMicrophone();
+  void initLicenseSection();
 }
 
 init().catch((err) => console.error("init failed", err));

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BromeoRemote | Gebruikers Dashboard & Licenties</title>
+  <link rel="icon" href="/assets/icon.png">
+  <link rel="stylesheet" href="/styles.css?v=20260729">
+  <style>
+    body { background: #0b1425; color: #e8edf5; min-height: 100vh; display: flex; flex-direction: column; }
+    .portal-container { max-width: 900px; margin: 3rem auto; padding: 0 1.5rem; flex: 1; width: 100%; }
+    .portal-card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 2.5rem; backdrop-filter: blur(20px); }
+    .portal-header { text-align: center; margin-bottom: 2rem; }
+    .portal-header img { height: 40px; margin-bottom: 1rem; }
+    .portal-header h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    .portal-header p { color: #8898aa; font-size: 0.95rem; }
+
+    /* Tabs for Auth */
+    .auth-tabs { display: flex; gap: 1rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .tab-btn { background: none; border: none; color: #8898aa; padding: 0.75rem 1.25rem; font-size: 1rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab-btn.active { color: #0be881; border-bottom-color: #0be881; }
+
+    .form-group { margin-bottom: 1.25rem; text-align: left; }
+    .form-group label { display: block; font-size: 0.8rem; color: #8898aa; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 0.8rem 1rem; color: #e8edf5; font-size: 0.95rem; outline: none; }
+    .form-group input:focus { border-color: #0be881; }
+    
+    .btn-submit { width: 100%; background: #0be881; color: #0b1425; border: none; border-radius: 10px; padding: 0.9rem; font-size: 1rem; font-weight: 700; cursor: pointer; transition: opacity 0.2s; margin-top: 0.5rem; }
+    .btn-submit:hover { opacity: 0.9; }
+
+    /* Dashboard view */
+    .dashboard-view { display: none; }
+    .license-box { background: rgba(11,232,129,0.08); border: 1px solid rgba(11,232,129,0.3); border-radius: 14px; padding: 1.5rem; margin-bottom: 2rem; position: relative; }
+    .license-key { font-family: monospace; font-size: 1.25rem; font-weight: 700; color: #0be881; letter-spacing: 1px; word-break: break-all; margin: 0.5rem 0; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .copy-btn { background: #0be881; color: #0b1425; border: none; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 700; cursor: pointer; flex-shrink: 0; }
+    
+    .plans-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-top: 2rem; }
+    .plan-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 1.75rem; text-align: left; }
+    .plan-card.active-plan { border-color: #0be881; background: rgba(11,232,129,0.05); }
+    .plan-price { font-size: 1.75rem; font-weight: 700; color: #e8edf5; margin: 0.5rem 0; }
+    .plan-price span { font-size: 0.9rem; color: #8898aa; font-weight: 400; }
+    
+    .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; }
+    .badge-green { background: rgba(11,232,129,0.2); color: #0be881; }
+    .badge-cyan { background: rgba(14,165,183,0.2); color: #0ea5b7; }
+    .badge-gray { background: rgba(255,255,255,0.1); color: #8898aa; }
+
+    .instructions-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem; margin-top: 2rem; text-align: left; }
+    .instructions-box h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #0be881; }
+    .instructions-box ol { margin-left: 1.25rem; font-size: 0.9rem; color: #8898aa; }
+    .instructions-box li { margin-bottom: 0.4rem; }
+
+    .error-msg { color: #ff4d6d; font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+    .user-bar { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem; margin-bottom: 1.5rem; }
+    .logout-link { color: #ff4d6d; font-size: 0.9rem; cursor: pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header class="site-header" style="background: transparent;">
+    <a class="brand" href="/">
+      <img src="/assets/logo2.png" alt="BromeoRemote">
+    </a>
+    <a class="header-cta" href="/">← Terug naar website</a>
+  </header>
+
+  <div class="portal-container">
+    <div class="portal-card">
+
+      <!-- AUTH VIEW (UNAUTHENTICATED) -->
+      <div id="authView">
+        <div class="portal-header">
+          <img src="/assets/logo2.png" alt="BromeoRemote">
+          <h1>Mijn BromeoRemote Account</h1>
+          <p>Meld je aan of maak een gratis account aan om je licentiesleutel te bekijken en te beheren.</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button class="tab-btn active" id="tabLoginBtn" onclick="showTab('login')">Inloggen</button>
+          <button class="tab-btn" id="tabRegisterBtn" onclick="showTab('register')">Account Aanmaken (Gratis)</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail">E-mailadres</label>
+            <input type="email" id="loginEmail" required placeholder="jouw@email.nl">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Wachtwoord</label>
+            <input type="password" id="loginPassword" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit" id="btnAuthSubmit">Inloggen</button>
+          <p class="error-msg" id="authError" hidden></p>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="registerForm" style="display: none;">
+          <div class="form-group">
+            <label for="regEmail">E-mailadres *</label>
+            <input type="email" id="regEmail" required placeholder="jouw@email.nl">
+          </div>
+          <div class="form-group">
+            <label for="regCompany">Bedrijfsnaam (optioneel)</label>
+            <input type="text" id="regCompany" placeholder="Bedrijf B.V.">
+          </div>
+          <div class="form-group">
+            <label for="regPassword">Wachtwoord (min. 6 tekens) *</label>
+            <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit">Gratis Account Aanmaken</button>
+          <p class="error-msg" id="regError" hidden></p>
+        </form>
+      </div>
+
+      <!-- DASHBOARD VIEW (AUTHENTICATED) -->
+      <div id="dashboardView" class="dashboard-view">
+        <div class="user-bar">
+          <div>
+            <span style="color:#8898aa; font-size:0.85rem;">Ingelogd als:</span>
+            <strong id="userEmailDisplay" style="margin-left:0.5rem; color:#e8edf5;">-</strong>
+          </div>
+          <span class="logout-link" onclick="logoutUser()">Uitloggen</span>
+        </div>
+
+        <h2 style="font-size:1.4rem; margin-bottom:0.5rem; text-align:left;">Mijn Licentiesleutel</h2>
+        <p style="color:#8898aa; font-size:0.9rem; text-align:left; margin-bottom:1.5rem;">
+          Vul dit e-mailadres en onderstaande licentiesleutel in bij de BromeoRemote software om je licentie en functies te activeren.
+        </p>
+
+        <div class="license-box">
+          <span style="font-size:0.75rem; color:#8898aa; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Licentiesleutel (UUID)</span>
+          <div class="license-key">
+            <span id="licenseKeyDisplay">Laden...</span>
+            <button class="copy-btn" onclick="copyLicenseKey()">Kopiëren</button>
+          </div>
+          <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center;">
+            <span class="badge badge-green" id="planBadge">GRATIS</span>
+            <span style="font-size:0.85rem; color:#8898aa;" id="expiresDisplay">Permanente gratis licentie</span>
+          </div>
+        </div>
+
+        <h3 style="font-size:1.2rem; text-align:left; margin-top:2.5rem; margin-bottom:0.5rem;">Licentie Upgraden</h3>
+        <p style="color:#8898aa; font-size:0.9rem; text-align:left;">
+          Standaard is de software gratis. Upgrade voor onbeperkte sessieduur of extra functies zoals AI Buddy.
+        </p>
+
+        <div class="plans-grid">
+          <div class="plan-card" id="planCardFree">
+            <span class="badge badge-gray">Huidig / Basis</span>
+            <h4 style="font-size:1.1rem; margin-top:0.5rem;">Gratis</h4>
+            <div class="plan-price">€0 <span>/mnd</span></div>
+            <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem;">
+              <li>Remote desktop besturing</li>
+              <li>Max. 15 min per sessie</li>
+              <li>Standaard beeldkwaliteit</li>
+            </ul>
+          </div>
+
+          <div class="plan-card" id="planCardPro">
+            <span class="badge badge-green">Meest Gekozen</span>
+            <h4 style="font-size:1.1rem; margin-top:0.5rem;">Pro</h4>
+            <div class="plan-price">€7,95 <span>/mnd</span></div>
+            <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
+              <li><strong>Onbeperkte sessieduur</strong></li>
+              <li>Bestandsoverdracht &amp; Chat</li>
+              <li>HWID Hardware-beveiliging</li>
+              <li>Multi-monitor &amp; gordijnmodus</li>
+            </ul>
+            <button class="btn-submit" style="background:#0be881;" onclick="startCheckout('Pro')">Upgraden naar Pro (€7,95/mnd)</button>
+          </div>
+
+          <div class="plan-card" id="planCardUnlimited">
+            <span class="badge badge-cyan">Unlimited</span>
+            <h4 style="font-size:1.1rem; margin-top:0.5rem;">Unlimited</h4>
+            <div class="plan-price">€50 <span>/mnd</span></div>
+            <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
+              <li><strong>Onbeperkt apparaten &amp; sessies</strong></li>
+              <li><strong>AI Buddy assistent ingebouwd</strong></li>
+              <li>Onbeheerde toegang met 2FA</li>
+              <li>Prioriteitsondersteuning</li>
+            </ul>
+            <button class="btn-submit" style="background:#0ea5b7; color:#fff;" onclick="startCheckout('Unlimited')">Upgraden naar Unlimited (€50,00/mnd)</button>
+          </div>
+        </div>
+
+        <div class="instructions-box">
+          <h3>💡 Hoe activeer je de licentie in de BromeoRemote software?</h3>
+          <ol>
+            <li>Open de BromeoRemote software op je computer.</li>
+            <li>Ga naar de <strong>Instellingen / Licentie</strong> pagina in het menu.</li>
+            <li>Vul jouw e-mailadres (<code><span class="current-user-email">jouw@email.nl</span></code>) en je **Licentiesleutel** in.</li>
+            <li>Klik op <strong>Licentie Controleren & Activeren</strong>. De functies en sessieduur worden direct ontgrendeld!</li>
+          </ol>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let activeLicenseKey = "";
+
+    function showTab(tab) {
+      document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegisterBtn').classList.toggle('active', tab === 'register');
+      document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+      document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+      document.getElementById('authError').hidden = true;
+      document.getElementById('regError').hidden = true;
+    }
+
+    async function checkAuth() {
+      try {
+        const res = await fetch('/api/user/me');
+        const data = await res.json();
+        if (data.ok) {
+          renderDashboard(data.user, data.licenses);
+        } else {
+          document.getElementById('authView').style.display = 'block';
+          document.getElementById('dashboardView').style.display = 'none';
+        }
+      } catch {
+        document.getElementById('authView').style.display = 'block';
+        document.getElementById('dashboardView').style.display = 'none';
+      }
+    }
+
+    function renderDashboard(user, licenses) {
+      document.getElementById('authView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+      document.getElementById('userEmailDisplay').textContent = user.email;
+      document.querySelectorAll('.current-user-email').forEach(el => el.textContent = user.email);
+
+      const activeLic = (licenses && licenses.length > 0) ? licenses[0] : null;
+      if (activeLic) {
+        activeLicenseKey = activeLic.id;
+        document.getElementById('licenseKeyDisplay').textContent = activeLic.id;
+        document.getElementById('planBadge').textContent = (activeLic.plan || 'Free').toUpperCase();
+        
+        if (activeLic.expires_at) {
+          document.getElementById('expiresDisplay').textContent = `Geldig tot ${new Date(activeLic.expires_at).toLocaleDateString('nl-NL')}`;
+        } else {
+          document.getElementById('expiresDisplay').textContent = activeLic.plan === 'Free' ? 'Permanente gratis licentie' : 'Actief abonnement';
+        }
+      } else {
+        document.getElementById('licenseKeyDisplay').textContent = 'Geen licentie gevonden';
+      }
+
+      // Check URL query parameters for auto-checkout trigger
+      const urlParams = new URLSearchParams(window.location.search);
+      const planParam = urlParams.get('plan');
+      if (planParam === 'Pro' || planParam === 'Unlimited') {
+        history.replaceState({}, '', '/dashboard.html');
+        startCheckout(planParam);
+      }
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('authError');
+      err.hidden = true;
+      try {
+        const res = await fetch('/api/user/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('loginEmail').value,
+            password: document.getElementById('loginPassword').value
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          renderDashboard(data.user, data.licenses);
+        } else {
+          err.textContent = data.error || 'Inloggen mislukt.';
+          err.hidden = false;
+        }
+      } catch {
+        err.textContent = 'Serverfout. Probeer opnieuw.';
+        err.hidden = false;
+      }
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const err = document.getElementById('regError');
+      err.hidden = true;
+      try {
+        const res = await fetch('/api/user/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: document.getElementById('regEmail').value,
+            company: document.getElementById('regCompany').value,
+            password: document.getElementById('regPassword').value
+          })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          renderDashboard(data.user, [data.license]);
+        } else {
+          err.textContent = data.error || 'Registratie mislukt.';
+          err.hidden = false;
+        }
+      } catch {
+        err.textContent = 'Serverfout. Probeer opnieuw.';
+        err.hidden = false;
+      }
+    });
+
+    async function startCheckout(plan) {
+      try {
+        const res = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan })
+        });
+        const data = await res.json();
+        if (data.ok && data.url) {
+          window.location.href = data.url;
+        } else {
+          alert(data.error || 'Betaling starten mislukt.');
+        }
+      } catch {
+        alert('Serverfout bij starten betaling.');
+      }
+    }
+
+    async function logoutUser() {
+      await fetch('/api/user/logout', { method: 'POST' });
+      window.location.reload();
+    }
+
+    function copyLicenseKey() {
+      if (!activeLicenseKey) return;
+      navigator.clipboard.writeText(activeLicenseKey);
+      alert('Licentiesleutel gecopieerd naar klembord!');
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>

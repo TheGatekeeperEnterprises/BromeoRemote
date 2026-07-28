@@ -106,6 +106,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS users (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       email text NOT NULL UNIQUE,
+      password_hash text,
       company text,
       mollie_customer_id text,
       notes text,
@@ -113,6 +114,7 @@ async function initDatabase() {
       updated_at timestamptz NOT NULL DEFAULT now()
     );
   `);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;`);
 
   // Licenses
   await query(`
@@ -382,6 +384,153 @@ async function recordSessionEvent({ userId, hwidHash, ipAddress, platform, event
   return id;
 }
 
+async function verifyLicenseInDb({ licenseKey, email, hwidHash, platform = "windows", appVersion = "1.0.0", ipAddress = "" }) {
+  if (!licenseKey && !email) {
+    return { valid: false, reason: "Licentiesleutel of e-mailadres is verplicht." };
+  }
+
+  if (!databaseEnabled()) {
+    return { valid: true, plan: "Trial (Offline)", status: "Active", isTrial: true, expiresAt: null };
+  }
+
+  let queryText = `
+    SELECT l.*, u.email as user_email
+    FROM licenses l
+    JOIN users u ON u.id = l.user_id
+    WHERE 
+  `;
+  const params = [];
+
+  if (licenseKey) {
+    queryText += ` l.id::text = $1`;
+    params.push(licenseKey.trim());
+  } else {
+    queryText += ` u.email = $1`;
+    params.push(email.trim().toLowerCase());
+  }
+
+  queryText += ` ORDER BY l.created_at DESC LIMIT 1`;
+
+  const res = await query(queryText, params);
+  if (!res || res.rows.length === 0) {
+    return { valid: false, reason: "Geen geldige licentie gevonden voor deze sleutel/e-mail." };
+  }
+
+  const license = res.rows[0];
+
+  if (license.status === "Blocked") {
+    return { valid: false, reason: "Deze licentie is geblokkeerd. Neem contact op met de beheerder." };
+  }
+
+  if (license.expires_at && new Date(license.expires_at) < new Date()) {
+    await query("UPDATE licenses SET status = 'Expired', updated_at = now() WHERE id = $1", [license.id]);
+    return { valid: false, reason: "Deze licentie is verlopen." };
+  }
+
+  if (license.status === "Expired") {
+    return { valid: false, reason: "Deze licentie is verlopen." };
+  }
+
+  if (hwidHash) {
+    if (!license.hwid_hash) {
+      await query("UPDATE licenses SET hwid_hash = $1, updated_at = now() WHERE id = $2", [hwidHash, license.id]);
+    } else if (license.hwid_hash !== hwidHash) {
+      return {
+        valid: false,
+        reason: "Licentie is al op een ander apparaat geactiveerd. Vraag een HWID-reset aan bij de beheerder."
+      };
+    }
+  }
+
+  await recordSessionEvent({
+    userId: license.user_id,
+    hwidHash: hwidHash || license.hwid_hash,
+    ipAddress,
+    platform,
+    eventType: "license_check",
+    appVersion,
+  });
+
+  const isUnlimited = license.plan === "Unlimited" || license.plan === "Enterprise";
+  const isPro = license.plan === "Pro" || license.plan === "Professional" || isUnlimited;
+  const isFree = !isPro;
+
+  const features = {
+    sessionLimitMinutes: isFree ? 15 : null,
+    allowFileTransfer: isPro,
+    allowAiBuddy: isUnlimited,
+  };
+
+  return {
+    valid: true,
+    licenseId: license.id,
+    plan: license.plan,
+    status: license.status,
+    isTrial: license.is_trial,
+    expiresAt: license.expires_at,
+    userEmail: license.user_email,
+    features,
+  };
+}
+
+async function userRegister({ email, password, company = "" }) {
+  const bcrypt = require("bcrypt");
+  const cleanEmail = email.trim().toLowerCase();
+
+  const existing = await query("SELECT id FROM users WHERE email = $1", [cleanEmail]);
+  if (existing && existing.rows.length > 0) {
+    throw new Error("Er bestaat al een account met dit e-mailadres.");
+  }
+
+  const hash = await bcrypt.hash(password, 12);
+  const userRes = await query(
+    "INSERT INTO users (email, password_hash, company) VALUES ($1, $2, $3) RETURNING id, email, company, created_at",
+    [cleanEmail, hash, company || null]
+  );
+  const user = userRes.rows[0];
+
+  const licRes = await query(
+    "INSERT INTO licenses (user_id, plan, status, is_trial, notes) VALUES ($1, 'Free', 'Active', false, 'Standaard gratis account licentie') RETURNING *",
+    [user.id]
+  );
+  const license = licRes.rows[0];
+
+  return { user, license };
+}
+
+async function userLogin({ email, password }) {
+  const bcrypt = require("bcrypt");
+  const cleanEmail = email.trim().toLowerCase();
+
+  const res = await query("SELECT * FROM users WHERE email = $1", [cleanEmail]);
+  if (!res || res.rows.length === 0) return null;
+
+  const user = res.rows[0];
+  if (!user.password_hash) return null;
+
+  const match = await bcrypt.compare(password, user.password_hash);
+  if (!match) return null;
+
+  const licensesRes = await query("SELECT * FROM licenses WHERE user_id = $1 ORDER BY created_at DESC", [user.id]);
+
+  return {
+    user: { id: user.id, email: user.email, company: user.company },
+    licenses: licensesRes ? licensesRes.rows : [],
+  };
+}
+
+async function userGetPortalData(userId) {
+  const userRes = await query("SELECT id, email, company, created_at FROM users WHERE id = $1", [userId]);
+  if (!userRes || userRes.rows.length === 0) return null;
+
+  const licensesRes = await query("SELECT * FROM licenses WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
+
+  return {
+    user: userRes.rows[0],
+    licenses: licensesRes ? licensesRes.rows : [],
+  };
+}
+
 module.exports = {
   closeDatabase,
   databaseEnabled,
@@ -390,6 +539,10 @@ module.exports = {
   saveContactRequest,
   saveDownloadEvent,
   saveNewsletterSignup,
+  // User Portal Auth
+  userRegister,
+  userLogin,
+  userGetPortalData,
   // Admin
   adminGetStats,
   adminGetUsers,
@@ -401,5 +554,6 @@ module.exports = {
   adminGetSessions,
   adminVerifyLogin,
   recordSessionEvent,
+  verifyLicenseInDb,
   getPool,
 };

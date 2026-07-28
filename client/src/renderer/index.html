@@ -438,6 +438,27 @@
               <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
             </div>
           </article>
+
+          <article class="tool-panel" style="grid-column: 1 / -1;">
+            <div class="tool-panel-header">
+              <h3>Licentie & Account Activeer</h3>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg licentie">i<span class="info-tooltip">Vul het e-mailadres en de licentiesleutel in van jouw BromeoRemote account voor directe activatie en onbeperkte sessies.</span></span>
+            </div>
+            <div class="field-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+              <div class="field compact-field">
+                <label>E-mailadres</label>
+                <input id="license-email-input" class="input" type="email" placeholder="jouw@email.nl" />
+              </div>
+              <div class="field compact-field">
+                <label>Licentiesleutel (UUID)</label>
+                <input id="license-key-input" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+              </div>
+            </div>
+            <div class="value-row" style="margin-top:0.75rem;">
+              <button id="license-verify-btn" class="btn btn-primary btn-sm">Licentie Controleren &amp; Activeren</button>
+            </div>
+            <p id="license-status-text" class="muted small" style="margin-top:0.5rem; font-weight:600;">Licentiestatus: Wordt gecontroleerd...</p>
+          </article>
         </div>
       </section>
     </div>

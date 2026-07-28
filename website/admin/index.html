@@ -27,9 +27,9 @@
       border-right: 1px solid var(--border); display: flex; flex-direction: column;
       position: fixed; top: 0; left: 0; bottom: 0; z-index: 100;
     }
-    .sidebar-logo { padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; }
-    .sidebar-logo img { height: 28px; }
-    .sidebar-logo span { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+    .sidebar-logo { padding: 1.5rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.75rem; overflow: hidden; }
+    .sidebar-logo img { height: 28px; max-width: 130px; object-fit: contain; }
+    .sidebar-logo span { font-size: 0.7rem; color: var(--accent); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; white-space: nowrap; }
     .sidebar nav { flex: 1; padding: 1rem 0; }
     .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; cursor: pointer; font-size: 0.9rem; color: var(--muted); transition: all 0.15s; border-left: 3px solid transparent; }
     .nav-item:hover { color: var(--text); background: rgba(255,255,255,0.04); }
@@ -348,7 +348,7 @@ let searchTimer;
 let currentUserId = null;
 
 // ── Navigation ────────────────────────────────────────────────────────────────
-function navigate(page, id) {
+function navigate(page, id, push = true) {
   document.querySelectorAll('[id^="page-"]').forEach(p => p.classList.add('page-hidden'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   const nav = document.querySelector(`[data-page="${page === 'user-detail' ? 'users' : page}"]`);
@@ -356,12 +356,35 @@ function navigate(page, id) {
   const el = document.getElementById(`page-${page}`);
   if (el) el.classList.remove('page-hidden');
   currentPage = page;
-  history.pushState({}, '', page === 'dashboard' ? '/admin' : page === 'user-detail' ? `/admin/users/${id}` : `/admin/${page}`);
+  
+  if (push) {
+    const targetUrl = page === 'dashboard' ? '/admin' : page === 'user-detail' ? `/admin/users/${id}` : `/admin/${page}`;
+    if (window.location.pathname !== targetUrl) {
+      history.pushState({}, '', targetUrl);
+    }
+  }
+
   if (page === 'dashboard') loadStats();
   if (page === 'users') loadUsers();
   if (page === 'user-detail' && id) loadUserDetail(id);
   if (page === 'sessions') loadSessions();
 }
+
+function handleRoute() {
+  const path = window.location.pathname.replace(/\/$/, '');
+  if (path === '/admin/users') {
+    navigate('users', null, false);
+  } else if (path.startsWith('/admin/users/')) {
+    const parts = path.split('/');
+    navigate('user-detail', parts[3], false);
+  } else if (path === '/admin/sessions') {
+    navigate('sessions', null, false);
+  } else {
+    navigate('dashboard', null, false);
+  }
+}
+
+window.addEventListener('popstate', handleRoute);
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
 async function init() {
@@ -370,7 +393,7 @@ async function init() {
     const data = await res.json();
     if (!data.ok) { window.location.href = '/admin/login'; return; }
     document.getElementById('adminEmail').textContent = data.email;
-    navigate('dashboard');
+    handleRoute();
   } catch { window.location.href = '/admin/login'; }
 }
 

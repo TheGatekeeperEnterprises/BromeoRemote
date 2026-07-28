@@ -211,6 +211,27 @@ export class PeerSession {
         this.clearDisconnectTimer();
         this.startStatsLoop();
         this.startIceRefreshLoop();
+
+        if ((window as any).bromeo?.getLicenseStatus) {
+          (window as any).bromeo.getLicenseStatus().then((status: any) => {
+            const sessionLimitMinutes = status?.licenseStatus?.features?.sessionLimitMinutes ?? 15;
+            if (sessionLimitMinutes && sessionLimitMinutes > 0) {
+              const ms = sessionLimitMinutes * 60 * 1000;
+              console.log(`[License] Gratis sessielimiet geactiveerd: ${sessionLimitMinutes} minuten`);
+
+              if (ms > 60000) {
+                setTimeout(() => {
+                  alert(`Let op: Jouw gratis sessie verloopt over 1 minuut. Neem een Pro licentie op bromeoremote.com voor onbeperkte duur!`);
+                }, ms - 60000);
+              }
+
+              setTimeout(() => {
+                alert(`Sessie beëindigd: De gratis limiet van ${sessionLimitMinutes} minuten is bereikt. Neem een Pro licentie (€7,95/mnd) voor onbeperkte sessies.`);
+                this.close();
+              }, ms);
+            }
+          }).catch(() => {});
+        }
       } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
         // "failed" (never reached "connected" at all — e.g. this machine's
         // TURN allocate silently failing, see docs/WEBRTC-TURN-DEBUGGING.md

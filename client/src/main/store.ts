@@ -32,6 +32,9 @@ export interface StoreData {
   // timestamp — device ids already travel in plaintext over signaling), so
   // unlike savedDevices/totpSecret this isn't safeStorage-encrypted.
   trustedDevices: { id: string; label: string; trustedUntil: number }[];
+  licenseKey: string | null;
+  licenseEmail: string | null;
+  licenseStatus: { valid: boolean; plan?: string; expiresAt?: string | null; reason?: string } | null;
 }
 
 function randomDeviceId(): string {
@@ -90,6 +93,9 @@ class Store {
           totpSecretEncrypted: raw.totpSecretEncrypted ?? null,
           openaiApiKeyEncrypted: raw.openaiApiKeyEncrypted ?? null,
           trustedDevices: Array.isArray(raw.trustedDevices) ? raw.trustedDevices : [],
+          licenseKey: raw.licenseKey ?? null,
+          licenseEmail: raw.licenseEmail ?? null,
+          licenseStatus: raw.licenseStatus ?? null,
         };
       } catch {
         // fall through to defaults on corrupt file
@@ -108,6 +114,9 @@ class Store {
       totpSecretEncrypted: null,
       openaiApiKeyEncrypted: null,
       trustedDevices: [],
+      licenseKey: null,
+      licenseEmail: null,
+      licenseStatus: null,
     };
   }
 
@@ -125,6 +134,13 @@ class Store {
     this.data = { ...this.data, ...partial };
     this.save();
     return this.get();
+  }
+
+  setLicenseInfo(key: string | null, email: string | null, status: any): void {
+    this.data.licenseKey = key;
+    this.data.licenseEmail = email;
+    this.data.licenseStatus = status;
+    this.save();
   }
 
   // Saved devices are decrypted lazily (never in the constructor): safeStorage
