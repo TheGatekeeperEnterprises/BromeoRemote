@@ -1,3 +1,4 @@
+const fs = require("fs");
 const express = require("express");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
@@ -60,7 +61,19 @@ function requireAuth(req, res, next) {
 }
 
 // ── Serve admin HTML ─────────────────────────────────────────────────────────
-const adminDir = path.join(__dirname, "..", "admin");
+function getAdminDir() {
+  const candidates = [
+    path.join(__dirname, "..", "admin"),
+    path.join(__dirname, "admin"),
+    path.join(process.cwd(), "admin"),
+    path.join(process.cwd(), "website", "admin"),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(__dirname, "..", "admin");
+}
+const adminDir = getAdminDir();
 
 router.get("/login", (req, res) => {
   if (req.session && req.session.adminId) return res.redirect("/admin");
