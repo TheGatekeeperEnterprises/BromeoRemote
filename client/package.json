@@ -1,7 +1,7 @@
 {
   "name": "bromeoremote",
   "productName": "BromeoRemote",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "description": "BromeoRemote — Access Anywhere. Cross-platform remote desktop access & support.",
   "private": true,
   "main": "dist/main/main.js",
