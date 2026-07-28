@@ -8,16 +8,26 @@ function databaseEnabled() {
   return Boolean(config.databaseUrl);
 }
 
+function getSslConfig() {
+  if (process.env.DB_SSL === "true") return { rejectUnauthorized: false };
+  if (process.env.DB_SSL === "false") return false;
+  if (config.databaseUrl.includes("sslmode=disable")) return false;
+  if (
+    config.databaseUrl.includes("sslmode=require") ||
+    config.databaseUrl.includes("sslmode=no-verify") ||
+    config.databaseUrl.includes("ssl=true")
+  ) {
+    return { rejectUnauthorized: false };
+  }
+  return false;
+}
+
 function getPool() {
   if (!databaseEnabled()) return null;
   if (!pool) {
-    const isProduction = process.env.NODE_ENV === "production" ||
-                         config.databaseUrl.includes("sslmode=require") ||
-                         config.databaseUrl.includes("ssl=true") ||
-                         !config.databaseUrl.includes("localhost");
     pool = new Pool({
       connectionString: config.databaseUrl,
-      ssl: isProduction ? { rejectUnauthorized: false } : false,
+      ssl: getSslConfig(),
       max: 8,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
@@ -41,9 +51,10 @@ async function initDatabase() {
     return;
   }
 
-  // Existing tables
-  await query(`
-    CREATE TABLE IF NOT EXISTS contact_requests (
+  try {
+    // Existing tables
+    await query(`
+      CREATE TABLE IF NOT EXISTS contact_requests (
       id uuid PRIMARY KEY,
       name text NOT NULL,
       email text NOT NULL,
@@ -168,6 +179,9 @@ async function initDatabase() {
 
   // Seed admin account if it doesn't exist
   await seedAdminAccount();
+  } catch (err) {
+    console.error("[Database] Fout bij initialiseren van tabellen:", err.message);
+  }
 }
 
 async function seedAdminAccount() {
