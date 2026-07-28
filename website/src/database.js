@@ -11,11 +11,19 @@ function databaseEnabled() {
 function getPool() {
   if (!databaseEnabled()) return null;
   if (!pool) {
+    const isProduction = process.env.NODE_ENV === "production" ||
+                         config.databaseUrl.includes("sslmode=require") ||
+                         config.databaseUrl.includes("ssl=true") ||
+                         !config.databaseUrl.includes("localhost");
     pool = new Pool({
       connectionString: config.databaseUrl,
+      ssl: isProduction ? { rejectUnauthorized: false } : false,
       max: 8,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
+    });
+    pool.on("error", (err) => {
+      console.error("[Database Pool Error]", err.message);
     });
   }
   return pool;

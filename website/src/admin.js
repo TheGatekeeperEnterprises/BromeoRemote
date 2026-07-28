@@ -21,10 +21,10 @@ const router = express.Router();
 // ── Session middleware ────────────────────────────────────────────────────────
 function createAdminSession() {
   const store = databaseEnabled()
-    ? new pgSession({ pool: getPool(), tableName: "admin_sessions", createTableIfMissing: false })
+    ? new pgSession({ pool: getPool(), tableName: "admin_sessions", createTableIfMissing: true })
     : new session.MemoryStore();
 
-  return session({
+  const sessionMw = session({
     store,
     secret: process.env.SESSION_SECRET || "bromeoremote-admin-secret-change-in-prod",
     resave: false,
@@ -36,6 +36,19 @@ function createAdminSession() {
     },
     name: "br_admin_sid",
   });
+
+  return (req, res, next) => {
+    sessionMw(req, res, (err) => {
+      if (err) {
+        console.error("[Session Error]", err.message);
+        // Do not crash page load if session error occurs
+        if (!req.path.startsWith("/api/")) {
+          return next();
+        }
+      }
+      next(err);
+    });
+  };
 }
 
 function requireAuth(req, res, next) {
