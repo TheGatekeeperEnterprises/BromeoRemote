@@ -20,6 +20,7 @@ const {
 const { sendContactNotification } = require("./mailer");
 const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
 const { router: adminRouter, createAdminSession } = require("./admin");
+const { createUserSession } = require("./userSession");
 
 const app = express();
 const publicDir = path.join(__dirname, "..", "public");
@@ -51,9 +52,11 @@ app.use(compression());
 app.use(express.json({ limit: "32kb" }));
 app.use(express.urlencoded({ extended: false, limit: "32kb" }));
 
-// Admin panel (session + router)
-app.use(createAdminSession());
-app.use("/admin", adminRouter);
+// Separate session middleware per audience — see userSession.js for why this
+// used to be a single global admin session shared with customer logins.
+const userSessionMw = createUserSession();
+app.use((req, res, next) => (req.path.startsWith("/admin") ? next() : userSessionMw(req, res, next)));
+app.use("/admin", createAdminSession(), adminRouter);
 
 const apiLimiter = rateLimit({
   windowMs: 60_000,
@@ -261,7 +264,24 @@ app.get("/download/:platform", apiLimiter, async (req, res, next) => {
   }
 });
 
-const { createSubscriptionCheckout, verifyLicense } = require("./licensing");
+const { createSubscriptionCheckout, handleMollieWebhook, cancelUserSubscription, verifyLicense } = require("./licensing");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+const {
+  setPasswordResetToken,
+  getUserByResetToken,
+  resetUserPassword,
+  regenerateLicenseKey,
+} = require("./database");
+const { sendPasswordResetEmail } = require("./mailer");
+
+function requireUserSession(req, res) {
+  if (!req.session || !req.session.userId) {
+    res.status(401).json({ ok: false, error: "Niet ingelogd." });
+    return null;
+  }
+  return req.session.userId;
+}
 
 app.post("/api/license/verify", apiLimiter, async (req, res, next) => {
   try {
@@ -341,17 +361,13 @@ app.get("/api/user/me", async (req, res, next) => {
 
 app.post("/api/checkout", apiLimiter, async (req, res, next) => {
   try {
+    // A real user account is required now — the transaction/license rows
+    // created during checkout are foreign-keyed to a real users.id, so an
+    // anonymous checkout has nothing valid to attach to.
+    const userId = requireUserSession(req, res);
+    if (!userId) return;
     const plan = req.body.plan === "Unlimited" ? "Unlimited" : "Pro";
-    let email = req.body.email;
-    let userId = req.session && req.session.userId ? req.session.userId : "00000000-0000-0000-0000-000000000000";
-
-    if (!email && req.session && req.session.userEmail) {
-      email = req.session.userEmail;
-    }
-
-    if (!email || !email.includes("@")) {
-      return res.status(400).json({ ok: false, error: "Geldig e-mailadres is verplicht om af te rekenen." });
-    }
+    const email = req.session.userEmail;
 
     const checkoutUrl = await createSubscriptionCheckout(email, userId, plan);
     res.json({ ok: true, url: checkoutUrl });
@@ -360,18 +376,82 @@ app.post("/api/checkout", apiLimiter, async (req, res, next) => {
   }
 });
 
-app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (req, res, next) => {
+app.post("/api/user/cancel-subscription", apiLimiter, async (req, res, next) => {
   try {
-    const paymentId = req.body.id;
-    if (!paymentId) return res.status(400).send("No payment ID");
-    
-    // In production, fetch the payment via mollieClient.payments.get(paymentId)
-    // and update the license / transaction status in the PostgreSQL database.
-    console.log(`[Mollie Webhook] Received status update for payment: ${paymentId}`);
-    
-    res.status(200).send("OK");
+    const userId = requireUserSession(req, res);
+    if (!userId) return;
+    const license = await cancelUserSubscription(userId);
+    res.json({ ok: true, license });
+  } catch (error) {
+    if (error.message && error.message.includes("Geen actief abonnement")) {
+      return res.status(400).json({ ok: false, error: error.message });
+    }
+    next(error);
+  }
+});
+
+app.post("/api/user/regenerate-license-key", apiLimiter, async (req, res, next) => {
+  try {
+    const userId = requireUserSession(req, res);
+    if (!userId) return;
+    const license = await regenerateLicenseKey(userId);
+    res.json({ ok: true, license });
   } catch (error) {
     next(error);
+  }
+});
+
+app.post("/api/user/forgot-password", contactLimiter, async (req, res, next) => {
+  try {
+    const email = String(req.body.email || "").trim().toLowerCase();
+    // Always respond the same way regardless of whether the email exists —
+    // otherwise this endpoint becomes a way to enumerate registered emails.
+    if (email && email.includes("@")) {
+      const token = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+      const user = await setPasswordResetToken(email, tokenHash, expiresAt);
+      if (user) {
+        const resetUrl = `${config.publicBaseUrl}/dashboard.html?resetToken=${token}`;
+        await sendPasswordResetEmail(user.email, resetUrl);
+      }
+    }
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/user/reset-password", contactLimiter, async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+    if (!token || !newPassword || newPassword.length < 6) {
+      return res.status(400).json({ ok: false, error: "Ongeldig verzoek of wachtwoord te kort (min. 6 tekens)." });
+    }
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const user = await getUserByResetToken(tokenHash);
+    if (!user) {
+      return res.status(400).json({ ok: false, error: "Deze resetlink is ongeldig of verlopen." });
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await resetUserPassword(user.id, passwordHash);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (req, res) => {
+  const paymentId = req.body.id;
+  if (!paymentId) return res.status(400).send("No payment ID");
+  try {
+    await handleMollieWebhook(paymentId);
+    res.status(200).send("OK");
+  } catch (error) {
+    // Non-200 makes Mollie retry the webhook later — safe since
+    // handleMollieWebhook is idempotent per mollie_payment_id.
+    console.error("[Mollie Webhook] processing failed:", error.message);
+    res.status(500).send("Webhook processing failed");
   }
 });
 

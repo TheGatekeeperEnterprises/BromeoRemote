@@ -8,14 +8,13 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node src/server.js",
-    "check": "node --check src/config.js && node --check src/database.js && node --check src/mailer.js && node --check src/server.js && node --check src/validation.js"
+    "check": "node --check src/config.js && node --check src/database.js && node --check src/mailer.js && node --check src/server.js && node --check src/validation.js && node --check src/admin.js && node --check src/licensing.js && node --check src/userSession.js"
   },
   "dependencies": {
     "@mollie/api-client": "^4.6.0",
     "bcrypt": "^6.0.0",
     "compression": "^1.7.4",
     "connect-pg-simple": "^10.0.0",
-    "crypto": "^1.0.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",

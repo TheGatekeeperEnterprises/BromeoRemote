@@ -67,4 +67,36 @@ async function sendContactNotification(contact) {
   return true;
 }
 
-module.exports = { sendContactNotification };
+async function sendPasswordResetEmail(email, resetUrl) {
+  const activeTransporter = getTransporter();
+  if (!activeTransporter) {
+    console.warn(`SMTP is niet volledig ingesteld; wachtwoord-resetmail niet verzonden naar ${email}. Reset-URL: ${resetUrl}`);
+    return false;
+  }
+
+  const html = `
+    <h2>Wachtwoord resetten voor je BromeoRemote account</h2>
+    <p>Klik op onderstaande link om een nieuw wachtwoord in te stellen. Deze link is 1 uur geldig.</p>
+    <p><a href="${escapeHtml(resetUrl)}">${escapeHtml(resetUrl)}</a></p>
+    <p>Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren — je wachtwoord blijft ongewijzigd.</p>
+  `;
+
+  await activeTransporter.sendMail({
+    from: config.smtp.from,
+    to: email,
+    subject: "BromeoRemote — Wachtwoord resetten",
+    text: [
+      "Wachtwoord resetten voor je BromeoRemote account",
+      "",
+      "Klik op onderstaande link om een nieuw wachtwoord in te stellen. Deze link is 1 uur geldig.",
+      resetUrl,
+      "",
+      "Heb je dit niet aangevraagd? Dan kun je deze e-mail negeren.",
+    ].join("\n"),
+    html,
+  });
+
+  return true;
+}
+
+module.exports = { sendContactNotification, sendPasswordResetEmail };

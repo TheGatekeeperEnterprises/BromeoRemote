@@ -3,6 +3,7 @@ const express = require("express");
 const session = require("express-session");
 const pgSession = require("connect-pg-simple")(session);
 const path = require("path");
+const { config } = require("./config");
 const {
   adminVerifyLogin,
   adminGetStats,
@@ -34,6 +35,7 @@ function createAdminSession() {
       maxAge: 8 * 60 * 60 * 1000, // 8 hours
       httpOnly: true,
       sameSite: "lax",
+      secure: config.env === "production",
     },
     name: "br_admin_sid",
   });

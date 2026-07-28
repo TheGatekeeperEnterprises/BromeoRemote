@@ -44,4 +44,18 @@ const config = {
 
 config.mailEnabled = Boolean(config.smtp.host && config.smtp.user && config.smtp.pass && config.smtp.from);
 
+// Several secrets used to silently fall back to hardcoded defaults (visible
+// in this public repo) when their env vars were unset — fine for local dev,
+// a real security hole in production. Fail loudly at startup instead of
+// quietly running on a known-to-attackers secret/password.
+if (config.env === "production") {
+  const missing = ["SESSION_SECRET", "USER_SESSION_SECRET", "ADMIN_PASSWORD"].filter((name) => !process.env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `Missing required production environment variable(s): ${missing.join(", ")}. ` +
+        "Refusing to start with insecure hardcoded defaults — set these in Coolify's environment variables."
+    );
+  }
+}
+
 module.exports = { config };

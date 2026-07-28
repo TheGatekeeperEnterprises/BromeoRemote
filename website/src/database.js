@@ -115,12 +115,15 @@ async function initDatabase() {
     );
   `);
   await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text;`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token text;`);
+  await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires timestamptz;`);
 
   // Licenses
   await query(`
     CREATE TABLE IF NOT EXISTS licenses (
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      license_key uuid NOT NULL DEFAULT gen_random_uuid(),
       plan text NOT NULL DEFAULT 'Personal',
       status text NOT NULL DEFAULT 'Active',
       is_trial boolean NOT NULL DEFAULT false,
@@ -134,6 +137,11 @@ async function initDatabase() {
       updated_at timestamptz NOT NULL DEFAULT now()
     );
   `);
+  // license_key predates some deployments — backfilled per-row via gen_random_uuid()
+  // (a volatile default, so Postgres computes a fresh value per existing row rather
+  // than reusing one constant).
+  await query(`ALTER TABLE licenses ADD COLUMN IF NOT EXISTS license_key uuid NOT NULL DEFAULT gen_random_uuid();`);
+  await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_license_key ON licenses (license_key);`);
 
   // License transactions
   await query(`
@@ -402,7 +410,7 @@ async function verifyLicenseInDb({ licenseKey, email, hwidHash, platform = "wind
   const params = [];
 
   if (licenseKey) {
-    queryText += ` l.id::text = $1`;
+    queryText += ` l.license_key::text = $1`;
     params.push(licenseKey.trim());
   } else {
     queryText += ` u.email = $1`;
@@ -531,6 +539,110 @@ async function userGetPortalData(userId) {
   };
 }
 
+// ── Payments / subscriptions ──────────────────────────────────────────────────
+
+async function getUserMollieCustomerId(userId) {
+  const result = await query("SELECT mollie_customer_id FROM users WHERE id = $1", [userId]);
+  return result?.rows[0]?.mollie_customer_id || null;
+}
+
+async function setUserMollieCustomerId(userId, mollieCustomerId) {
+  await query("UPDATE users SET mollie_customer_id = $1, updated_at = now() WHERE id = $2", [mollieCustomerId, userId]);
+}
+
+async function createLicenseTransaction({ userId, molliePaymentId, amount, currency = "EUR" }) {
+  const result = await query(
+    `INSERT INTO license_transactions (user_id, mollie_payment_id, amount, currency, status)
+     VALUES ($1, $2, $3, $4, 'pending') RETURNING *`,
+    [userId, molliePaymentId, amount, currency]
+  );
+  return result?.rows[0];
+}
+
+async function getLicenseTransactionByPaymentId(molliePaymentId) {
+  const result = await query("SELECT * FROM license_transactions WHERE mollie_payment_id = $1", [molliePaymentId]);
+  return result?.rows[0] || null;
+}
+
+async function updateLicenseTransactionStatus(molliePaymentId, status, failureReason = null) {
+  const result = await query(
+    "UPDATE license_transactions SET status = $1, failure_reason = $2 WHERE mollie_payment_id = $3 RETURNING *",
+    [status, failureReason, molliePaymentId]
+  );
+  return result?.rows[0] || null;
+}
+
+// Applied to the user's most recent license row rather than inserting a new
+// one — registration already gives every user exactly one license row
+// (see userRegister), and the dashboard/verifyLicenseInDb both treat "most
+// recently created license" as *the* license, so upgrading in place keeps
+// that single-source-of-truth assumption intact instead of creating a
+// second, competing row.
+// mollieSubscriptionId is optional — pass null (not undefined) to leave the
+// license's existing subscription ID untouched, e.g. for a recurring
+// payment where the subscription already exists and only the license's
+// active/expired status needs refreshing.
+async function upgradeUserLicense({ userId, plan, mollieSubscriptionId = null }) {
+  const result = await query(
+    `UPDATE licenses SET plan = $1, status = 'Active', is_trial = false,
+       mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
+     WHERE id = (SELECT id FROM licenses WHERE user_id = $3 ORDER BY created_at DESC LIMIT 1)
+     RETURNING *`,
+    [plan, mollieSubscriptionId, userId]
+  );
+  return result?.rows[0] || null;
+}
+
+async function downgradeUserLicenseToFree(userId) {
+  const result = await query(
+    `UPDATE licenses SET plan = 'Free', status = 'Active', mollie_subscription_id = NULL, updated_at = now()
+     WHERE id = (SELECT id FROM licenses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1)
+     RETURNING *`,
+    [userId]
+  );
+  return result?.rows[0] || null;
+}
+
+async function getMostRecentLicense(userId) {
+  const result = await query("SELECT * FROM licenses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1", [userId]);
+  return result?.rows[0] || null;
+}
+
+async function regenerateLicenseKey(userId) {
+  const result = await query(
+    `UPDATE licenses SET license_key = gen_random_uuid(), updated_at = now()
+     WHERE id = (SELECT id FROM licenses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1)
+     RETURNING *`,
+    [userId]
+  );
+  return result?.rows[0] || null;
+}
+
+// ── Password reset ────────────────────────────────────────────────────────────
+
+async function setPasswordResetToken(email, tokenHash, expiresAt) {
+  const result = await query(
+    "UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE email = $3 RETURNING id, email",
+    [tokenHash, expiresAt, email.trim().toLowerCase()]
+  );
+  return result?.rows[0] || null;
+}
+
+async function getUserByResetToken(tokenHash) {
+  const result = await query(
+    "SELECT * FROM users WHERE password_reset_token = $1 AND password_reset_expires > now()",
+    [tokenHash]
+  );
+  return result?.rows[0] || null;
+}
+
+async function resetUserPassword(userId, passwordHash) {
+  await query(
+    "UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL, updated_at = now() WHERE id = $2",
+    [passwordHash, userId]
+  );
+}
+
 module.exports = {
   closeDatabase,
   databaseEnabled,
@@ -543,6 +655,20 @@ module.exports = {
   userRegister,
   userLogin,
   userGetPortalData,
+  // Payments / subscriptions
+  getUserMollieCustomerId,
+  setUserMollieCustomerId,
+  createLicenseTransaction,
+  getLicenseTransactionByPaymentId,
+  updateLicenseTransactionStatus,
+  upgradeUserLicense,
+  downgradeUserLicenseToFree,
+  getMostRecentLicense,
+  regenerateLicenseKey,
+  // Password reset
+  setPasswordResetToken,
+  getUserByResetToken,
+  resetUserPassword,
   // Admin
   adminGetStats,
   adminGetUsers,
