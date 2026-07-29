@@ -261,13 +261,22 @@ async function closeDatabase() {
 // ── Admin queries ──────────────────────────────────────────────────────────────
 
 async function adminGetStats() {
-  const [users, licenses, activeLicenses, trialLicenses, sessions7d, downloads7d] = await Promise.all([
+  const [
+    users, licenses, activeLicenses, trialLicenses, sessions7d, downloads7d,
+    revenue30d, revenueTotal, failedPayments7d, contactRequests7d, newsletterSignups7d, activeSubscriptions,
+  ] = await Promise.all([
     query("SELECT COUNT(*) AS count FROM users"),
     query("SELECT COUNT(*) AS count FROM licenses"),
     query("SELECT COUNT(*) AS count FROM licenses WHERE status = 'Active' AND is_trial = false"),
     query("SELECT COUNT(*) AS count FROM licenses WHERE is_trial = true AND status = 'Active'"),
     query("SELECT COUNT(*) AS count FROM session_events WHERE created_at > now() - interval '7 days'"),
     query("SELECT COUNT(*) AS count FROM download_events WHERE created_at > now() - interval '7 days'"),
+    query("SELECT COALESCE(SUM(amount), 0) AS sum FROM license_transactions WHERE status = 'paid' AND created_at > now() - interval '30 days'"),
+    query("SELECT COALESCE(SUM(amount), 0) AS sum FROM license_transactions WHERE status = 'paid'"),
+    query("SELECT COUNT(*) AS count FROM license_transactions WHERE status = 'failed' AND created_at > now() - interval '7 days'"),
+    query("SELECT COUNT(*) AS count FROM contact_requests WHERE created_at > now() - interval '7 days'"),
+    query("SELECT COUNT(*) AS count FROM newsletter_signups WHERE created_at > now() - interval '7 days'"),
+    query("SELECT COUNT(*) AS count FROM licenses WHERE mollie_subscription_id IS NOT NULL AND status = 'Active'"),
   ]);
   return {
     totalUsers: parseInt(users?.rows[0]?.count || 0),
@@ -276,6 +285,12 @@ async function adminGetStats() {
     trialLicenses: parseInt(trialLicenses?.rows[0]?.count || 0),
     sessions7d: parseInt(sessions7d?.rows[0]?.count || 0),
     downloads7d: parseInt(downloads7d?.rows[0]?.count || 0),
+    revenue30d: parseFloat(revenue30d?.rows[0]?.sum || 0),
+    revenueTotal: parseFloat(revenueTotal?.rows[0]?.sum || 0),
+    failedPayments7d: parseInt(failedPayments7d?.rows[0]?.count || 0),
+    contactRequests7d: parseInt(contactRequests7d?.rows[0]?.count || 0),
+    newsletterSignups7d: parseInt(newsletterSignups7d?.rows[0]?.count || 0),
+    activeSubscriptions: parseInt(activeSubscriptions?.rows[0]?.count || 0),
   };
 }
 
@@ -360,13 +375,26 @@ async function adminResetHwid(licenseId) {
   return result?.rows[0];
 }
 
-async function adminGetSessions({ page = 1, limit = 50 } = {}) {
+async function adminGetSessions({ page = 1, limit = 50, platform = "", eventType = "" } = {}) {
   const offset = (page - 1) * limit;
+  const conditions = [];
+  const params = [];
+  if (platform) {
+    params.push(platform);
+    conditions.push(`se.platform = $${params.length}`);
+  }
+  if (eventType) {
+    params.push(eventType);
+    conditions.push(`se.event_type = $${params.length}`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  params.push(limit, offset);
   const result = await query(
     `SELECT se.*, u.email FROM session_events se
      LEFT JOIN users u ON u.id = se.user_id
-     ORDER BY se.created_at DESC LIMIT $1 OFFSET $2`,
-    [limit, offset]
+     ${where}
+     ORDER BY se.created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
   );
   return result?.rows || [];
 }
@@ -378,6 +406,109 @@ async function adminVerifyLogin(email, password) {
   const admin = result.rows[0];
   const match = await bcrypt.compare(password, admin.password_hash);
   return match ? admin : null;
+}
+
+// ── Transactions / Leads (admin) ────────────────────────────────────────────────
+
+async function adminGetTransactions({ page = 1, limit = 25, status = "" } = {}) {
+  const offset = (page - 1) * limit;
+  const conditions = [];
+  const params = [];
+  if (status) {
+    params.push(status);
+    conditions.push(`t.status = $${params.length}`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+  const listParams = [...params, limit, offset];
+  const result = await query(
+    `SELECT t.*, u.email FROM license_transactions t
+     LEFT JOIN users u ON u.id = t.user_id
+     ${where}
+     ORDER BY t.created_at DESC LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
+    listParams
+  );
+  const countResult = await query(
+    `SELECT COUNT(*) AS count FROM license_transactions t ${where}`,
+    params
+  );
+  return {
+    transactions: result?.rows || [],
+    total: parseInt(countResult?.rows[0]?.count || 0),
+    page,
+    limit,
+  };
+}
+
+async function adminGetContactRequests({ page = 1, limit = 25 } = {}) {
+  const offset = (page - 1) * limit;
+  const result = await query(
+    "SELECT * FROM contact_requests ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+  const countResult = await query("SELECT COUNT(*) AS count FROM contact_requests");
+  return {
+    requests: result?.rows || [],
+    total: parseInt(countResult?.rows[0]?.count || 0),
+    page,
+    limit,
+  };
+}
+
+async function adminGetNewsletterSignups({ page = 1, limit = 25 } = {}) {
+  const offset = (page - 1) * limit;
+  const result = await query(
+    "SELECT * FROM newsletter_signups ORDER BY created_at DESC LIMIT $1 OFFSET $2",
+    [limit, offset]
+  );
+  const countResult = await query("SELECT COUNT(*) AS count FROM newsletter_signups");
+  return {
+    signups: result?.rows || [],
+    total: parseInt(countResult?.rows[0]?.count || 0),
+    page,
+    limit,
+  };
+}
+
+// ── Delete actions (admin) ───────────────────────────────────────────────────────
+
+async function adminDeleteUser(userId) {
+  await query("DELETE FROM users WHERE id = $1", [userId]);
+}
+
+async function adminDeleteLicense(licenseId) {
+  await query("DELETE FROM licenses WHERE id = $1", [licenseId]);
+}
+
+// ── Admin accounts management ────────────────────────────────────────────────────
+
+async function adminGetAdmins() {
+  const result = await query("SELECT id, email, role, created_at FROM admin_accounts ORDER BY created_at ASC");
+  return result?.rows || [];
+}
+
+async function adminCreateAdmin({ email, password, role }) {
+  const bcrypt = require("bcrypt");
+  const hash = await bcrypt.hash(password, 12);
+  const result = await query(
+    `INSERT INTO admin_accounts (email, password_hash, role) VALUES ($1, $2, $3)
+     RETURNING id, email, role, created_at`,
+    [email, hash, role || "admin"]
+  );
+  return result?.rows[0];
+}
+
+async function adminCountSuperAdmins() {
+  const result = await query("SELECT COUNT(*) AS count FROM admin_accounts WHERE role = 'superadmin'");
+  return parseInt(result?.rows[0]?.count || 0);
+}
+
+async function adminGetAdminById(id) {
+  const result = await query("SELECT id, email, role FROM admin_accounts WHERE id = $1", [id]);
+  return result?.rows[0] || null;
+}
+
+async function adminDeleteAdmin(id) {
+  await query("DELETE FROM admin_accounts WHERE id = $1", [id]);
 }
 
 // Record a session event from the client/app
@@ -679,6 +810,16 @@ module.exports = {
   adminResetHwid,
   adminGetSessions,
   adminVerifyLogin,
+  adminGetTransactions,
+  adminGetContactRequests,
+  adminGetNewsletterSignups,
+  adminDeleteUser,
+  adminDeleteLicense,
+  adminGetAdmins,
+  adminCreateAdmin,
+  adminCountSuperAdmins,
+  adminGetAdminById,
+  adminDeleteAdmin,
   recordSessionEvent,
   verifyLicenseInDb,
   getPool,

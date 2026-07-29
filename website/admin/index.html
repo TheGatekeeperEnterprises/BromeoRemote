@@ -146,6 +146,18 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
         Sessies
       </div>
+      <div class="nav-item" data-page="transactions" onclick="navigate('transactions')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Transacties
+      </div>
+      <div class="nav-item" data-page="leads" onclick="navigate('leads')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><path d="M2 6h20v12H2z"/></svg>
+        Leads
+      </div>
+      <div class="nav-item" id="navAdmins" data-page="admins" onclick="navigate('admins')" style="display:none;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
+        Beheerders
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="admin-info" id="adminEmail">—</div>
@@ -166,6 +178,11 @@
           <div class="stat-card"><div class="stat-label">Trial licenties</div><div class="stat-value warn" id="stat-trials">–</div></div>
           <div class="stat-card"><div class="stat-label">Sessies (7 dagen)</div><div class="stat-value" id="stat-sessions">–</div></div>
           <div class="stat-card"><div class="stat-label">Downloads (7 dagen)</div><div class="stat-value" id="stat-downloads">–</div></div>
+          <div class="stat-card"><div class="stat-label">Omzet (30 dagen)</div><div class="stat-value accent" id="stat-revenue30d">–</div></div>
+          <div class="stat-card"><div class="stat-label">Omzet totaal</div><div class="stat-value accent" id="stat-revenueTotal">–</div></div>
+          <div class="stat-card"><div class="stat-label">Actieve abonnementen</div><div class="stat-value blue" id="stat-activeSubs">–</div></div>
+          <div class="stat-card"><div class="stat-label">Mislukte betalingen (7d)</div><div class="stat-value" id="stat-failedPayments" style="color:var(--danger)">–</div></div>
+          <div class="stat-card"><div class="stat-label">Nieuwe leads (7 dagen)</div><div class="stat-value warn" id="stat-leads7d">–</div></div>
         </div>
       </div>
     </div>
@@ -207,7 +224,10 @@
         <div class="detail-grid">
           <div>
             <div class="card">
-              <div class="card-header"><h2>Accountgegevens</h2></div>
+              <div class="card-header">
+                <h2>Accountgegevens</h2>
+                <button class="btn btn-danger btn-sm" onclick="deleteCurrentUser()">Gebruiker verwijderen</button>
+              </div>
               <div style="padding:1.25rem 1.5rem;" id="userInfoBox"></div>
             </div>
             <div class="card">
@@ -216,6 +236,10 @@
                 <button class="btn btn-primary btn-sm" id="addLicenseBtn">+ Licentie toevoegen</button>
               </div>
               <div id="licensesBox"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Facturen</h2></div>
+              <div id="transactionsBox"></div>
             </div>
           </div>
           <div>
@@ -233,12 +257,92 @@
       <div class="topbar"><h1>Alle Sessies</h1></div>
       <div class="content">
         <div class="card">
-          <div class="card-header"><h2>Sessie-activiteit</h2></div>
+          <div class="card-header">
+            <h2>Sessie-activiteit</h2>
+            <div style="display:flex; gap:0.5rem;">
+              <select class="search-input" id="sessionsPlatformFilter" style="width:140px;" onchange="sessionsPage=1;loadSessions();">
+                <option value="">Alle platforms</option>
+                <option value="windows">Windows</option>
+                <option value="android">Android</option>
+              </select>
+              <select class="search-input" id="sessionsEventFilter" style="width:140px;" onchange="sessionsPage=1;loadSessions();">
+                <option value="">Alle types</option>
+                <option value="connect">Connect</option>
+                <option value="disconnect">Disconnect</option>
+              </select>
+            </div>
+          </div>
           <table>
             <thead><tr><th>Gebruiker</th><th>Platform</th><th>Type</th><th>Duur</th><th>IP</th><th>Tijdstip</th></tr></thead>
             <tbody id="sessionsTableBody"><tr><td colspan="6" class="loading">Laden...</td></tr></tbody>
           </table>
           <div class="pagination" id="sessionsPagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transactions Page -->
+    <div id="page-transactions" class="page-hidden">
+      <div class="topbar"><h1>Transacties</h1></div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Betalingen</h2>
+            <select class="search-input" id="transactionsStatusFilter" style="width:160px;" onchange="transactionsPage=1;loadTransactions();">
+              <option value="">Alle statussen</option>
+              <option value="paid">Betaald</option>
+              <option value="failed">Mislukt</option>
+              <option value="pending">In behandeling</option>
+              <option value="open">Open</option>
+              <option value="canceled">Geannuleerd</option>
+              <option value="expired">Verlopen</option>
+            </select>
+          </div>
+          <table>
+            <thead><tr><th>Gebruiker</th><th>Bedrag</th><th>Status</th><th>Mollie ID</th><th>Tijdstip</th></tr></thead>
+            <tbody id="transactionsTableBody"><tr><td colspan="5" class="loading">Laden...</td></tr></tbody>
+          </table>
+          <div class="pagination" id="transactionsPagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leads Page -->
+    <div id="page-leads" class="page-hidden">
+      <div class="topbar"><h1>Leads</h1></div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header"><h2>Contactaanvragen</h2></div>
+          <table>
+            <thead><tr><th>Naam</th><th>E-mail</th><th>Bedrijf</th><th>Onderwerp</th><th>Bericht</th><th>Tijdstip</th></tr></thead>
+            <tbody id="contactTableBody"><tr><td colspan="6" class="loading">Laden...</td></tr></tbody>
+          </table>
+          <div class="pagination" id="contactPagination"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Nieuwsbriefaanmeldingen</h2></div>
+          <table>
+            <thead><tr><th>E-mail</th><th>Tijdstip</th></tr></thead>
+            <tbody id="newsletterTableBody"><tr><td colspan="2" class="loading">Laden...</td></tr></tbody>
+          </table>
+          <div class="pagination" id="newsletterPagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Admins Page -->
+    <div id="page-admins" class="page-hidden">
+      <div class="topbar">
+        <h1>Beheerders</h1>
+        <button class="btn btn-primary" onclick="openModal('newAdmin')">+ Nieuwe beheerder</button>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header"><h2>Alle beheerders</h2></div>
+          <table>
+            <thead><tr><th>E-mail</th><th>Rol</th><th>Aangemaakt</th><th></th></tr></thead>
+            <tbody id="adminsTableBody"><tr><td colspan="4" class="loading">Laden...</td></tr></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -299,6 +403,25 @@
         <button class="btn btn-danger btn-sm" onclick="resetHwid()">HWID Resetten</button>
         <button class="btn btn-outline" onclick="closeModal('editLicense')">Annuleren</button>
         <button class="btn btn-primary" onclick="submitEditLicense()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Nieuwe beheerder -->
+  <div class="modal-overlay hidden" id="modal-newAdmin">
+    <div class="modal">
+      <h2>Nieuwe beheerder aanmaken</h2>
+      <div class="form-group"><label>E-mailadres *</label><input type="email" id="na-email" placeholder="beheerder@bromeoremote.com"></div>
+      <div class="form-group"><label>Wachtwoord *</label><input type="password" id="na-password" placeholder="Minstens 8 tekens"></div>
+      <div class="form-group"><label>Rol</label>
+        <select id="na-role">
+          <option value="admin">Admin</option>
+          <option value="superadmin">Superadmin</option>
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('newAdmin')">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitNewAdmin()">Aanmaken</button>
       </div>
     </div>
   </div>
@@ -368,6 +491,9 @@ function navigate(page, id, push = true) {
   if (page === 'users') loadUsers();
   if (page === 'user-detail' && id) loadUserDetail(id);
   if (page === 'sessions') loadSessions();
+  if (page === 'transactions') loadTransactions();
+  if (page === 'leads') { loadContactRequests(); loadNewsletterSignups(); }
+  if (page === 'admins') loadAdmins();
 }
 
 function handleRoute() {
@@ -379,6 +505,12 @@ function handleRoute() {
     navigate('user-detail', parts[3], false);
   } else if (path === '/admin/sessions') {
     navigate('sessions', null, false);
+  } else if (path === '/admin/transactions') {
+    navigate('transactions', null, false);
+  } else if (path === '/admin/leads') {
+    navigate('leads', null, false);
+  } else if (path === '/admin/admins') {
+    navigate('admins', null, false);
   } else {
     navigate('dashboard', null, false);
   }
@@ -387,12 +519,18 @@ function handleRoute() {
 window.addEventListener('popstate', handleRoute);
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
+let currentAdminId = null;
+let currentAdminRole = null;
+
 async function init() {
   try {
     const res = await fetch('/admin/api/me');
     const data = await res.json();
     if (!data.ok) { window.location.href = '/admin/login'; return; }
     document.getElementById('adminEmail').textContent = data.email;
+    currentAdminId = data.id;
+    currentAdminRole = data.role;
+    if (data.role === 'superadmin') document.getElementById('navAdmins').style.display = 'flex';
     handleRoute();
   } catch { window.location.href = '/admin/login'; }
 }
@@ -413,6 +551,11 @@ async function loadStats() {
   document.getElementById('stat-trials').textContent = s.trialLicenses;
   document.getElementById('stat-sessions').textContent = s.sessions7d;
   document.getElementById('stat-downloads').textContent = s.downloads7d;
+  document.getElementById('stat-revenue30d').textContent = `€${s.revenue30d.toFixed(2)}`;
+  document.getElementById('stat-revenueTotal').textContent = `€${s.revenueTotal.toFixed(2)}`;
+  document.getElementById('stat-activeSubs').textContent = s.activeSubscriptions;
+  document.getElementById('stat-failedPayments').textContent = s.failedPayments7d;
+  document.getElementById('stat-leads7d').textContent = s.contactRequests7d + s.newsletterSignups7d;
 }
 
 // ── Users ──────────────────────────────────────────────────────────────────────
@@ -476,7 +619,25 @@ async function loadUserDetail(userId) {
         <td>${statusBadge(l.status)}</td>
         <td>${l.expires_at ? new Date(l.expires_at).toLocaleDateString('nl-NL') : '–'}</td>
         <td><span class="badge ${l.hwid_hash ? 'badge-green' : 'badge-gray'}">${l.hwid_hash ? '✓ Gekoppeld' : 'Vrij'}</span></td>
-        <td><button class="btn btn-outline btn-sm" onclick="openEditLicense(${JSON.stringify(l).replace(/"/g,'&quot;')})">Bewerken</button></td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="openEditLicense(${JSON.stringify(l).replace(/"/g,'&quot;')})">Bewerken</button>
+          ${l.mollie_subscription_id ? `<button class="btn btn-danger btn-sm" onclick="cancelSubscription('${l.user_id}')">Opzeggen</button>` : ''}
+          <button class="btn btn-danger btn-sm" onclick="deleteLicense('${l.id}')">Verwijderen</button>
+        </td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+  // Transactions
+  const tb = document.getElementById('transactionsBox');
+  if (!data.transactions || !data.transactions.length) {
+    tb.innerHTML = '<div class="empty-state">Nog geen transacties.</div>';
+  } else {
+    tb.innerHTML = `<table><thead><tr><th>Bedrag</th><th>Status</th><th>Mollie ID</th><th>Tijdstip</th></tr></thead><tbody>
+      ${data.transactions.map(t => `<tr>
+        <td>€${parseFloat(t.amount).toFixed(2)}</td>
+        <td>${transactionStatusBadge(t.status)}</td>
+        <td>${t.mollie_payment_id || '–'}</td>
+        <td>${new Date(t.created_at).toLocaleString('nl-NL')}</td>
       </tr>`).join('')}
     </tbody></table>`;
   }
@@ -496,10 +657,37 @@ async function loadUserDetail(userId) {
   }
 }
 
+async function cancelSubscription(userId) {
+  if (!confirm('Abonnement opzeggen en terugzetten naar Free? Dit annuleert het bij Mollie.')) return;
+  const res = await fetch(`/admin/api/users/${userId}/cancel-subscription`, { method: 'POST' });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  if (currentUserId) loadUserDetail(currentUserId);
+}
+
+async function deleteLicense(licenseId) {
+  if (!confirm('Deze licentie definitief verwijderen?')) return;
+  const res = await fetch(`/admin/api/licenses/${licenseId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  if (currentUserId) loadUserDetail(currentUserId);
+}
+
+async function deleteCurrentUser() {
+  if (!currentUserId) return;
+  if (!confirm('Deze gebruiker en al hun licenties definitief verwijderen? Dit kan niet ongedaan worden gemaakt.')) return;
+  const res = await fetch(`/admin/api/users/${currentUserId}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  navigate('users');
+}
+
 // ── Sessions overview ─────────────────────────────────────────────────────────
 let sessionsPage = 1;
 async function loadSessions() {
-  const res = await fetch(`/admin/api/sessions?page=${sessionsPage}`);
+  const platform = document.getElementById('sessionsPlatformFilter')?.value || '';
+  const eventType = document.getElementById('sessionsEventFilter')?.value || '';
+  const res = await fetch(`/admin/api/sessions?page=${sessionsPage}&platform=${encodeURIComponent(platform)}&eventType=${encodeURIComponent(eventType)}`);
   const data = await res.json();
   const tbody = document.getElementById('sessionsTableBody');
   if (!data.ok || !data.sessions.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Geen sessies gevonden.</td></tr>'; return; }
@@ -511,6 +699,110 @@ async function loadSessions() {
     <td>${s.ip_address || '–'}</td>
     <td>${new Date(s.created_at).toLocaleString('nl-NL')}</td>
   </tr>`).join('');
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+let transactionsPage = 1;
+async function loadTransactions() {
+  const status = document.getElementById('transactionsStatusFilter')?.value || '';
+  document.getElementById('transactionsTableBody').innerHTML = '<tr><td colspan="5" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/transactions?page=${transactionsPage}&status=${encodeURIComponent(status)}`);
+  const data = await res.json();
+  const tbody = document.getElementById('transactionsTableBody');
+  if (!data.ok || !data.transactions.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Geen transacties gevonden.</td></tr>'; document.getElementById('transactionsPagination').innerHTML = ''; return; }
+  tbody.innerHTML = data.transactions.map(t => `<tr>
+    <td>${t.email || '<span style="color:var(--muted)">Onbekend</span>'}</td>
+    <td>€${parseFloat(t.amount).toFixed(2)}</td>
+    <td>${transactionStatusBadge(t.status)}</td>
+    <td>${t.mollie_payment_id || '–'}</td>
+    <td>${new Date(t.created_at).toLocaleString('nl-NL')}</td>
+  </tr>`).join('');
+  const totalPages = Math.ceil(data.total / data.limit);
+  document.getElementById('transactionsPagination').innerHTML = `
+    <button onclick="transactionsPage--;loadTransactions()" ${transactionsPage <= 1 ? 'disabled' : ''}>← Vorige</button>
+    <span>Pagina ${transactionsPage} van ${totalPages} (${data.total} totaal)</span>
+    <button onclick="transactionsPage++;loadTransactions()" ${transactionsPage >= totalPages ? 'disabled' : ''}>Volgende →</button>
+  `;
+}
+
+// ── Leads ─────────────────────────────────────────────────────────────────────
+let contactPage = 1;
+async function loadContactRequests() {
+  document.getElementById('contactTableBody').innerHTML = '<tr><td colspan="6" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/leads/contact?page=${contactPage}`);
+  const data = await res.json();
+  const tbody = document.getElementById('contactTableBody');
+  if (!data.ok || !data.requests.length) { tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Geen contactaanvragen.</td></tr>'; document.getElementById('contactPagination').innerHTML = ''; return; }
+  tbody.innerHTML = data.requests.map(r => `<tr>
+    <td>${r.name}</td>
+    <td>${r.email}</td>
+    <td>${r.company || '–'}</td>
+    <td>${r.subject}</td>
+    <td title="${r.message.replace(/"/g,'&quot;')}" style="max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:help;">${r.message}</td>
+    <td>${new Date(r.created_at).toLocaleString('nl-NL')}</td>
+  </tr>`).join('');
+  const totalPages = Math.ceil(data.total / data.limit);
+  document.getElementById('contactPagination').innerHTML = `
+    <button onclick="contactPage--;loadContactRequests()" ${contactPage <= 1 ? 'disabled' : ''}>← Vorige</button>
+    <span>Pagina ${contactPage} van ${totalPages} (${data.total} totaal)</span>
+    <button onclick="contactPage++;loadContactRequests()" ${contactPage >= totalPages ? 'disabled' : ''}>Volgende →</button>
+  `;
+}
+
+let newsletterPage = 1;
+async function loadNewsletterSignups() {
+  document.getElementById('newsletterTableBody').innerHTML = '<tr><td colspan="2" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/leads/newsletter?page=${newsletterPage}`);
+  const data = await res.json();
+  const tbody = document.getElementById('newsletterTableBody');
+  if (!data.ok || !data.signups.length) { tbody.innerHTML = '<tr><td colspan="2" class="empty-state">Geen aanmeldingen.</td></tr>'; document.getElementById('newsletterPagination').innerHTML = ''; return; }
+  tbody.innerHTML = data.signups.map(n => `<tr>
+    <td>${n.email}</td>
+    <td>${new Date(n.created_at).toLocaleString('nl-NL')}</td>
+  </tr>`).join('');
+  const totalPages = Math.ceil(data.total / data.limit);
+  document.getElementById('newsletterPagination').innerHTML = `
+    <button onclick="newsletterPage--;loadNewsletterSignups()" ${newsletterPage <= 1 ? 'disabled' : ''}>← Vorige</button>
+    <span>Pagina ${newsletterPage} van ${totalPages} (${data.total} totaal)</span>
+    <button onclick="newsletterPage++;loadNewsletterSignups()" ${newsletterPage >= totalPages ? 'disabled' : ''}>Volgende →</button>
+  `;
+}
+
+// ── Admins ────────────────────────────────────────────────────────────────────
+async function loadAdmins() {
+  document.getElementById('adminsTableBody').innerHTML = '<tr><td colspan="4" class="loading">Laden...</td></tr>';
+  const res = await fetch('/admin/api/admins');
+  const data = await res.json();
+  const tbody = document.getElementById('adminsTableBody');
+  if (!data.ok) { tbody.innerHTML = `<tr><td colspan="4" class="empty-state">${data.error}</td></tr>`; return; }
+  tbody.innerHTML = data.admins.map(a => `<tr>
+    <td>${a.email}</td>
+    <td><span class="badge ${a.role === 'superadmin' ? 'badge-blue' : 'badge-gray'}">${a.role}</span></td>
+    <td>${new Date(a.created_at).toLocaleDateString('nl-NL')}</td>
+    <td>${a.id === currentAdminId ? '' : `<button class="btn btn-danger btn-sm" onclick="deleteAdmin('${a.id}')">Verwijderen</button>`}</td>
+  </tr>`).join('');
+}
+
+async function submitNewAdmin() {
+  const email = document.getElementById('na-email').value;
+  const password = document.getElementById('na-password').value;
+  const role = document.getElementById('na-role').value;
+  if (!email || !password) return alert('E-mail en wachtwoord zijn verplicht.');
+  const res = await fetch('/admin/api/admins', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email, password, role }) });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  closeModal('newAdmin');
+  document.getElementById('na-email').value = '';
+  document.getElementById('na-password').value = '';
+  loadAdmins();
+}
+
+async function deleteAdmin(id) {
+  if (!confirm('Deze beheerder verwijderen?')) return;
+  const res = await fetch(`/admin/api/admins/${id}`, { method: 'DELETE' });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  loadAdmins();
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────
@@ -598,6 +890,10 @@ function planBadge(plan, isTrial) {
 }
 function statusBadge(status) {
   const map = { Active: 'badge-green', Trial: 'badge-warn', Expired: 'badge-red', Blocked: 'badge-red' };
+  return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
+}
+function transactionStatusBadge(status) {
+  const map = { paid: 'badge-green', failed: 'badge-red', pending: 'badge-warn', open: 'badge-warn', canceled: 'badge-gray', expired: 'badge-gray' };
   return `<span class="badge ${map[status] || 'badge-gray'}">${status}</span>`;
 }
 function timeAgo(dateStr) {

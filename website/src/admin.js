@@ -14,9 +14,20 @@ const {
   adminUpdateLicense,
   adminResetHwid,
   adminGetSessions,
+  adminGetTransactions,
+  adminGetContactRequests,
+  adminGetNewsletterSignups,
+  adminDeleteUser,
+  adminDeleteLicense,
+  adminGetAdmins,
+  adminCreateAdmin,
+  adminCountSuperAdmins,
+  adminGetAdminById,
+  adminDeleteAdmin,
   databaseEnabled,
   getPool,
 } = require("./database");
+const { cancelUserSubscription } = require("./licensing");
 
 const router = express.Router();
 
@@ -62,6 +73,11 @@ function requireAuth(req, res, next) {
   res.redirect("/admin/login");
 }
 
+function requireSuperAdmin(req, res, next) {
+  if (req.session && req.session.adminRole === "superadmin") return next();
+  res.status(403).json({ ok: false, error: "Alleen voor superadmins." });
+}
+
 // ── Serve admin HTML ─────────────────────────────────────────────────────────
 function getAdminDir() {
   const candidates = [
@@ -82,7 +98,7 @@ router.get("/login", (req, res) => {
   res.sendFile(path.join(adminDir, "login.html"));
 });
 
-router.get(["/", "/users", "/users/:id", "/sessions"], requireAuth, (req, res) => {
+router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins"], requireAuth, (req, res) => {
   res.sendFile(path.join(adminDir, "index.html"));
 });
 
@@ -110,7 +126,7 @@ router.post("/api/logout", (req, res) => {
 });
 
 router.get("/api/me", requireAuth, (req, res) => {
-  res.json({ ok: true, email: req.session.adminEmail, role: req.session.adminRole });
+  res.json({ ok: true, id: req.session.adminId, email: req.session.adminEmail, role: req.session.adminRole });
 });
 
 // ── Stats API ─────────────────────────────────────────────────────────────────
@@ -198,8 +214,113 @@ router.post("/api/licenses/:id/reset-hwid", requireAuth, async (req, res) => {
 router.get("/api/sessions", requireAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const sessions = await adminGetSessions({ page });
+    const platform = req.query.platform || "";
+    const eventType = req.query.eventType || "";
+    const sessions = await adminGetSessions({ page, platform, eventType });
     res.json({ ok: true, sessions });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Transactions API ──────────────────────────────────────────────────────────
+router.get("/api/transactions", requireAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const status = req.query.status || "";
+    const data = await adminGetTransactions({ page, status });
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Leads API ─────────────────────────────────────────────────────────────────
+router.get("/api/leads/contact", requireAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const data = await adminGetContactRequests({ page });
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.get("/api/leads/newsletter", requireAuth, async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const data = await adminGetNewsletterSignups({ page });
+    res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Destructive user/license actions ───────────────────────────────────────────
+router.delete("/api/users/:id", requireAuth, async (req, res) => {
+  try {
+    await adminDeleteUser(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.delete("/api/licenses/:id", requireAuth, async (req, res) => {
+  try {
+    await adminDeleteLicense(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/users/:id/cancel-subscription", requireAuth, async (req, res) => {
+  try {
+    await cancelUserSubscription(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Admin accounts management (superadmin only) ────────────────────────────────
+router.get("/api/admins", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const admins = await adminGetAdmins();
+    res.json({ ok: true, admins });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/admins", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { email, password, role } = req.body;
+    if (!email || !password) return res.status(400).json({ ok: false, error: "E-mail en wachtwoord zijn verplicht." });
+    if (password.length < 8) return res.status(400).json({ ok: false, error: "Wachtwoord moet minstens 8 tekens zijn." });
+    const admin = await adminCreateAdmin({ email, password, role: role === "superadmin" ? "superadmin" : "admin" });
+    res.json({ ok: true, admin });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.delete("/api/admins/:id", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    if (req.params.id === req.session.adminId) {
+      return res.status(400).json({ ok: false, error: "Je kunt je eigen account niet verwijderen." });
+    }
+    const target = await adminGetAdminById(req.params.id);
+    if (!target) return res.status(404).json({ ok: false, error: "Beheerder niet gevonden." });
+    if (target.role === "superadmin") {
+      const superAdminCount = await adminCountSuperAdmins();
+      if (superAdminCount <= 1) {
+        return res.status(400).json({ ok: false, error: "Kan de laatste superadmin niet verwijderen." });
+      }
+    }
+    await adminDeleteAdmin(req.params.id);
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
