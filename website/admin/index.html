@@ -28,6 +28,20 @@
       --card-bg3: #ffffff;
       --map-land: #cbd5e1;
       --map-border: #94a3b8;
+      
+      --stat-bg-default: #ffffff;
+      --stat-bg-green: #f0fdf4;
+      --stat-bg-blue: #eff6ff;
+      --stat-bg-purple: #faf5ff;
+      --stat-bg-yellow: #fefce8;
+      --stat-text-green: #15803d;
+      --stat-text-blue: #1d4ed8;
+      --stat-text-purple: #7e22ce;
+      --stat-text-yellow: #a16207;
+      --stat-border-green: rgba(22, 163, 74, 0.2);
+      --stat-border-blue: rgba(37, 99, 235, 0.2);
+      --stat-border-purple: rgba(147, 51, 234, 0.2);
+      --stat-border-yellow: rgba(202, 138, 4, 0.2);
     }
 
     [data-theme="dark"] {
@@ -37,7 +51,7 @@
       --bg3: #162040;
       --border: rgba(255,255,255,0.08);
       --border2: rgba(255,255,255,0.06);
-      --accent: #0be881;
+      --accent: var(--accent);
       --accent2: #00c9ff;
       --text: #e8edf5;
       --text-h: #ffffff;
@@ -51,6 +65,20 @@
       --card-bg3: #0b1426;
       --map-land: #1e293b;
       --map-border: #0f172a;
+      
+      --stat-bg-default: #132342;
+      --stat-bg-green: #1b2a1a;
+      --stat-bg-blue: #132a42;
+      --stat-bg-purple: #26183c;
+      --stat-bg-yellow: #2d2412;
+      --stat-text-green: #4ade80;
+      --stat-text-blue: #60a5fa;
+      --stat-text-purple: #a78bfa;
+      --stat-text-yellow: #facc15;
+      --stat-border-green: rgba(11,232,129,0.2);
+      --stat-border-blue: rgba(59,130,246,0.2);
+      --stat-border-purple: rgba(139,92,246,0.2);
+      --stat-border-yellow: rgba(245,158,11,0.2);
     }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
@@ -153,8 +181,8 @@
     }
     .stat-pill-btn:hover, .stat-pill-btn.active {
       background: #1e293b;
-      color: #38bdf8;
-      border-color: #38bdf8;
+      color: var(--accent2);
+      border-color: var(--accent2);
     }
 
     /* Misc */
@@ -440,7 +468,7 @@
     <div id="page-analytics" class="page-hidden">
       <div class="topbar" style="border-bottom:1px solid var(--border2); padding-bottom:1rem; margin-bottom:1.5rem;">
         <div>
-          <span style="font-size:0.75rem; font-weight:700; letter-spacing:1px; color:#38bdf8; text-transform:uppercase;">WEBSITE STATISTICS</span>
+          <span style="font-size:0.75rem; font-weight:700; letter-spacing:1px; color:var(--accent2); text-transform:uppercase;">WEBSITE STATISTICS</span>
           <h1 style="font-size:1.75rem; margin:0.25rem 0 0.5rem 0; font-weight:800; color:var(--text-h);">Traffic, visitors, response times, and downloads</h1>
           <p class="muted small" style="margin:0; font-size:0.875rem;">Review live website activity, recent visitors, full page interest, and software download timing from one professional statistics page.</p>
         </div>
@@ -479,44 +507,44 @@
 
         <!-- 10 Overview Stat Cards -->
         <div id="sec-overzicht" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">UNIQUE VISITORS (7D)</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">UNIQUE VISITORS (7D)</div>
             <div class="stat-value" id="stat-uniques7d" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#1b2a1a; border:1px solid rgba(11,232,129,0.2); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#86efac;">NEW USERS (7D)</div>
-            <div class="stat-value" id="stat-newusers7d" style="font-size:1.75rem; font-weight:800; color:#4ade80; margin-top:0.5rem;">0</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-green); border:1px solid var(--stat-border-green); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--stat-text-green);">NEW USERS (7D)</div>
+            <div class="stat-value" id="stat-newusers7d" style="font-size:1.75rem; font-weight:800; color:var(--stat-text-green); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132a42; border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#93c5fd;">SUCCESSFUL DOWNLOADS (30D)</div>
-            <div class="stat-value" id="stat-downloads30d" style="font-size:1.75rem; font-weight:800; color:#60a5fa; margin-top:0.5rem;">0</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-blue); border:1px solid var(--stat-border-blue); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--stat-text-blue);">SUCCESSFUL DOWNLOADS (30D)</div>
+            <div class="stat-value" id="stat-downloads30d" style="font-size:1.75rem; font-weight:800; color:var(--stat-text-blue); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#26183c; border:1px solid rgba(139,92,246,0.2); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#c4b5fd;">ACTIVATED TRIALS (30D)</div>
-            <div class="stat-value" id="stat-trials30d" style="font-size:1.75rem; font-weight:800; color:#a78bfa; margin-top:0.5rem;">0</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-purple); border:1px solid var(--stat-border-purple); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--stat-text-purple);">ACTIVATED TRIALS (30D)</div>
+            <div class="stat-value" id="stat-trials30d" style="font-size:1.75rem; font-weight:800; color:var(--stat-text-purple); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#2d2412; border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#fde047;">ACTIVE LICENSES</div>
-            <div class="stat-value" id="stat-activeLicenses" style="font-size:1.75rem; font-weight:800; color:#facc15; margin-top:0.5rem;">0</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-yellow); border:1px solid var(--stat-border-yellow); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--stat-text-yellow);">ACTIVE LICENSES</div>
+            <div class="stat-value" id="stat-activeLicenses" style="font-size:1.75rem; font-weight:800; color:var(--stat-text-yellow); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">PAGE VIEWS (7D)</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">PAGE VIEWS (7D)</div>
             <div class="stat-value" id="stat-pageviews7d" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">AVG RESPONSE</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">AVG RESPONSE</div>
             <div class="stat-value" id="stat-avgResponse" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">2 ms</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">DATA SERVED</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">DATA SERVED</div>
             <div class="stat-value" id="stat-dataServed" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0.0 MB</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">EXPIRED TRIALS WITHOUT UPGRADE</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">EXPIRED TRIALS WITHOUT UPGRADE</div>
             <div class="stat-value" id="stat-expiredTrials" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
-            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">COUNTRIES WITH ACTIVE LICENSES</div>
+          <div class="stat-card-grid" style="background:var(--stat-bg-default); border:1px solid var(--border); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:var(--muted);">COUNTRIES WITH ACTIVE LICENSES</div>
             <div class="stat-value" id="stat-countriesActive" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
         </div>
@@ -526,37 +554,37 @@
           <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Week, month, and year performance</h3>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
             <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
-              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS WEEK</div>
+              <div style="font-size:0.75rem; font-weight:700; color:var(--accent2); text-transform:uppercase;">THIS WEEK</div>
               <div id="perf-week-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Laatste 7 Dagen</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-week-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-week-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-week-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-week-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-week-revenue" style="font-weight:700; font-size:1.1rem; color:var(--accent);">EUR 0.00</div></div>
               </div>
               <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-week-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
 
             <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
-              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS MONTH</div>
+              <div style="font-size:0.75rem; font-weight:700; color:var(--accent2); text-transform:uppercase;">THIS MONTH</div>
               <div id="perf-month-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Deze Maand</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-month-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-month-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-month-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-month-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-month-revenue" style="font-weight:700; font-size:1.1rem; color:var(--accent);">EUR 0.00</div></div>
               </div>
               <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-month-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
 
             <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
-              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS YEAR</div>
+              <div style="font-size:0.75rem; font-weight:700; color:var(--accent2); text-transform:uppercase;">THIS YEAR</div>
               <div id="perf-year-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Dit Jaar (2026)</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-year-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-year-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
                 <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-year-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-year-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-year-revenue" style="font-weight:700; font-size:1.1rem; color:var(--accent);">EUR 0.00</div></div>
               </div>
               <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-year-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
@@ -575,24 +603,24 @@
           </div>
 
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">
-            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">LAST 30 DAYS</div><div style="font-weight:700; font-size:0.9rem; color:#38bdf8;">Live range</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">LAST 30 DAYS</div><div style="font-weight:700; font-size:0.9rem; color:var(--accent2);">Live range</div></div>
             <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">NEW USERS</div><div id="graph-tot-users" style="font-weight:700; font-size:1rem;">0</div></div>
             <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">VIEWS</div><div id="graph-tot-views" style="font-weight:700; font-size:1rem;">0</div></div>
             <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">DOWNLOADS</div><div id="graph-tot-downloads" style="font-weight:700; font-size:1rem;">0</div></div>
             <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">TRIALS</div><div id="graph-tot-trials" style="font-weight:700; font-size:1rem;">0</div></div>
             <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">PAID TX</div><div id="graph-tot-tx" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">REVENUE</div><div id="graph-tot-revenue" style="font-weight:700; font-size:1rem; color:#0be881;">EUR 0.00</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">REVENUE</div><div id="graph-tot-revenue" style="font-weight:700; font-size:1rem; color:var(--accent);">EUR 0.00</div></div>
           </div>
 
           <!-- SVG Graph -->
           <div style="background:var(--card-bg3); border-radius:10px; padding:1.25rem; border:1px solid var(--border2); position:relative; overflow:hidden;">
             <svg id="analytics-svg-graph" viewBox="0 0 900 240" style="width:100%; height:240px; display:block;"></svg>
             <div style="display:flex; gap:1.5rem; justify-content:center; margin-top:1rem; font-size:0.8rem; font-weight:600;">
-              <span style="color:#4ade80;">● Users</span>
-              <span style="color:#60a5fa;">● Visitors</span>
-              <span style="color:#38bdf8;">● Downloads</span>
-              <span style="color:#c4b5fd;">● Trials</span>
-              <span style="color:#facc15;">● Paid transactions</span>
+              <span style="color:var(--stat-text-green);">● Users</span>
+              <span style="color:var(--stat-text-blue);">● Visitors</span>
+              <span style="color:var(--accent2);">● Downloads</span>
+              <span style="color:var(--stat-text-purple);">● Trials</span>
+              <span style="color:var(--stat-text-yellow);">● Paid transactions</span>
             </div>
           </div>
 
@@ -615,20 +643,20 @@
 
               <!-- Interactive Simplemaps Vector SVG (loaded dynamically from world.svg) -->
               <div id="simplemaps-container" style="width:100%; height:300px; overflow:hidden; position:relative;">
-                <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#94a3b8; font-size:0.85rem;">world.svg wordt geladen...</div>
+                <div style="display:flex; justify-content:center; align-items:center; height:100%; color:var(--muted); font-size:0.85rem;">world.svg wordt geladen...</div>
               </div>
 
               <!-- Map Footer exact text match with BromeoGrid -->
               <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; border-top:1px solid var(--border2); padding-top:0.5rem;">
-                <p class="muted small" style="margin:0; font-size:0.75rem; color:#94a3b8;">Kaartdata: Simplemaps worldmap (v1.1).</p>
+                <p class="muted small" style="margin:0; font-size:0.75rem; color:var(--muted);">Kaartdata: Simplemaps worldmap (v1.1).</p>
                 <span class="muted small" style="font-size:0.75rem;">Zoom: <span id="map-zoom-level">100%</span></span>
               </div>
             </div>
 
             <div style="background:var(--card-bg3); border-radius:10px; padding:1.25rem; border:1px solid var(--border2); max-height:360px; overflow-y:auto;">
               <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:1rem;">
-                <span style="color:#38bdf8; font-weight:600;">● Traffic weight</span>
-                <span style="color:#facc15; font-weight:600;">● Licensed / paid heavier</span>
+                <span style="color:var(--accent2); font-weight:600;">● Traffic weight</span>
+                <span style="color:var(--stat-text-yellow); font-weight:600;">● Licensed / paid heavier</span>
               </div>
               <div id="analytics-country-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
             </div>
@@ -1259,7 +1287,7 @@ async function initWorldMapSvg() {
       <div id="svg-map-wrapper" style="width:100%; height:100%; transition: transform 0.25s ease-out; transform-origin: center center;">
         ${svgText}
       </div>
-      <div id="map-tooltip" style="position:absolute; display:none; background:var(--card-bg3); border:1px solid #38bdf8; color:var(--text-h); padding:0.5rem 0.75rem; border-radius:6px; font-size:0.8rem; pointer-events:none; z-index:100; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
+      <div id="map-tooltip" style="position:absolute; display:none; background:var(--card-bg3); border:1px solid var(--accent2); color:var(--text-h); padding:0.5rem 0.75rem; border-radius:6px; font-size:0.8rem; pointer-events:none; z-index:100; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
     `;
 
     const svg = container.querySelector('svg');
@@ -1278,13 +1306,13 @@ async function initWorldMapSvg() {
         p.style.cursor = 'pointer';
 
         p.addEventListener('mouseenter', (e) => {
-          p.style.fill = '#38bdf8';
+          p.style.fill = 'var(--accent2)';
           p.style.stroke = '#ffffff';
           const name = p.getAttribute('name') || p.getAttribute('class') || p.getAttribute('id') || 'Land';
           const tooltip = document.getElementById('map-tooltip');
           if (tooltip) {
             tooltip.style.display = 'block';
-            tooltip.innerHTML = `<strong>${name}</strong><br/><span style="color:#0be881;">Actief verkeer &amp; licenties</span>`;
+            tooltip.innerHTML = `<strong>${name}</strong><br/><span style="color:var(--accent);">Actief verkeer &amp; licenties</span>`;
           }
         });
 
@@ -1396,7 +1424,7 @@ async function loadAnalytics() {
   const pathsBody = document.getElementById('analyticsPathsBody');
   pathsBody.innerHTML = (data.topPages || []).length
     ? (data.topPages).map(p => `<tr>
-        <td style="font-family:monospace; font-size:0.85rem; color:#38bdf8;">${p.path}</td>
+        <td style="font-family:monospace; font-size:0.85rem; color:var(--accent2);">${p.path}</td>
         <td style="font-weight:700;">${p.views}</td>
         <td>${p.uniqueVisitors}</td>
         <td><span class="badge badge-gray">${p.avgResponse}</span></td>
@@ -1409,7 +1437,7 @@ async function loadAnalytics() {
     ? (data.topReferrers).map(r => `
         <div style="background:var(--card-bg2); border-radius:8px; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
           <span style="font-family:monospace; font-size:0.85rem; color:#e2e8f0;">${r.referrer}</span>
-          <span style="font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.1); padding:0.25rem 0.6rem; border-radius:6px;">${r.views}</span>
+          <span style="font-weight:700; color:var(--accent2); background:rgba(56,189,248,0.1); padding:0.25rem 0.6rem; border-radius:6px;">${r.views}</span>
         </div>`).join('')
     : '<div class="empty-state">Geen referrers.</div>';
 
@@ -1419,16 +1447,16 @@ async function loadAnalytics() {
     ? (data.recentVisitors).map(v => `
         <div style="background:var(--card-bg2); border-radius:10px; padding:1rem; border:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
           <div>
-            <div style="font-size:0.75rem; color:#94a3b8;">${new Date(v.timestamp).toLocaleString('nl-NL')}</div>
+            <div style="font-size:0.75rem; color:var(--muted);">${new Date(v.timestamp).toLocaleString('nl-NL')}</div>
             <div style="font-weight:700; font-size:0.9rem; color:var(--text-h); margin-top:0.25rem;">VISITOR ${v.visitor}</div>
-            <div style="font-family:monospace; font-size:0.8rem; color:#38bdf8; margin-top:0.25rem;">PATH ${v.path}</div>
+            <div style="font-family:monospace; font-size:0.8rem; color:var(--accent2); margin-top:0.25rem;">PATH ${v.path}</div>
           </div>
           <div style="text-align:right;">
             <div style="display:flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
               <span>${v.flag || '🇳🇱'}</span>
               <span style="font-size:0.85rem; font-weight:600;">${v.city || 'Nederland'}</span>
             </div>
-            <div style="font-size:0.8rem; color:#94a3b8; margin-top:0.25rem;">IP ${v.ip} · ${v.responseTime}</div>
+            <div style="font-size:0.8rem; color:var(--muted); margin-top:0.25rem;">IP ${v.ip} · ${v.responseTime}</div>
           </div>
         </div>`).join('')
     : '<div class="empty-state">Geen recente bezoekers.</div>';
@@ -1439,14 +1467,14 @@ async function loadAnalytics() {
     ? (data.softwareDownloads).map(d => `
         <tr>
           <td style="font-weight:600;">${d.name}</td>
-          <td style="color:#94a3b8;">${d.email}</td>
-          <td style="color:#38bdf8; font-family:monospace;">${d.file}</td>
+          <td style="color:var(--muted);">${d.email}</td>
+          <td style="color:var(--accent2); font-family:monospace;">${d.file}</td>
           <td>${d.flag || '🇳🇱'} ${d.geo}</td>
           <td style="font-family:monospace; font-size:0.8rem;">${d.ip}</td>
           <td>${d.duration}</td>
           <td>${d.size}</td>
           <td><span class="badge badge-green">${d.status}</span></td>
-          <td style="font-size:0.8rem; color:#94a3b8;">${new Date(d.completed).toLocaleString('nl-NL')}</td>
+          <td style="font-size:0.8rem; color:var(--muted);">${new Date(d.completed).toLocaleString('nl-NL')}</td>
         </tr>`).join('')
     : '<tr><td colspan="9" class="empty-state">Geen software downloads geregistreerd.</td></tr>';
 }
@@ -1504,13 +1532,13 @@ function renderDailyCarousel(daily) {
   carousel.innerHTML = [...daily].reverse().map(d => `
     <div style="background:var(--card-bg1); border:1px solid var(--border2); border-radius:10px; padding:0.875rem 1rem; min-width:140px; flex-shrink:0;">
       <div style="font-weight:700; font-size:0.85rem; color:var(--text-h); border-bottom:1px solid var(--border2); padding-bottom:0.4rem; margin-bottom:0.4rem;">${d.label}</div>
-      <div style="font-size:0.75rem; color:#94a3b8; display:flex; flex-direction:column; gap:0.2rem;">
+      <div style="font-size:0.75rem; color:var(--muted); display:flex; flex-direction:column; gap:0.2rem;">
         <div>Users: <strong style="color:var(--text-h);">${d.users}</strong></div>
         <div>Views: <strong style="color:var(--text-h);">${d.views}</strong></div>
         <div>Visitors: <strong style="color:var(--text-h);">${d.visitors}</strong></div>
         <div>Downloads: <strong style="color:var(--text-h);">${d.downloads}</strong></div>
         <div>Trials: <strong style="color:var(--text-h);">${d.trials}</strong></div>
-        <div style="color:#0be881; font-weight:700; margin-top:0.2rem;">EUR ${d.revenue.toFixed(2)}</div>
+        <div style="color:var(--accent); font-weight:700; margin-top:0.2rem;">EUR ${d.revenue.toFixed(2)}</div>
       </div>
     </div>`).join('');
 }
@@ -1538,7 +1566,7 @@ function renderCountryOverview(countries) {
           <span style="font-size:1.1rem;">${c.flag}</span>
           <span style="font-size:0.85rem; font-weight:600; color:var(--text-h);">${c.name}</span>
         </div>
-        <div style="font-weight:700; font-size:0.85rem; color:#0be881;">EUR ${c.revenue.toFixed(2)}</div>
+        <div style="font-weight:700; font-size:0.85rem; color:var(--accent);">EUR ${c.revenue.toFixed(2)}</div>
       </div>`).join('');
   }
 
@@ -1551,7 +1579,7 @@ function renderCountryOverview(countries) {
         <td>${c.downloaders}</td>
         <td>${c.licensedCustomers}</td>
         <td>${c.paidTx}</td>
-        <td style="font-weight:700; color:#0be881;">EUR ${c.revenue.toFixed(2)}</td>
+        <td style="font-weight:700; color:var(--accent);">EUR ${c.revenue.toFixed(2)}</td>
       </tr>`).join('');
   }
 }

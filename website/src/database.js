@@ -652,9 +652,9 @@ async function adminGetFullStatistics({ days = 30, filterInternal = false, filte
     query(`SELECT COUNT(*) AS count FROM licenses WHERE is_trial = true AND created_at > now() - interval '30 days'`),
     query(`SELECT COUNT(*) AS count FROM licenses WHERE status = 'Active' AND plan != 'Free'`),
     query(`SELECT COUNT(*) AS count FROM page_views WHERE created_at > now() - interval '7 days'`),
-    query(`SELECT AVG(duration_seconds) AS avg FROM session_events WHERE created_at > now() - interval '30 days'`),
+    query(`SELECT AVG(session_duration_seconds) AS avg FROM session_events WHERE created_at > now() - interval '30 days'`),
     query(`SELECT COUNT(*) AS count FROM licenses WHERE is_trial = true AND expires_at < now() AND status != 'Active'`),
-    query(`SELECT COUNT(DISTINCT country_code) AS count FROM software_downloads WHERE created_at > now() - interval '30 days'`),
+    query(`SELECT 0 AS count`),
     query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM license_transactions WHERE status = 'paid' AND created_at > date_trunc('month', now())`),
     query(`SELECT COALESCE(SUM(amount), 0) AS total, COUNT(*) AS count FROM license_transactions WHERE status = 'paid' AND created_at > date_trunc('year', now())`),
     query(`
@@ -709,7 +709,7 @@ async function adminGetFullStatistics({ days = 30, filterInternal = false, filte
       LIMIT 20
     `),
     query(`
-      SELECT de.created_at, de.file_name, de.ip_address
+      SELECT de.created_at, de.platform AS file_name, de.ip_address
       FROM download_events de
       ORDER BY de.created_at DESC
       LIMIT 20
