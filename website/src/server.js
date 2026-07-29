@@ -12,6 +12,7 @@ const {
   saveContactRequest,
   saveDownloadEvent,
   saveNewsletterSignup,
+  recordPageView,
   recordSessionEvent,
   userRegister,
   userLogin,
@@ -43,6 +44,7 @@ app.use(
         objectSrc: ["'none'"],
         // Allow inline scripts for admin panel
         scriptSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrcAttr: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
       },
     },
@@ -462,6 +464,30 @@ app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (
 app.get("/dashboard.html", (req, res) => {
   const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
   res.redirect(302, "/" + query);
+});
+
+// Lightweight server-side visitor tracking — only real page navigations
+// (GET, HTML accept, no file extension, not API/admin/releases), never assets.
+// Must run before express.static(publicDir) below, since that middleware
+// auto-resolves "/" to index.html and would otherwise short-circuit the
+// request before this ever saw it.
+app.use((req, res, next) => {
+  if (
+    req.method === "GET" &&
+    !req.path.startsWith("/api") &&
+    !req.path.startsWith("/admin") &&
+    !req.path.startsWith("/releases") &&
+    !path.extname(req.path) &&
+    (req.headers.accept || "").includes("text/html")
+  ) {
+    recordPageView({
+      path: req.path,
+      referrer: req.get("referer") || null,
+      ip: req.ip,
+      userAgent: req.get("user-agent") || null,
+    }).catch(() => {});
+  }
+  next();
 });
 
 app.use("/releases", express.static(releasesDir));

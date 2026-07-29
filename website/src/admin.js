@@ -24,6 +24,7 @@ const {
   adminCountSuperAdmins,
   adminGetAdminById,
   adminDeleteAdmin,
+  adminGetAnalytics,
   databaseEnabled,
   getPool,
 } = require("./database");
@@ -98,7 +99,7 @@ router.get("/login", (req, res) => {
   res.sendFile(path.join(adminDir, "login.html"));
 });
 
-router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins"], requireAuth, (req, res) => {
+router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins", "/analytics"], requireAuth, (req, res) => {
   res.sendFile(path.join(adminDir, "index.html"));
 });
 
@@ -321,6 +322,17 @@ router.delete("/api/admins/:id", requireAuth, requireSuperAdmin, async (req, res
     }
     await adminDeleteAdmin(req.params.id);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Analytics API ─────────────────────────────────────────────────────────────
+router.get("/api/analytics", requireAuth, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const data = await adminGetAnalytics({ days });
+    res.json({ ok: true, ...data });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

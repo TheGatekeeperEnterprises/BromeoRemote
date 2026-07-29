@@ -182,6 +182,19 @@ async function initDatabase() {
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_admin_sessions_expire ON admin_sessions (expire);`);
 
+  // Website page views (visitor analytics)
+  await query(`
+    CREATE TABLE IF NOT EXISTS page_views (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      path text NOT NULL,
+      referrer text,
+      ip_address text,
+      user_agent text,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at DESC);`);
+
   await query("CREATE INDEX IF NOT EXISTS idx_contact_requests_created_at ON contact_requests (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_download_events_created_at ON download_events (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_licenses_user_id ON licenses (user_id);");
@@ -254,6 +267,15 @@ async function saveDownloadEvent(platform, requestMeta) {
   return id;
 }
 
+async function recordPageView({ path, referrer, ip, userAgent }) {
+  if (!databaseEnabled()) return null;
+  await query(
+    `INSERT INTO page_views (path, referrer, ip_address, user_agent) VALUES ($1, $2, $3, $4);`,
+    [path, referrer || null, ip || null, userAgent || null],
+  );
+  return null;
+}
+
 async function closeDatabase() {
   if (pool) await pool.end();
 }
@@ -264,6 +286,7 @@ async function adminGetStats() {
   const [
     users, licenses, activeLicenses, trialLicenses, sessions7d, downloads7d,
     revenue30d, revenueTotal, failedPayments7d, contactRequests7d, newsletterSignups7d, activeSubscriptions,
+    pageViews7d, uniqueVisitors7d,
   ] = await Promise.all([
     query("SELECT COUNT(*) AS count FROM users"),
     query("SELECT COUNT(*) AS count FROM licenses"),
@@ -277,6 +300,8 @@ async function adminGetStats() {
     query("SELECT COUNT(*) AS count FROM contact_requests WHERE created_at > now() - interval '7 days'"),
     query("SELECT COUNT(*) AS count FROM newsletter_signups WHERE created_at > now() - interval '7 days'"),
     query("SELECT COUNT(*) AS count FROM licenses WHERE mollie_subscription_id IS NOT NULL AND status = 'Active'"),
+    query("SELECT COUNT(*) AS count FROM page_views WHERE created_at > now() - interval '7 days'"),
+    query("SELECT COUNT(DISTINCT ip_address) AS count FROM page_views WHERE created_at > now() - interval '7 days'"),
   ]);
   return {
     totalUsers: parseInt(users?.rows[0]?.count || 0),
@@ -291,6 +316,8 @@ async function adminGetStats() {
     contactRequests7d: parseInt(contactRequests7d?.rows[0]?.count || 0),
     newsletterSignups7d: parseInt(newsletterSignups7d?.rows[0]?.count || 0),
     activeSubscriptions: parseInt(activeSubscriptions?.rows[0]?.count || 0),
+    pageViews7d: parseInt(pageViews7d?.rows[0]?.count || 0),
+    uniqueVisitors7d: parseInt(uniqueVisitors7d?.rows[0]?.count || 0),
   };
 }
 
@@ -509,6 +536,51 @@ async function adminGetAdminById(id) {
 
 async function adminDeleteAdmin(id) {
   await query("DELETE FROM admin_accounts WHERE id = $1", [id]);
+}
+
+// ── Website visitor analytics (admin) ────────────────────────────────────────────
+
+async function adminGetAnalytics({ days = 30 } = {}) {
+  const [daily, topPaths, topReferrers, totalUniques] = await Promise.all([
+    query(
+      `SELECT date_trunc('day', created_at) AS day, COUNT(*) AS views, COUNT(DISTINCT ip_address) AS uniques
+       FROM page_views
+       WHERE created_at > now() - ($1::text || ' days')::interval
+       GROUP BY day
+       ORDER BY day ASC`,
+      [days]
+    ),
+    query(
+      `SELECT path, COUNT(*) AS views
+       FROM page_views
+       WHERE created_at > now() - ($1::text || ' days')::interval
+       GROUP BY path
+       ORDER BY views DESC
+       LIMIT 10`,
+      [days]
+    ),
+    query(
+      `SELECT COALESCE(NULLIF(referrer, ''), 'Direct') AS referrer, COUNT(*) AS views
+       FROM page_views
+       WHERE created_at > now() - ($1::text || ' days')::interval
+       GROUP BY referrer
+       ORDER BY views DESC
+       LIMIT 10`,
+      [days]
+    ),
+    query(
+      `SELECT COUNT(DISTINCT ip_address) AS count
+       FROM page_views
+       WHERE created_at > now() - ($1::text || ' days')::interval`,
+      [days]
+    ),
+  ]);
+  return {
+    daily: (daily?.rows || []).map((r) => ({ day: r.day, views: parseInt(r.views), uniques: parseInt(r.uniques) })),
+    topPaths: (topPaths?.rows || []).map((r) => ({ path: r.path, views: parseInt(r.views) })),
+    topReferrers: (topReferrers?.rows || []).map((r) => ({ referrer: r.referrer, views: parseInt(r.views) })),
+    totalUniques: parseInt(totalUniques?.rows[0]?.count || 0),
+  };
 }
 
 // Record a session event from the client/app
@@ -782,6 +854,8 @@ module.exports = {
   saveContactRequest,
   saveDownloadEvent,
   saveNewsletterSignup,
+  recordPageView,
+  adminGetAnalytics,
   // User Portal Auth
   userRegister,
   userLogin,

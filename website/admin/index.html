@@ -154,6 +154,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><path d="M2 6h20v12H2z"/></svg>
         Leads
       </div>
+      <div class="nav-item" data-page="analytics" onclick="navigate('analytics')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+        Analytics
+      </div>
       <div class="nav-item" id="navAdmins" data-page="admins" onclick="navigate('admins')" style="display:none;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
         Beheerders
@@ -183,6 +187,8 @@
           <div class="stat-card"><div class="stat-label">Actieve abonnementen</div><div class="stat-value blue" id="stat-activeSubs">–</div></div>
           <div class="stat-card"><div class="stat-label">Mislukte betalingen (7d)</div><div class="stat-value" id="stat-failedPayments" style="color:var(--danger)">–</div></div>
           <div class="stat-card"><div class="stat-label">Nieuwe leads (7 dagen)</div><div class="stat-value warn" id="stat-leads7d">–</div></div>
+          <div class="stat-card"><div class="stat-label">Bezoeken (7 dagen)</div><div class="stat-value blue" id="stat-pageViews7d">–</div></div>
+          <div class="stat-card"><div class="stat-label">Unieke bezoekers (7 dagen)</div><div class="stat-value blue" id="stat-uniqueVisitors7d">–</div></div>
         </div>
       </div>
     </div>
@@ -347,6 +353,47 @@
       </div>
     </div>
 
+    <!-- Analytics Page -->
+    <div id="page-analytics" class="page-hidden">
+      <div class="topbar">
+        <h1>Website Analytics</h1>
+        <select class="search-input" id="analyticsDaysFilter" style="width:160px;" onchange="loadAnalytics();">
+          <option value="7">Laatste 7 dagen</option>
+          <option value="30" selected>Laatste 30 dagen</option>
+          <option value="90">Laatste 90 dagen</option>
+        </select>
+      </div>
+      <div class="content">
+        <div class="stats-grid" style="margin-bottom:1.5rem;">
+          <div class="stat-card"><div class="stat-label">Totaal bezoeken</div><div class="stat-value accent" id="analytics-totalViews">–</div></div>
+          <div class="stat-card"><div class="stat-label">Unieke bezoekers</div><div class="stat-value blue" id="analytics-totalUniques">–</div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><h2>Bezoeken per dag</h2></div>
+          <table>
+            <thead><tr><th>Datum</th><th>Bezoeken</th><th>Uniek</th><th style="width:40%;">Trend</th></tr></thead>
+            <tbody id="analyticsDailyBody"><tr><td colspan="4" class="loading">Laden...</td></tr></tbody>
+          </table>
+        </div>
+        <div class="detail-grid">
+          <div class="card">
+            <div class="card-header"><h2>Top pagina's</h2></div>
+            <table>
+              <thead><tr><th>Pad</th><th>Bezoeken</th></tr></thead>
+              <tbody id="analyticsPathsBody"><tr><td colspan="2" class="loading">Laden...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="card">
+            <div class="card-header"><h2>Top verwijzers</h2></div>
+            <table>
+              <thead><tr><th>Bron</th><th>Bezoeken</th></tr></thead>
+              <tbody id="analyticsReferrersBody"><tr><td colspan="2" class="loading">Laden...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Modal: Nieuw gebruiker -->
@@ -494,6 +541,7 @@ function navigate(page, id, push = true) {
   if (page === 'transactions') loadTransactions();
   if (page === 'leads') { loadContactRequests(); loadNewsletterSignups(); }
   if (page === 'admins') loadAdmins();
+  if (page === 'analytics') loadAnalytics();
 }
 
 function handleRoute() {
@@ -511,6 +559,8 @@ function handleRoute() {
     navigate('leads', null, false);
   } else if (path === '/admin/admins') {
     navigate('admins', null, false);
+  } else if (path === '/admin/analytics') {
+    navigate('analytics', null, false);
   } else {
     navigate('dashboard', null, false);
   }
@@ -556,6 +606,8 @@ async function loadStats() {
   document.getElementById('stat-activeSubs').textContent = s.activeSubscriptions;
   document.getElementById('stat-failedPayments').textContent = s.failedPayments7d;
   document.getElementById('stat-leads7d').textContent = s.contactRequests7d + s.newsletterSignups7d;
+  document.getElementById('stat-pageViews7d').textContent = s.pageViews7d;
+  document.getElementById('stat-uniqueVisitors7d').textContent = s.uniqueVisitors7d;
 }
 
 // ── Users ──────────────────────────────────────────────────────────────────────
@@ -803,6 +855,44 @@ async function deleteAdmin(id) {
   const data = await res.json();
   if (!data.ok) return alert(data.error);
   loadAdmins();
+}
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  const days = document.getElementById('analyticsDaysFilter')?.value || 30;
+  document.getElementById('analyticsDailyBody').innerHTML = '<tr><td colspan="4" class="loading">Laden...</td></tr>';
+  document.getElementById('analyticsPathsBody').innerHTML = '<tr><td colspan="2" class="loading">Laden...</td></tr>';
+  document.getElementById('analyticsReferrersBody').innerHTML = '<tr><td colspan="2" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/analytics?days=${days}`);
+  const data = await res.json();
+  if (!data.ok) return;
+
+  const totalViews = data.daily.reduce((sum, d) => sum + d.views, 0);
+  document.getElementById('analytics-totalViews').textContent = totalViews;
+  document.getElementById('analytics-totalUniques').textContent = data.totalUniques;
+
+  const dailyBody = document.getElementById('analyticsDailyBody');
+  if (!data.daily.length) {
+    dailyBody.innerHTML = '<tr><td colspan="4" class="empty-state">Nog geen bezoeken geregistreerd.</td></tr>';
+  } else {
+    const maxViews = Math.max(...data.daily.map(d => d.views), 1);
+    dailyBody.innerHTML = [...data.daily].reverse().map(d => `<tr>
+      <td>${new Date(d.day).toLocaleDateString('nl-NL')}</td>
+      <td>${d.views}</td>
+      <td>${d.uniques}</td>
+      <td><div style="background:var(--bg3); border-radius:4px; overflow:hidden;"><div style="background:var(--accent); height:10px; width:${Math.round((d.views / maxViews) * 100)}%;"></div></div></td>
+    </tr>`).join('');
+  }
+
+  const pathsBody = document.getElementById('analyticsPathsBody');
+  pathsBody.innerHTML = data.topPaths.length
+    ? data.topPaths.map(p => `<tr><td>${p.path}</td><td>${p.views}</td></tr>`).join('')
+    : '<tr><td colspan="2" class="empty-state">Geen data.</td></tr>';
+
+  const referrersBody = document.getElementById('analyticsReferrersBody');
+  referrersBody.innerHTML = data.topReferrers.length
+    ? data.topReferrers.map(r => `<tr><td>${r.referrer}</td><td>${r.views}</td></tr>`).join('')
+    : '<tr><td colspan="2" class="empty-state">Geen data.</td></tr>';
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────
