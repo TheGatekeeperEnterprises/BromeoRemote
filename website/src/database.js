@@ -604,25 +604,34 @@ async function verifyLicenseInDb({ licenseKey, email, hwidHash, platform = "wind
     return { valid: true, plan: "Trial (Offline)", status: "Active", isTrial: true, expiresAt: null };
   }
 
-  let queryText = `
-    SELECT l.*, u.email as user_email
-    FROM licenses l
-    JOIN users u ON u.id = l.user_id
-    WHERE 
-  `;
-  const params = [];
-
+  // Resolve the user first (via whichever of key/email was given), then always
+  // verify against that user's single most-recent license — not necessarily
+  // the exact license row the key happens to point at. This matches the
+  // "most recently created license is *the* license" invariant already used
+  // by upgradeUserLicense/downgradeUserLicenseToFree/getMostRecentLicense, so
+  // e.g. an admin adding a new trial for an existing account is immediately
+  // picked up by a client re-verifying with its old, previously-issued key,
+  // instead of that key permanently pinning verification to the license row
+  // it was originally issued against.
+  let userIdRes;
   if (licenseKey) {
-    queryText += ` l.license_key::text = $1`;
-    params.push(licenseKey.trim());
+    userIdRes = await query("SELECT user_id FROM licenses WHERE license_key::text = $1", [licenseKey.trim()]);
   } else {
-    queryText += ` u.email = $1`;
-    params.push(email.trim().toLowerCase());
+    userIdRes = await query("SELECT id AS user_id FROM users WHERE email = $1", [email.trim().toLowerCase()]);
   }
+  if (!userIdRes || userIdRes.rows.length === 0) {
+    return { valid: false, reason: "Geen geldige licentie gevonden voor deze sleutel/e-mail." };
+  }
+  const userId = userIdRes.rows[0].user_id;
 
-  queryText += ` ORDER BY l.created_at DESC LIMIT 1`;
-
-  const res = await query(queryText, params);
+  const res = await query(
+    `SELECT l.*, u.email as user_email
+     FROM licenses l
+     JOIN users u ON u.id = l.user_id
+     WHERE l.user_id = $1
+     ORDER BY l.created_at DESC LIMIT 1`,
+    [userId]
+  );
   if (!res || res.rows.length === 0) {
     return { valid: false, reason: "Geen geldige licentie gevonden voor deze sleutel/e-mail." };
   }
