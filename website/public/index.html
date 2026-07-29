@@ -1,35 +1,40 @@
 <!doctype html>
-<html lang="nl">
+<html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="BromeoRemote — professionele remote desktop software voor Windows en Android. Veilig, snel en beveiligd met HWID-licenties en end-to-end encryptie.">
+    <meta name="description" content="BromeoRemote — professional remote desktop software for Windows and Android. Secure, fast and protected with HWID licensing and end-to-end encryption.">
     <meta name="theme-color" content="#0b1425">
     <link rel="canonical" href="https://bromeoremote.com/">
-    <meta property="og:title" content="BromeoRemote | Professionele Remote Desktop Software">
-    <meta property="og:description" content="Veilig meekijken, besturen en bestanden overzetten via Windows en Android. Enterprise-grade beveiliging met HWID en end-to-end encryptie.">
+    <meta property="og:title" content="BromeoRemote | Professional Remote Desktop Software">
+    <meta property="og:description" content="Securely view, control and transfer files across Windows and Android. Enterprise-grade security with HWID and end-to-end encryption.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://bromeoremote.com/">
     <meta property="og:image" content="https://bromeoremote.com/assets/logo.png">
-    <title>BromeoRemote | Professionele Remote Desktop Software</title>
+    <title>BromeoRemote | Professional Remote Desktop Software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="stylesheet" href="/styles.css?v=20260726-1">
+    <script src="/i18n.js?v=20260730-1"></script>
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href="#top" aria-label="BromeoRemote home">
         <img src="/assets/logo2.png" alt="BromeoRemote">
       </a>
-      <nav class="nav-links" aria-label="Hoofdnavigatie">
-        <a href="#werkwijze">Hoe het werkt</a>
-        <a href="#veiligheid">Beveiliging</a>
-        <a href="#licenties">Prijzen</a>
-        <a href="#contact">Contact</a>
+      <nav class="nav-links" data-i18n-aria-label="nav.ariaLabel" aria-label="Main navigation">
+        <a href="#werkwijze" data-i18n="nav.howItWorks">How it works</a>
+        <a href="#veiligheid" data-i18n="nav.security">Security</a>
+        <a href="#licenties" data-i18n="nav.pricing">Pricing</a>
+        <a href="#contact" data-i18n="nav.contact">Contact</a>
       </nav>
         <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
-          <button type="button" class="header-cta" id="accountModalTrigger" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Mijn Dashboard / Licentie</button>
-          <a class="header-cta" href="#downloads">Download gratis</a>
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">EN</button>
+            <button type="button" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">NL</button>
+          </div>
+          <button type="button" class="header-cta" id="accountModalTrigger" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">My Dashboard / License</button>
+          <a class="header-cta" href="#downloads" data-i18n="header.downloadFree">Download free</a>
         </div>
       </header>
 
@@ -38,23 +43,23 @@
       <!-- HERO: Eerste indruk, uniek verkoopargument -->
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow">Remote Desktop voor Windows & Android</p>
-          <h1 id="hero-title">Professionele remote support, beveiligd van hardware tot sessie.</h1>
-          <p class="hero-lead">
-            BromeoRemote geeft IT-professionals en supportteams volledige controle: meekijken, besturen, chatten en bestanden overzetten — beschermd door end-to-end encryptie en HWID-licenties.
+          <p class="eyebrow" data-i18n="hero.eyebrow">Remote Desktop for Windows & Android</p>
+          <h1 id="hero-title" data-i18n="hero.title">Professional remote support, secured from hardware to session.</h1>
+          <p class="hero-lead" data-i18n="hero.lead">
+            BromeoRemote gives IT professionals and support teams full control: view, control, chat and transfer files — protected by end-to-end encryption and HWID licensing.
           </p>
-          <div class="hero-actions" aria-label="Belangrijkste acties">
-            <a class="primary-action" href="#downloads">Gratis downloaden</a>
-            <a class="secondary-action" href="#licenties">Bekijk licenties</a>
+          <div class="hero-actions" aria-label="Key actions">
+            <a class="primary-action" href="#downloads" data-i18n="hero.ctaPrimary">Download free</a>
+            <a class="secondary-action" href="#licenties" data-i18n="hero.ctaSecondary">View plans</a>
           </div>
-          <ul class="hero-checks" aria-label="Kernvoordelen">
-            <li>End-to-end versleuteld</li>
-            <li>HWID hardware-koppeling</li>
-            <li>Windows &amp; Android</li>
+          <ul class="hero-checks" data-i18n-aria-label="hero.checksLabel" aria-label="Key benefits">
+            <li data-i18n="hero.check1">End-to-end encrypted</li>
+            <li data-i18n="hero.check2">HWID hardware binding</li>
+            <li data-i18n="hero.check3">Windows &amp; Android</li>
           </ul>
         </div>
 
-        <div class="hero-product" aria-label="BromeoRemote productvoorbeeld">
+        <div class="hero-product" data-i18n-aria-label="hero.productAlt" aria-label="BromeoRemote interface preview">
           <div class="product-frame" style="background: transparent; border: none; box-shadow: none;">
             <img src="/assets/bromeoremote_hero.png" alt="BromeoRemote Interface" style="width: 100%; height: auto; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 255, 255, 0.15);">
           </div>
@@ -64,22 +69,22 @@
       <!-- DOWNLOADS: Directe actie -->
       <section class="download-band" id="downloads" aria-labelledby="downloads-title">
         <div>
-          <p class="eyebrow">Downloads</p>
-          <h2 id="downloads-title">Direct aan de slag.</h2>
-          <p style="color: var(--text-secondary); margin-top: 0.5rem;">Gratis te downloaden. Upgrade naar Professional wanneer je klaar bent.</p>
+          <p class="eyebrow" data-i18n="downloads.eyebrow">Downloads</p>
+          <h2 id="downloads-title" data-i18n="downloads.title">Get started right away.</h2>
+          <p style="color: var(--text-secondary); margin-top: 0.5rem;" data-i18n="downloads.subtitle">Free to download. Upgrade to Professional when you're ready.</p>
         </div>
         <div class="download-actions">
           <a class="download-action primary" href="/download/windows" data-download="windows">
-            <span>Windows</span>
-            <strong>Installer downloaden</strong>
+            <span data-i18n="downloads.windowsLabel">Windows</span>
+            <strong data-i18n="downloads.windowsCta">Download installer</strong>
           </a>
           <a class="download-action" href="/download/windows-portable" data-download="windows-portable">
-            <span>Portable</span>
-            <strong>Direct starten</strong>
+            <span data-i18n="downloads.portableLabel">Portable</span>
+            <strong data-i18n="downloads.portableCta">Run instantly</strong>
           </a>
           <a class="download-action" href="/download/android" data-download="android">
-            <span>Android</span>
-            <strong>Mobiele app</strong>
+            <span data-i18n="downloads.androidLabel">Android</span>
+            <strong data-i18n="downloads.androidCta">Mobile app</strong>
           </a>
         </div>
       </section>
@@ -88,26 +93,26 @@
       <section class="section workflow-section" id="werkwijze" aria-labelledby="workflow-title">
         <div class="section-heading split-heading">
           <div>
-            <p class="eyebrow">Hoe het werkt</p>
-            <h2 id="workflow-title">Van download naar actieve sessie in drie stappen.</h2>
+            <p class="eyebrow" data-i18n="workflow.eyebrow">How it works</p>
+            <h2 id="workflow-title" data-i18n="workflow.title">From download to active session in three steps.</h2>
           </div>
-          <p>Eindgebruikers hoeven alleen de app te openen en hun code te delen. De IT-beheerder heeft volledige controle over sessierechten en tools.</p>
+          <p data-i18n="workflow.subtitle">End users just open the app and share their code. The IT admin has full control over session permissions and tools.</p>
         </div>
         <div class="workflow-grid">
           <article>
             <span>01</span>
-            <h3>Open BromeoRemote</h3>
-            <p>De gebruiker opent de app en ziet direct een uniek apparaat-ID en tijdelijk sessiewachtwoord.</p>
+            <h3 data-i18n="workflow.step1Title">Open BromeoRemote</h3>
+            <p data-i18n="workflow.step1Body">The user opens the app and immediately sees a unique device ID and temporary session password.</p>
           </article>
           <article>
             <span>02</span>
-            <h3>Verbind met ID & wachtwoord</h3>
-            <p>De beheerder voert het ID en wachtwoord in en kiest de gewenste sessierechten: meekijken, besturen of allebei.</p>
+            <h3 data-i18n="workflow.step2Title">Connect with ID & password</h3>
+            <p data-i18n="workflow.step2Body">The admin enters the ID and password and chooses the desired session permissions: view, control, or both.</p>
           </article>
           <article>
             <span>03</span>
-            <h3>Los het probleem op</h3>
-            <p>Chat, bestanden overzetten, klembord delen, scherm opnemen en beheeracties — alles in één sessie.</p>
+            <h3 data-i18n="workflow.step3Title">Solve the problem</h3>
+            <p data-i18n="workflow.step3Body">Chat, transfer files, share the clipboard, record the screen and manage the device — all in one session.</p>
           </article>
         </div>
       </section>
@@ -115,30 +120,30 @@
       <!-- FUNCTIES: Unieke feature-kaarten (niet herhalen wat hierboven staat) -->
       <section class="section platform-section" id="platformen" aria-labelledby="platformen-title">
         <div class="section-heading">
-          <p class="eyebrow">Wat je krijgt</p>
-          <h2 id="platformen-title">Alles wat een professioneel supportteam nodig heeft.</h2>
-          <p>Gebouwd voor dagelijks gebruik: snel verbinden, veilig overnemen en gebruikers vertrouwen geven.</p>
+          <p class="eyebrow" data-i18n="features.eyebrow">What you get</p>
+          <h2 id="platformen-title" data-i18n="features.title">Everything a professional support team needs.</h2>
+          <p data-i18n="features.subtitle">Built for daily use: connect fast, take over securely, and give users confidence.</p>
         </div>
         <div class="feature-grid">
           <article>
             <span class="feature-kicker">01</span>
-            <h3>Volledig scherm, volledige controle</h3>
-            <p>Bekijk en bestuur Windows-pc&apos;s met muis, toetsenbord en multi-monitor ondersteuning. View-only beschikbaar waar gewenst.</p>
+            <h3 data-i18n="features.f1Title">Full screen, full control</h3>
+            <p data-i18n="features.f1Body">View and control Windows PCs with mouse, keyboard and multi-monitor support. View-only available wherever needed.</p>
           </article>
           <article>
             <span class="feature-kicker">02</span>
-            <h3>Ingebouwde sessietools</h3>
-            <p>Chat, bestandsoverdracht, klembord, schermopname en herstart — direct bereikbaar zonder extra software.</p>
+            <h3 data-i18n="features.f2Title">Built-in session tools</h3>
+            <p data-i18n="features.f2Body">Chat, file transfer, clipboard, screen recording and restart — instantly available, no extra software needed.</p>
           </article>
           <article>
             <span class="feature-kicker">03</span>
-            <h3>Android app voor onderweg</h3>
-            <p>Beheer op afstand via je smartphone. Touch- en muismodus, lichte modus en snelle notificaties inbegrepen.</p>
+            <h3 data-i18n="features.f3Title">Android app for on the go</h3>
+            <p data-i18n="features.f3Body">Manage remotely from your smartphone. Touch and mouse mode, light mode and instant notifications included.</p>
           </article>
           <article>
             <span class="feature-kicker">04</span>
-            <h3>Onbeheerde toegang met 2FA</h3>
-            <p>Stel een vast wachtwoord in voor automatisch beheer zonder aanwezigheid, beveiligd met twee-factor-authenticatie.</p>
+            <h3 data-i18n="features.f4Title">Unattended access with 2FA</h3>
+            <p data-i18n="features.f4Body">Set a fixed password for automatic unattended management, secured with two-factor authentication.</p>
           </article>
         </div>
       </section>
@@ -146,26 +151,26 @@
       <!-- BEVEILIGING: Geconsolideerd in één sterke sectie -->
       <section class="security-band" id="veiligheid" aria-labelledby="security-title">
         <div class="section-heading">
-          <p class="eyebrow">Enterprise Beveiliging</p>
-          <h2 id="security-title">Veiligheid die verder gaat dan een wachtwoord.</h2>
-          <p>Elke laag van BromeoRemote is ontworpen met veiligheid als uitgangspunt — van de verbinding tot de licentie.</p>
+          <p class="eyebrow" data-i18n="security.eyebrow">Enterprise Security</p>
+          <h2 id="security-title" data-i18n="security.title">Security that goes beyond a password.</h2>
+          <p data-i18n="security.subtitle">Every layer of BromeoRemote is designed with security first — from the connection to the license.</p>
         </div>
         <ul class="security-list">
           <li>
-            <strong>End-to-End Encryptie</strong>
-            <span>Alle sessies, chatberichten en bestandsoverdrachten zijn volledig versleuteld. Niemand kan meekijken.</span>
+            <strong data-i18n="security.s1Title">End-to-End Encryption</strong>
+            <span data-i18n="security.s1Body">All sessions, chat messages and file transfers are fully encrypted. No one can look in.</span>
           </li>
           <li>
-            <strong>Granulaire sessierechten</strong>
-            <span>Muis, toetsenbord, klembord en bestanden kunnen per verbinding apart worden toegestaan of geblokkeerd.</span>
+            <strong data-i18n="security.s2Title">Granular session permissions</strong>
+            <span data-i18n="security.s2Body">Mouse, keyboard, clipboard and files can be allowed or blocked separately per connection.</span>
           </li>
           <li>
-            <strong>AVG &amp; Privacy Proof</strong>
-            <span>Wij slaan geen sessie-inhoud op en delen geen gegevens met derden. Jij behoudt de volledige controle.</span>
+            <strong data-i18n="security.s3Title">GDPR &amp; Privacy Proof</strong>
+            <span data-i18n="security.s3Body">We don't store session content and don't share data with third parties. You stay in full control.</span>
           </li>
           <li>
-            <strong>HWID Licentie-koppeling</strong>
-            <span>Je licentie is gebonden aan de hardware-vingerafdruk van jouw pc. Ongeautoriseerd gebruik is technisch onmogelijk.</span>
+            <strong data-i18n="security.s4Title">HWID License Binding</strong>
+            <span data-i18n="security.s4Body">Your license is bound to your PC's hardware fingerprint. Unauthorized use is technically impossible.</span>
           </li>
         </ul>
       </section>
@@ -173,53 +178,53 @@
       <!-- PRIJZEN: Licenties en Mollie -->
       <section class="section pricing-section" id="licenties" aria-labelledby="pricing-title">
         <div class="section-heading">
-          <p class="eyebrow">Licenties &amp; Prijzen</p>
-          <h2 id="pricing-title">Kies het plan dat bij jou past.</h2>
-          <p>Veilig betalen via Mollie (iDEAL, Bancontact, Creditcard). Je licentie is direct actief na betaling.</p>
+          <p class="eyebrow" data-i18n="pricing.eyebrow">Licenses &amp; Pricing</p>
+          <h2 id="pricing-title" data-i18n="pricing.title">Choose the plan that fits you.</h2>
+          <p data-i18n="pricing.subtitle">Pay securely via Mollie (iDEAL, Bancontact, Credit card). Your license is active immediately after payment.</p>
         </div>
-        
+
         <div class="pricing-layout">
           <div class="pricing-illustration">
-            <img src="/assets/secure_license.png" alt="Secure License Key">
+            <img src="/assets/secure_license.png" data-i18n-alt="pricing.illustrationAlt" alt="Secure License Key">
           </div>
           <div class="pricing-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); width: 100%;">
             <article class="pricing-card">
-              <h3>Gratis</h3>
-              <div class="price">€0<span>/mnd</span></div>
-              <p>Download gratis met basis functionaliteit.</p>
+              <h3 data-i18n="pricing.free.title">Free</h3>
+              <div class="price">€0<span data-i18n="common.perMonth">/mo</span></div>
+              <p data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
               <ul>
-                <li>Remote control &amp; meekijken</li>
-                <li>Max. 15 min per sessie</li>
-                <li>Standaard beeldkwaliteit</li>
+                <li data-i18n="pricing.free.f1">Remote control &amp; viewing</li>
+                <li data-i18n="pricing.free.f2">Max. 15 min per session</li>
+                <li data-i18n="pricing.free.f3">Standard picture quality</li>
               </ul>
-              <a href="#downloads" class="download-action secondary">Gratis Downloaden</a>
+              <a href="#downloads" class="download-action secondary" data-i18n="pricing.free.cta">Download Free</a>
             </article>
 
             <article class="pricing-card premium-card">
-              <div class="popular-badge">Populair</div>
-              <h3>Pro</h3>
-              <div class="price">€7,95<span>/mnd</span></div>
-              <p>Voor de actieve gebruiker en IT-beheerder.</p>
+              <div class="popular-badge" data-i18n="pricing.pro.badge">Popular</div>
+              <h3 data-i18n="pricing.pro.title">Pro</h3>
+              <div class="price">€7.95<span data-i18n="common.perMonth">/mo</span></div>
+              <p data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
               <ul>
-                <li><strong>Onbeperkte sessieduur</strong></li>
-                <li>Bestandsoverdracht &amp; chat</li>
-                <li><strong>HWID hardware-beveiliging</strong></li>
-                <li>Multi-monitor &amp; gordijnmodus</li>
+                <li><strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
+                <li data-i18n="pricing.pro.f2">File transfer &amp; chat</li>
+                <li><strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
+                <li data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</li>
               </ul>
-              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro">Abonneren (€7,95)</button>
+              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro" data-i18n="pricing.pro.cta">Subscribe (€7.95)</button>
             </article>
 
             <article class="pricing-card">
-              <h3>Unlimited</h3>
-              <div class="price">€50<span>/mnd</span></div>
-              <p>Voor bedrijven en power-users.</p>
+              <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
+              <div class="price">€50<span data-i18n="common.perMonth">/mo</span></div>
+              <p data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
               <ul>
-                <li><strong>Onbeperkt apparaten &amp; sessies</strong></li>
-                <li><strong>AI Buddy assistent ingebouwd</strong></li>
-                <li>Onbeheerde toegang met 2FA</li>
-                <li>Prioriteitsondersteuning</li>
+                <li><strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
+                <li><strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
+                <li data-i18n="pricing.unlimited.f3">Unattended access with 2FA</li>
+                <li data-i18n="pricing.unlimited.f4">Priority support</li>
               </ul>
-              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited">Abonneren (€50,00)</button>
+              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited" data-i18n="pricing.unlimited.cta">Subscribe (€50.00)</button>
             </article>
           </div>
         </div>
@@ -228,25 +233,25 @@
       <!-- FAQ -->
       <section class="section faq-section" aria-labelledby="faq-title">
         <div class="section-heading">
-          <p class="eyebrow">FAQ</p>
-          <h2 id="faq-title">Veelgestelde vragen.</h2>
+          <p class="eyebrow" data-i18n="faq.eyebrow">FAQ</p>
+          <h2 id="faq-title" data-i18n="faq.title">Frequently asked questions.</h2>
         </div>
         <div class="faq-list">
           <details>
-            <summary>Is BromeoRemote een alternatief voor TeamViewer?</summary>
-            <p>Ja. BromeoRemote biedt dezelfde kernfunctionaliteit — remote support, meekijken, besturen, chatten en bestanden overzetten — maar dan met betere privacy, HWID-beveiliging en transparante prijzen zonder verborgen kosten.</p>
+            <summary data-i18n="faq.q1">Is BromeoRemote an alternative to TeamViewer?</summary>
+            <p data-i18n="faq.a1">Yes. BromeoRemote offers the same core functionality — remote support, viewing, controlling, chatting and transferring files — but with better privacy, HWID security and transparent pricing with no hidden costs.</p>
           </details>
           <details>
-            <summary>Wat is HWID en waarom is het veiliger?</summary>
-            <p>HWID (Hardware ID) koppelt jouw licentie aan een unieke, onomkeerbare vingerafdruk van jouw beheercomputer. Zelfs als iemand je inloggegevens zou bemachtigen, kan de licentie niet op een andere pc worden gebruikt.</p>
+            <summary data-i18n="faq.q2">What is HWID and why is it more secure?</summary>
+            <p data-i18n="faq.a2">HWID (Hardware ID) binds your license to a unique, irreversible fingerprint of your admin computer. Even if someone got hold of your login details, the license couldn't be used on another PC.</p>
           </details>
           <details>
-            <summary>Hoe betaal ik en wanneer is mijn licentie actief?</summary>
-            <p>Je betaalt veilig via Mollie (iDEAL, Bancontact of Creditcard). Je licentie wordt automatisch geactiveerd zodra de betaling is bevestigd — geen handmatige stap nodig.</p>
+            <summary data-i18n="faq.q3">How do I pay and when is my license active?</summary>
+            <p data-i18n="faq.a3">You pay securely via Mollie (iDEAL, Bancontact or Credit card). Your license is activated automatically as soon as payment is confirmed — no manual step needed.</p>
           </details>
           <details>
-            <summary>Werkt BromeoRemote op alle Windows-versies?</summary>
-            <p>BromeoRemote ondersteunt Windows 10 en nieuwer. De Android app vereist Android 8.0 of hoger. Een stabiele internetverbinding is vereist voor externe sessies.</p>
+            <summary data-i18n="faq.q4">Does BromeoRemote work on all Windows versions?</summary>
+            <p data-i18n="faq.a4">BromeoRemote supports Windows 10 and newer. The Android app requires Android 8.0 or higher. A stable internet connection is required for remote sessions.</p>
           </details>
         </div>
       </section>
@@ -254,46 +259,46 @@
       <!-- CONTACT -->
       <section class="section contact-section" id="contact" aria-labelledby="contact-title">
         <div class="section-heading">
-          <p class="eyebrow">Contact</p>
-          <h2 id="contact-title">Vragen over licenties of zakelijke inzet?</h2>
-          <p>Stuur een bericht en we komen zo snel mogelijk bij je terug.</p>
+          <p class="eyebrow" data-i18n="contact.eyebrow">Contact</p>
+          <h2 id="contact-title" data-i18n="contact.title">Questions about licenses or business use?</h2>
+          <p data-i18n="contact.subtitle">Send a message and we'll get back to you as soon as possible.</p>
         </div>
 
         <div class="contact-layout">
           <form class="contact-form" id="contactForm" novalidate>
             <label>
-              Naam
+              <span data-i18n="contact.name">Name</span>
               <input name="name" autocomplete="name" required>
             </label>
             <label>
-              E-mail
+              <span data-i18n="contact.email">Email</span>
               <input name="email" type="email" autocomplete="email" required>
             </label>
             <label>
-              Bedrijf
+              <span data-i18n="contact.company">Company</span>
               <input name="company" autocomplete="organization">
             </label>
             <label>
-              Onderwerp
+              <span data-i18n="contact.subject">Subject</span>
               <input name="subject" required>
             </label>
             <label class="full-row">
-              Bericht
+              <span data-i18n="contact.message">Message</span>
               <textarea name="message" rows="5" required></textarea>
             </label>
-            <button class="primary-action full-row" type="submit">Bericht versturen</button>
+            <button class="primary-action full-row" type="submit" data-i18n="contact.submit">Send message</button>
             <p class="form-status full-row" id="contactStatus" role="status" aria-live="polite"></p>
           </form>
 
           <aside class="newsletter-panel" aria-labelledby="newsletter-title">
-            <h3 id="newsletter-title">Blijf op de hoogte</h3>
-            <p>Ontvang een melding bij nieuwe releases, functies en beveiligingsupdates.</p>
+            <h3 id="newsletter-title" data-i18n="newsletter.title">Stay in the loop</h3>
+            <p data-i18n="newsletter.subtitle">Get notified about new releases, features and security updates.</p>
             <form id="newsletterForm" novalidate>
               <label>
-                E-mail
+                <span data-i18n="newsletter.email">Email</span>
                 <input name="email" type="email" autocomplete="email" required>
               </label>
-              <button class="secondary-action" type="submit">Aanmelden</button>
+              <button class="secondary-action" type="submit" data-i18n="newsletter.submit">Subscribe</button>
               <p class="form-status" id="newsletterStatus" role="status" aria-live="polite"></p>
             </form>
           </aside>
@@ -304,12 +309,12 @@
     <footer class="site-footer">
       <div>
         <strong>BromeoRemote</strong>
-        <span>&copy; <span id="year"></span> Professionele remote desktop software</span>
+        <span>&copy; <span id="year"></span> <span data-i18n="footer.tagline">Professional remote desktop software</span></span>
       </div>
       <nav aria-label="Footer links">
-        <a href="/privacy/">Privacy</a>
-        <a href="/voorwaarden/">Voorwaarden</a>
-        <a href="#contact">Contact</a>
+        <a href="/privacy/" data-i18n="footer.privacy">Privacy</a>
+        <a href="/voorwaarden/" data-i18n="footer.terms">Terms</a>
+        <a href="#contact" data-i18n="footer.contact">Contact</a>
       </nav>
     </footer>
 
@@ -319,33 +324,33 @@
     <div id="downloadModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
       <div class="download-modal-backdrop" data-close-modal></div>
       <div class="download-modal-card">
-        <button class="download-modal-close" data-close-modal aria-label="Sluit venster">
+        <button class="download-modal-close" data-close-modal data-i18n-aria-label="downloadModal.close" aria-label="Close window">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
-        
+
         <div class="download-modal-header">
           <div class="modal-badge-wrapper">
-            <span class="modal-chip">Direct gratis starten</span>
+            <span class="modal-chip" data-i18n="downloadModal.chip">Start free instantly</span>
           </div>
-          <h2 id="modal-title" class="download-modal-title">Download BromeoRemote</h2>
-          <p class="download-modal-subtitle">Kies je platform hieronder. Gratis voor persoonlijk en zakelijk testen.</p>
+          <h2 id="modal-title" class="download-modal-title" data-i18n="downloadModal.title">Download BromeoRemote</h2>
+          <p class="download-modal-subtitle" data-i18n="downloadModal.subtitle">Choose your platform below. Free for personal and business testing.</p>
         </div>
 
         <div class="download-modal-grid">
           <!-- Windows Installer -->
           <a class="modal-download-card primary" href="/download/windows" data-download="windows">
-            <div class="card-tag">Aanbevolen</div>
+            <div class="card-tag" data-i18n="downloadModal.windowsTag">Recommended</div>
             <div class="card-icon-wrap windows">
               <svg width="34" height="34" viewBox="0 0 24 24" fill="#00adef">
                 <path d="M0 3.449L9.75 2.1v9.451H0m0 1.049h9.75v9.451L0 20.7V12.6zm10.55-10.65L24 0v11.4h-13.455V1.95zM24 12.6V24l-13.45-1.95V12.6H24z"/>
               </svg>
             </div>
             <div class="card-info">
-              <h3>Windows Installer</h3>
-              <p>Met automatische updates & snelkoppeling (.exe installer)</p>
+              <h3 data-i18n="downloadModal.windowsTitle">Windows Installer</h3>
+              <p data-i18n="downloadModal.windowsDesc">With automatic updates & shortcut (.exe installer)</p>
             </div>
             <div class="card-button primary">
-              <span>Installer downloaden</span>
+              <span data-i18n="downloadModal.windowsCta">Download installer</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </div>
           </a>
@@ -361,38 +366,38 @@
               </svg>
             </div>
             <div class="card-info">
-              <h3>Windows Portable</h3>
-              <p>Direct starten zonder installatie (.exe standalone)</p>
+              <h3 data-i18n="downloadModal.portableTitle">Windows Portable</h3>
+              <p data-i18n="downloadModal.portableDesc">Run instantly without installing (.exe standalone)</p>
             </div>
             <div class="card-button secondary">
-              <span>Direct starten</span>
+              <span data-i18n="downloadModal.portableCta">Run instantly</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </div>
           </a>
 
           <!-- Android App -->
           <a class="modal-download-card android" href="/download/android" data-download="android">
-            <div class="card-tag android">Android App</div>
+            <div class="card-tag android" data-i18n="downloadModal.androidTag">Android App</div>
             <div class="card-icon-wrap android">
               <svg width="38" height="38" viewBox="0 0 24 24" fill="#3DDC84">
                 <path d="M17.523 15.341c-.551 0-.999-.448-.999-.999s.448-.999.999-.999c.551 0 .999.448.999.999s-.448.999-.999.999zm-11.046 0c-.551 0-.999-.448-.999-.999s.448-.999.999-.999c.551 0 .999.448.999.999s-.448.999-.999.999zm11.405-6.03l1.997-3.459c.148-.256.06-.583-.196-.731-.256-.148-.583-.06-.731.196l-2.035 3.525c-1.482-.676-3.155-1.071-4.947-1.071s-3.465.395-4.947 1.071l-2.035-3.525c-.148-.256-.475-.344-.731-.196-.256.148-.344.475-.196.731l1.997 3.459c-3.329 1.838-5.612 5.215-5.91 9.208h23.708c-.298-3.993-2.581-7.37-5.91-9.208z"/>
               </svg>
             </div>
             <div class="card-info">
-              <h3>Android App</h3>
-              <p>Voor telefoons en tablets (.apk mobiele app)</p>
+              <h3 data-i18n="downloadModal.androidTitle">Android App</h3>
+              <p data-i18n="downloadModal.androidDesc">For phones and tablets (.apk mobile app)</p>
             </div>
             <div class="card-button android">
-              <span>Mobiele app</span>
+              <span data-i18n="downloadModal.androidCta">Mobile app</span>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             </div>
           </a>
         </div>
 
         <div class="download-modal-footer">
-          <span>🔒 End-to-end versleuteld</span>
-          <span>🛡️ 100% Virusvrij</span>
-          <span>⚡ Geen registratie verplicht</span>
+          <span data-i18n="downloadModal.footer1">🔒 End-to-end encrypted</span>
+          <span data-i18n="downloadModal.footer2">🛡️ 100% Virus-free</span>
+          <span data-i18n="downloadModal.footer3">⚡ No registration required</span>
         </div>
       </div>
     </div>
@@ -401,79 +406,79 @@
     <div id="accountModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="account-modal-title">
       <div class="download-modal-backdrop" data-close-modal></div>
       <div class="download-modal-card account-modal-card">
-        <button class="download-modal-close" data-close-modal aria-label="Sluit venster">
+        <button class="download-modal-close" data-close-modal data-i18n-aria-label="downloadModal.close" aria-label="Close window">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
 
         <!-- AUTH VIEW (UNAUTHENTICATED) -->
         <div id="authView">
           <div class="portal-header">
-            <h2 id="account-modal-title" class="download-modal-title">Mijn BromeoRemote Account</h2>
-            <p class="download-modal-subtitle">Meld je aan of maak een gratis account aan om je licentiesleutel te bekijken en te beheren.</p>
+            <h2 id="account-modal-title" class="download-modal-title" data-i18n="accountModal.title">My BromeoRemote Account</h2>
+            <p class="download-modal-subtitle" data-i18n="accountModal.subtitle">Sign in or create a free account to view and manage your license key.</p>
           </div>
 
           <div class="auth-tabs">
-            <button type="button" class="tab-btn active" id="tabLoginBtn" data-show-tab="login">Inloggen</button>
-            <button type="button" class="tab-btn" id="tabRegisterBtn" data-show-tab="register">Account Aanmaken (Gratis)</button>
+            <button type="button" class="tab-btn active" id="tabLoginBtn" data-show-tab="login" data-i18n="accountModal.tabLogin">Sign in</button>
+            <button type="button" class="tab-btn" id="tabRegisterBtn" data-show-tab="register" data-i18n="accountModal.tabRegister">Create account (free)</button>
           </div>
 
           <!-- LOGIN FORM -->
           <form id="loginForm">
             <div class="form-group">
-              <label for="loginEmail">E-mailadres</label>
-              <input type="email" id="loginEmail" required placeholder="jouw@email.nl">
+              <label for="loginEmail" data-i18n="login.email">Email address</label>
+              <input type="email" id="loginEmail" required placeholder="you@email.com">
             </div>
             <div class="form-group">
-              <label for="loginPassword">Wachtwoord</label>
+              <label for="loginPassword" data-i18n="login.password">Password</label>
               <input type="password" id="loginPassword" required placeholder="••••••••">
             </div>
-            <button type="submit" class="btn-submit" id="btnAuthSubmit">Inloggen</button>
+            <button type="submit" class="btn-submit" id="btnAuthSubmit" data-i18n="login.submit">Sign in</button>
             <p class="error-msg" id="authError" hidden></p>
             <p style="text-align:center; margin-top:0.75rem;">
-              <span class="logout-link" style="color:#8898aa;" id="forgotPasswordLink">Wachtwoord vergeten?</span>
+              <span class="logout-link" style="color:#8898aa;" id="forgotPasswordLink" data-i18n="login.forgotLink">Forgot password?</span>
             </p>
           </form>
 
           <!-- FORGOT PASSWORD FORM -->
           <form id="forgotForm" style="display:none;">
-            <p style="color:#8898aa; font-size:0.9rem; margin-bottom:1rem;">Vul je e-mailadres in, dan sturen we je een link om je wachtwoord opnieuw in te stellen.</p>
+            <p style="color:#8898aa; font-size:0.9rem; margin-bottom:1rem;" data-i18n="forgot.subtitle">Enter your email address and we'll send you a link to reset your password.</p>
             <div class="form-group">
-              <label for="forgotEmail">E-mailadres</label>
-              <input type="email" id="forgotEmail" required placeholder="jouw@email.nl">
+              <label for="forgotEmail" data-i18n="forgot.email">Email address</label>
+              <input type="email" id="forgotEmail" required placeholder="you@email.com">
             </div>
-            <button type="submit" class="btn-submit">Resetlink versturen</button>
+            <button type="submit" class="btn-submit" data-i18n="forgot.submit">Send reset link</button>
             <p class="error-msg" id="forgotError" hidden></p>
             <p class="error-msg" id="forgotSuccess" hidden style="color:#0be881;"></p>
             <p style="text-align:center; margin-top:0.75rem;">
-              <span class="logout-link" style="color:#8898aa;" id="backToLoginLink">Terug naar inloggen</span>
+              <span class="logout-link" style="color:#8898aa;" id="backToLoginLink" data-i18n="forgot.backLink">Back to sign in</span>
             </p>
           </form>
 
           <!-- RESET PASSWORD FORM (shown when ?resetToken= is present) -->
           <form id="resetPasswordForm" style="display:none;">
             <div class="form-group">
-              <label for="resetNewPassword">Nieuw wachtwoord (min. 6 tekens)</label>
+              <label for="resetNewPassword" data-i18n="reset.label">New password (min. 6 characters)</label>
               <input type="password" id="resetNewPassword" required minlength="6" placeholder="••••••••">
             </div>
-            <button type="submit" class="btn-submit">Wachtwoord instellen</button>
+            <button type="submit" class="btn-submit" data-i18n="reset.submit">Set password</button>
             <p class="error-msg" id="resetError" hidden></p>
           </form>
 
           <!-- REGISTER FORM -->
           <form id="registerForm" style="display: none;">
             <div class="form-group">
-              <label for="regEmail">E-mailadres *</label>
-              <input type="email" id="regEmail" required placeholder="jouw@email.nl">
+              <label for="regEmail" data-i18n="register.email">Email address *</label>
+              <input type="email" id="regEmail" required placeholder="you@email.com">
             </div>
             <div class="form-group">
-              <label for="regCompany">Bedrijfsnaam (optioneel)</label>
-              <input type="text" id="regCompany" placeholder="Bedrijf B.V.">
+              <label for="regCompany" data-i18n="register.company">Company name (optional)</label>
+              <input type="text" id="regCompany" placeholder="Company Ltd.">
             </div>
             <div class="form-group">
-              <label for="regPassword">Wachtwoord (min. 6 tekens) *</label>
+              <label for="regPassword" data-i18n="register.password">Password (min. 6 characters) *</label>
               <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
             </div>
-            <button type="submit" class="btn-submit">Gratis Account Aanmaken</button>
+            <button type="submit" class="btn-submit" data-i18n="register.submit">Create free account</button>
             <p class="error-msg" id="regError" hidden></p>
           </form>
         </div>
@@ -482,82 +487,82 @@
         <div id="dashboardView" class="dashboard-view">
           <div class="user-bar">
             <div>
-              <span style="color:#8898aa; font-size:0.85rem;">Ingelogd als:</span>
+              <span style="color:#8898aa; font-size:0.85rem;" data-i18n="dashboard.loggedInAs">Signed in as:</span>
               <strong id="userEmailDisplay" style="margin-left:0.5rem; color:#e8edf5;">-</strong>
             </div>
-            <span class="logout-link" id="logoutLink">Uitloggen</span>
+            <span class="logout-link" id="logoutLink" data-i18n="dashboard.logout">Sign out</span>
           </div>
 
-          <h2 style="font-size:1.4rem; margin-bottom:0.5rem; text-align:left;">Mijn Licentiesleutel</h2>
-          <p style="color:#8898aa; font-size:0.9rem; text-align:left; margin-bottom:1.5rem;">
-            Vul dit e-mailadres en onderstaande licentiesleutel in bij de BromeoRemote software om je licentie en functies te activeren.
+          <h2 style="font-size:1.4rem; margin-bottom:0.5rem; text-align:left;" data-i18n="dashboard.licenseTitle">My License Key</h2>
+          <p style="color:#8898aa; font-size:0.9rem; text-align:left; margin-bottom:1.5rem;" data-i18n="dashboard.licenseSubtitle">
+            Enter this email address and the license key below into the BromeoRemote software to activate your license and features.
           </p>
 
           <div class="license-box">
-            <span class="license-key-label">Licentiesleutel</span>
-            <div class="license-key" id="licenseKeyDisplay">Laden...</div>
+            <span class="license-key-label" data-i18n="dashboard.licenseKeyLabel">License key</span>
+            <div class="license-key" id="licenseKeyDisplay" data-i18n="dashboard.licenseKeyLoading">Loading...</div>
             <div class="license-key-actions">
-              <button type="button" class="copy-btn" id="copyLicenseKeyBtn">Kopiëren</button>
-              <button type="button" class="copy-btn copy-btn-secondary" id="regenerateLicenseKeyBtn">Nieuwe sleutel</button>
+              <button type="button" class="copy-btn" id="copyLicenseKeyBtn" data-i18n="dashboard.copyBtn">Copy</button>
+              <button type="button" class="copy-btn copy-btn-secondary" id="regenerateLicenseKeyBtn" data-i18n="dashboard.newKeyBtn">New key</button>
             </div>
             <div class="license-meta">
-              <span class="badge badge-green" id="planBadge">GRATIS</span>
-              <span class="license-expires" id="expiresDisplay">Permanente gratis licentie</span>
-              <span class="logout-link" id="cancelSubLink" style="display:none; margin-left:auto;">Abonnement opzeggen</span>
+              <span class="badge badge-green" id="planBadge">FREE</span>
+              <span class="license-expires" id="expiresDisplay" data-i18n="dashboard.expiresPermanent">Permanent free license</span>
+              <span class="logout-link" id="cancelSubLink" style="display:none; margin-left:auto;" data-i18n="dashboard.cancelSub">Cancel subscription</span>
             </div>
           </div>
 
-          <h3 style="font-size:1.2rem; text-align:left; margin-top:1.75rem; margin-bottom:0.5rem;">Licentie Upgraden</h3>
-          <p style="color:#8898aa; font-size:0.9rem; text-align:left;">
-            Standaard is de software gratis. Upgrade voor onbeperkte sessieduur of extra functies zoals AI Buddy.
+          <h3 style="font-size:1.2rem; text-align:left; margin-top:1.75rem; margin-bottom:0.5rem;" data-i18n="dashboard.upgradeTitle">Upgrade License</h3>
+          <p style="color:#8898aa; font-size:0.9rem; text-align:left;" data-i18n="dashboard.upgradeSubtitle">
+            The software is free by default. Upgrade for unlimited session duration or extra features like AI Buddy.
           </p>
 
           <div class="plans-grid">
             <div class="plan-card" id="planCardFree">
-              <span class="badge badge-gray">Huidig / Basis</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Gratis</h4>
-              <div class="plan-price">€0 <span>/mnd</span></div>
+              <span class="badge badge-gray" data-i18n="dashboard.plan.currentBadge">Current / Basic</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.freeName">Free</h4>
+              <div class="plan-price">€0 <span data-i18n="common.perMonth">/mo</span></div>
               <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem;">
-                <li>Remote desktop besturing</li>
-                <li>Max. 15 min per sessie</li>
-                <li>Standaard beeldkwaliteit</li>
+                <li data-i18n="dashboard.plan.f1">Remote desktop control</li>
+                <li data-i18n="dashboard.plan.f2">Max. 15 min per session</li>
+                <li data-i18n="dashboard.plan.f3">Standard picture quality</li>
               </ul>
             </div>
 
             <div class="plan-card" id="planCardPro">
-              <span class="badge badge-green">Meest Gekozen</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Pro</h4>
-              <div class="plan-price">€7,95 <span>/mnd</span></div>
+              <span class="badge badge-green" data-i18n="dashboard.plan.popularBadge">Most Chosen</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.proName">Pro</h4>
+              <div class="plan-price">€7.95 <span data-i18n="common.perMonth">/mo</span></div>
               <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
-                <li><strong>Onbeperkte sessieduur</strong></li>
-                <li>Bestandsoverdracht &amp; Chat</li>
-                <li>HWID Hardware-beveiliging</li>
-                <li>Multi-monitor &amp; gordijnmodus</li>
+                <li><strong data-i18n="dashboard.plan.proF1">Unlimited session duration</strong></li>
+                <li data-i18n="dashboard.plan.proF2">File transfer &amp; Chat</li>
+                <li data-i18n="dashboard.plan.proF3">HWID Hardware security</li>
+                <li data-i18n="dashboard.plan.proF4">Multi-monitor &amp; curtain mode</li>
               </ul>
-              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro">Upgraden naar Pro (€7,95/mnd)</button>
+              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro" data-i18n="dashboard.plan.proCta">Upgrade to Pro (€7.95/mo)</button>
             </div>
 
             <div class="plan-card" id="planCardUnlimited">
-              <span class="badge badge-cyan">Unlimited</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Unlimited</h4>
-              <div class="plan-price">€50 <span>/mnd</span></div>
+              <span class="badge badge-cyan" data-i18n="dashboard.plan.unlimitedBadge">Unlimited</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.unlimitedName">Unlimited</h4>
+              <div class="plan-price">€50 <span data-i18n="common.perMonth">/mo</span></div>
               <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
-                <li><strong>Onbeperkt apparaten &amp; sessies</strong></li>
-                <li><strong>AI Buddy assistent ingebouwd</strong></li>
-                <li>Onbeheerde toegang met 2FA</li>
-                <li>Prioriteitsondersteuning</li>
+                <li><strong data-i18n="dashboard.plan.unlimitedF1">Unlimited devices &amp; sessions</strong></li>
+                <li><strong data-i18n="dashboard.plan.unlimitedF2">AI Buddy assistant built in</strong></li>
+                <li data-i18n="dashboard.plan.unlimitedF3">Unattended access with 2FA</li>
+                <li data-i18n="dashboard.plan.unlimitedF4">Priority support</li>
               </ul>
-              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited">Upgraden naar Unlimited (€50,00/mnd)</button>
+              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited" data-i18n="dashboard.plan.unlimitedCta">Upgrade to Unlimited (€50.00/mo)</button>
             </div>
           </div>
 
           <div class="instructions-box">
-            <h3>💡 Hoe activeer je de licentie in de BromeoRemote software?</h3>
+            <h3 data-i18n="dashboard.instructionsTitle">💡 How do you activate the license in the BromeoRemote software?</h3>
             <ol>
-              <li>Open de BromeoRemote software op je computer.</li>
-              <li>Ga naar de <strong>Instellingen / Licentie</strong> pagina in het menu.</li>
-              <li>Vul jouw e-mailadres (<code><span class="current-user-email">jouw@email.nl</span></code>) en je <strong>Licentiesleutel</strong> in.</li>
-              <li>Klik op <strong>Licentie Controleren &amp; Activeren</strong>. De functies en sessieduur worden direct ontgrendeld!</li>
+              <li data-i18n="dashboard.instructions1">Open the BromeoRemote software on your computer.</li>
+              <li><span data-i18n="dashboard.instructions2Pre">Go to the </span><strong data-i18n="dashboard.instructions2Bold">Settings / License</strong><span data-i18n="dashboard.instructions2Post"> page in the menu.</span></li>
+              <li><span data-i18n="dashboard.instructions3Pre">Enter your email address (</span><code><span class="current-user-email">you@email.com</span></code><span data-i18n="dashboard.instructions3Mid">) and your </span><strong data-i18n="dashboard.instructions3Bold">License Key</strong><span data-i18n="dashboard.instructions3Post">.</span></li>
+              <li><span data-i18n="dashboard.instructions4Pre">Click </span><strong data-i18n="dashboard.instructions4Bold">Check &amp; Activate License</strong><span data-i18n="dashboard.instructions4Post">. Features and session duration unlock instantly!</span></li>
             </ol>
           </div>
         </div>

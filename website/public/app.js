@@ -18,7 +18,7 @@
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       const firstError = payload.errors ? Object.values(payload.errors)[0] : payload.error;
-      throw new Error(firstError || "Aanvraag mislukt.");
+      throw new Error(firstError || BromeoI18n.t("contact.genericError"));
     }
     return payload;
   }
@@ -38,10 +38,10 @@
 
       try {
         if (submit) submit.disabled = true;
-        setStatus(contactStatus, "Bericht wordt verstuurd...", null);
+        setStatus(contactStatus, BromeoI18n.t("contact.sending"), null);
         await postJson("/api/contact", data);
         contactForm.reset();
-        setStatus(contactStatus, "Bedankt, je bericht is verstuurd.", "success");
+        setStatus(contactStatus, BromeoI18n.t("contact.success"), "success");
       } catch (error) {
         setStatus(contactStatus, error.message, "error");
       } finally {
@@ -61,10 +61,10 @@
 
       try {
         if (submit) submit.disabled = true;
-        setStatus(newsletterStatus, "Aanmelding wordt opgeslagen...", null);
+        setStatus(newsletterStatus, BromeoI18n.t("newsletter.sending"), null);
         await postJson("/api/newsletter", data);
         newsletterForm.reset();
-        setStatus(newsletterStatus, "Je staat op de release-lijst.", "success");
+        setStatus(newsletterStatus, BromeoI18n.t("newsletter.success"), "success");
       } catch (error) {
         setStatus(newsletterStatus, error.message, "error");
       } finally {
@@ -216,7 +216,7 @@
       document.getElementById("userEmailDisplay").textContent = user.email;
       document.querySelectorAll(".current-user-email").forEach((el) => (el.textContent = user.email));
 
-      if (trigger) trigger.textContent = "Mijn Account";
+      if (trigger) trigger.textContent = BromeoI18n.t("header.myAccount");
 
       const activeLic = licenses && licenses.length > 0 ? licenses[0] : null;
       if (activeLic) {
@@ -226,12 +226,16 @@
         document.getElementById("cancelSubLink").style.display = activeLic.plan && activeLic.plan !== "Free" ? "inline" : "none";
 
         if (activeLic.expires_at) {
-          document.getElementById("expiresDisplay").textContent = `Geldig tot ${new Date(activeLic.expires_at).toLocaleDateString("nl-NL")}`;
+          const dateLocale = BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB";
+          document.getElementById("expiresDisplay").textContent = BromeoI18n.t("dashboard.expiresUntil", {
+            date: new Date(activeLic.expires_at).toLocaleDateString(dateLocale),
+          });
         } else {
-          document.getElementById("expiresDisplay").textContent = activeLic.plan === "Free" ? "Permanente gratis licentie" : "Actief abonnement";
+          document.getElementById("expiresDisplay").textContent =
+            activeLic.plan === "Free" ? BromeoI18n.t("dashboard.expiresPermanent") : BromeoI18n.t("dashboard.expiresActive");
         }
       } else {
-        document.getElementById("licenseKeyDisplay").textContent = "Geen licentie gevonden";
+        document.getElementById("licenseKeyDisplay").textContent = BromeoI18n.t("dashboard.licenseKeyMissing");
       }
     }
 
@@ -269,11 +273,11 @@
         if (data.ok) {
           afterAuthSuccess(data.user, data.licenses);
         } else {
-          err.textContent = data.error || "Inloggen mislukt.";
+          err.textContent = data.error || BromeoI18n.t("login.genericError");
           err.hidden = false;
         }
       } catch {
-        err.textContent = "Serverfout. Probeer opnieuw.";
+        err.textContent = BromeoI18n.t("common.serverError");
         err.hidden = false;
       }
     });
@@ -296,11 +300,11 @@
         if (data.ok) {
           afterAuthSuccess(data.user, [data.license]);
         } else {
-          err.textContent = data.error || "Registratie mislukt.";
+          err.textContent = data.error || BromeoI18n.t("register.genericError");
           err.hidden = false;
         }
       } catch {
-        err.textContent = "Serverfout. Probeer opnieuw.";
+        err.textContent = BromeoI18n.t("common.serverError");
         err.hidden = false;
       }
     });
@@ -317,10 +321,10 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: document.getElementById("forgotEmail").value }),
         });
-        success.textContent = "Als dit e-mailadres bekend is, is er een resetlink verstuurd.";
+        success.textContent = BromeoI18n.t("forgot.success");
         success.hidden = false;
       } catch {
-        err.textContent = "Serverfout. Probeer opnieuw.";
+        err.textContent = BromeoI18n.t("common.serverError");
         err.hidden = false;
       }
     });
@@ -338,15 +342,15 @@
         });
         const data = await res.json();
         if (data.ok) {
-          alert("Wachtwoord ingesteld! Je kunt nu inloggen.");
+          alert(BromeoI18n.t("reset.success"));
           document.getElementById("resetPasswordForm").style.display = "none";
           showTab("login");
         } else {
-          err.textContent = data.error || "Wachtwoord instellen mislukt.";
+          err.textContent = data.error || BromeoI18n.t("reset.genericError");
           err.hidden = false;
         }
       } catch {
-        err.textContent = "Serverfout. Probeer opnieuw.";
+        err.textContent = BromeoI18n.t("common.serverError");
         err.hidden = false;
       }
     });
@@ -354,11 +358,11 @@
     document.getElementById("copyLicenseKeyBtn").addEventListener("click", () => {
       if (!activeLicenseKey) return;
       navigator.clipboard.writeText(activeLicenseKey);
-      alert("Licentiesleutel gecopieerd naar klembord!");
+      alert(BromeoI18n.t("dashboard.copySuccess"));
     });
 
     document.getElementById("regenerateLicenseKeyBtn").addEventListener("click", async () => {
-      if (!confirm("Weet je zeker dat je een nieuwe licentiesleutel wilt genereren? De huidige sleutel werkt dan niet meer.")) return;
+      if (!confirm(BromeoI18n.t("dashboard.newKeyConfirm"))) return;
       try {
         const res = await fetch("/api/user/regenerate-license-key", { method: "POST" });
         const data = await res.json();
@@ -366,25 +370,25 @@
           activeLicenseKey = data.license.license_key;
           document.getElementById("licenseKeyDisplay").textContent = data.license.license_key;
         } else {
-          alert(data.error || "Sleutel genereren mislukt.");
+          alert(data.error || BromeoI18n.t("dashboard.newKeyError"));
         }
       } catch {
-        alert("Serverfout bij genereren van nieuwe sleutel.");
+        alert(BromeoI18n.t("dashboard.newKeyError"));
       }
     });
 
     document.getElementById("cancelSubLink").addEventListener("click", async () => {
-      if (!confirm("Weet je zeker dat je je abonnement wilt opzeggen? Je account gaat direct terug naar het gratis plan.")) return;
+      if (!confirm(BromeoI18n.t("dashboard.cancelSubConfirm"))) return;
       try {
         const res = await fetch("/api/user/cancel-subscription", { method: "POST" });
         const data = await res.json();
         if (data.ok) {
           renderDashboard({ email: document.getElementById("userEmailDisplay").textContent }, [data.license]);
         } else {
-          alert(data.error || "Opzeggen mislukt.");
+          alert(data.error || BromeoI18n.t("dashboard.cancelSubError"));
         }
       } catch {
-        alert("Serverfout bij opzeggen van abonnement.");
+        alert(BromeoI18n.t("dashboard.cancelSubError"));
       }
     });
 
@@ -404,10 +408,10 @@
         if (data.ok && data.url) {
           window.location.href = data.url;
         } else {
-          alert(data.error || "Betaling starten mislukt.");
+          alert(data.error || BromeoI18n.t("dashboard.checkoutError"));
         }
       } catch {
-        alert("Serverfout bij starten betaling.");
+        alert(BromeoI18n.t("dashboard.checkoutError"));
       }
     }
     modal.querySelectorAll("[data-start-checkout]").forEach((btn) => {
