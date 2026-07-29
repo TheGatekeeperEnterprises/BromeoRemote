@@ -7,14 +7,9 @@ import { getLicenseStatus } from "./license";
 // Stays comfortably under the ~64KB/256KB SCTP message ceilings — same
 // constant/value as client/src/renderer/session.ts's CHUNK_SIZE.
 const CHUNK_SIZE = 48 * 1024;
-// Shorter than the ~47s failure ceiling seen in practice (see docs/47seconds.md
-// §4.9a) so the path gets refreshed well before whatever degrades it has a
-// chance to accumulate — a single 30s interval let ~4 refreshes happen before
-// still eventually failing, so refreshing more often is the next thing worth
-// tuning. Kept identical to client/src/renderer/session.ts's constants.
-const ICE_REFRESH_INTERVAL_MS = 15_000;
+// Brief grace window before a "disconnected"/"failed" state is treated as
+// truly dead — matches client/src/renderer/session.ts.
 const DISCONNECTED_GRACE_MS = 20_000;
-const DISCONNECT_RETRY_INTERVAL_MS = 4_000;
 
 // VP8 (the usual default) has no tools for sharp text/UI edges — it's built
 // for motion video. VP9 adds screen-content-coding (palette prediction,
@@ -95,12 +90,9 @@ export class MobileSession {
   private pendingSystemCommands: SystemCommand[] = [];
   private incomingFiles = new Map<string, { name: string; total: number; chunks: string[]; received: number }>();
   private statsTimer: ReturnType<typeof setInterval> | null = null;
-  private iceRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private licenseWarnTimer: ReturnType<typeof setTimeout> | null = null;
   private licenseLimitTimer: ReturnType<typeof setTimeout> | null = null;
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private disconnectRetryTimer: ReturnType<typeof setInterval> | null = null;
-  private iceRestartInFlight = false;
   private lastVideoBytes: number | null = null;
   private lastVideoBytesTimestamp: number | null = null;
   private lastMouseMoveSent = 0;
@@ -111,14 +103,6 @@ export class MobileSession {
   // on/off later is just replaceTrack, never a renegotiation. `any` to
   // match this file's established pattern for react-native-webrtc types.
   private voiceTransceiver: any = null;
-  // See docs/47seconds.md — this is the mitigation for the mid-session
-  // TURN-relay drop, not a fix for its root cause. It's genuinely active by
-  // default (kept true here) since most users are better served by a
-  // session that keeps quietly re-stitching itself than one that just
-  // drops; setFailsafeEnabled lets a user turn it off from Settings if they
-  // ever want to see a real disconnect instead of repeated background
-  // reconnect attempts.
-  private failsafeEnabled = true;
   private currentResolutionScale = 1;
   private sustainedHighRttTicks = 0;
   // Fase 1 commercial-use measurement (viewer side only — matches desktop's
@@ -157,22 +141,16 @@ export class MobileSession {
       if (this.pc.connectionState === "connected") {
         this.clearDisconnectTimer();
         this.startStatsLoop();
-        this.startIceRefreshLoop();
         if (this.role === "viewer") {
           this.enforceLicenseSessionLimit();
           this.connectedAt = Date.now();
         }
       } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
-        // Mirrors client/src/renderer/session.ts's fix — "failed" (never
-        // reached "connected" at all) used to get zero retry attempts,
-        // unlike a post-connect "disconnected" drop. See
-        // docs/WEBRTC-TURN-DEBUGGING.md.
         this.stopStatsLoop();
-        this.scheduleDisconnectRecovery();
+        this.scheduleDisconnectClose();
       } else if (this.pc.connectionState === "closed") {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
-        this.stopIceRefreshLoop();
         this.clearLicenseTimers();
         this.reportCompletedSession();
       }
@@ -481,53 +459,17 @@ export class MobileSession {
     }, 2000);
   }
 
-  /** Settings-driven toggle for the periodic ICE-restart failsafe — see failsafeEnabled's own comment. */
-  setFailsafeEnabled(enabled: boolean): void {
-    this.failsafeEnabled = enabled;
-    if (!enabled) this.stopIceRefreshLoop(); // stop an already-running proactive loop immediately
-  }
-
-  private startIceRefreshLoop(): void {
-    if (this.role !== "viewer" || this.iceRefreshTimer || !this.failsafeEnabled) return;
-    this.iceRefreshTimer = setInterval(() => {
-      void this.restartIce("scheduled");
-    }, ICE_REFRESH_INTERVAL_MS);
-  }
-
-  private stopIceRefreshLoop(): void {
-    if (this.iceRefreshTimer) clearInterval(this.iceRefreshTimer);
-    this.iceRefreshTimer = null;
-    this.iceRestartInFlight = false;
-  }
-
-  private isRecoveringState(): boolean {
-    return this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed";
-  }
-
-  private scheduleDisconnectRecovery(): void {
-    const reason = this.pc.connectionState === "failed" ? "failed" : "disconnected";
-    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce(reason);
-    // A single restart attempt can itself fail to land (e.g. it starts while
-    // signalingState isn't stable yet, or its own candidate gather stalls) —
-    // keep retrying every few seconds for the whole grace window instead of
-    // trying once and just waiting out the clock. restartIce() already no-ops
-    // safely if one is still in flight or the state isn't right for it.
-    if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
-      this.disconnectRetryTimer = setInterval(() => {
-        if (this.isRecoveringState()) void this.restartIce(this.pc.connectionState === "failed" ? "failed" : "disconnected");
-      }, DISCONNECT_RETRY_INTERVAL_MS);
-    }
-    // The grace-period close below always runs regardless of the failsafe
-    // toggle — turning the active recovery attempts off shouldn't mean a
-    // dead connection hangs forever, just that nothing actively fights to
-    // revive it first.
+  // No active recovery attempts — matches client/src/renderer/session.ts.
+  // A brief "disconnected"/"failed" blip either self-heals natively, or the
+  // connection is genuinely dead and this closes it after a short grace
+  // window instead of leaving it hanging indefinitely.
+  private scheduleDisconnectClose(): void {
     if (this.disconnectTimer) return;
     this.disconnectTimer = setTimeout(() => {
       this.disconnectTimer = null;
-      this.clearDisconnectRetryTimer();
-      if (this.isRecoveringState()) {
-        console.warn(`[ice] ${this.pc.connectionState} recovery timed out, closing peer connection`);
-        this.pc.close();
+      if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
+        console.warn(`[ice] ${this.pc.connectionState}, closing peer connection`);
+        this.close();
       }
     }, DISCONNECTED_GRACE_MS);
   }
@@ -535,29 +477,6 @@ export class MobileSession {
   private clearDisconnectTimer(): void {
     if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     this.disconnectTimer = null;
-    this.clearDisconnectRetryTimer();
-  }
-
-  private clearDisconnectRetryTimer(): void {
-    if (this.disconnectRetryTimer) clearInterval(this.disconnectRetryTimer);
-    this.disconnectRetryTimer = null;
-  }
-
-  private async restartIce(reason: "scheduled" | "disconnected" | "failed"): Promise<void> {
-    if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
-    if (this.pc.signalingState !== "stable") return;
-    this.iceRestartInFlight = true;
-    try {
-      console.log(`[ice] restarting ICE (${reason})`);
-      this.pc.restartIce?.();
-      const offer = await this.pc.createOffer({ iceRestart: true });
-      await this.pc.setLocalDescription(new RTCSessionDescription(offer));
-      this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: offer } });
-    } catch (err) {
-      console.warn("[ice] ICE restart failed:", err);
-    } finally {
-      this.iceRestartInFlight = false;
-    }
   }
 
   // Temporary diagnostic for the ~40-47s mid-session drop investigation
@@ -705,7 +624,6 @@ export class MobileSession {
   close(): void {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
-    this.stopIceRefreshLoop();
     this.clearLicenseTimers();
     this.reportCompletedSession();
     this.controlChannel?.close();

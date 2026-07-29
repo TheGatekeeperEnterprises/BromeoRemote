@@ -504,33 +504,24 @@
   </footer>
 
   <div id="free-upsell-modal" class="modal-backdrop hidden">
-    <div class="modal" style="max-width: 520px; text-align: left; padding: 2rem;">
-      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
-        <span style="font-size:1.75rem;">🚀</span>
-        <div>
-          <h2 style="margin:0; font-size:1.3rem; color: #0be881;">Ontgrendel BromeoRemote Pro!</h2>
-          <p class="muted small" style="margin:0.25rem 0 0 0;">Je gebruikt momenteel de gratis versie van BromeoRemote.</p>
-        </div>
-      </div>
-      
-      <p style="font-size:0.9rem; margin-bottom:1rem; line-height:1.5;">
-        Upgrade naar een betaalde licentie en profiteer direct van alle grote voordelen:
-      </p>
+    <div class="modal" style="max-width: 480px; text-align: left;">
+      <h3>Upgrade naar BromeoRemote Pro</h3>
+      <p style="margin-top: 4px;">Je gebruikt momenteel de gratis versie.</p>
 
-      <ul style="font-size:0.875rem; line-height:1.6; margin-bottom:1.5rem; padding-left:1.25rem; color: #e8edf5;">
-        <li><strong style="color:#0be881;">Onbeperkte Sessieduur:</strong> Geen 15-minuten limiet meer per verbinding.</li>
-        <li><strong style="color:#0be881;">Bestandsoverdracht &amp; Multi-Monitor:</strong> Razendsnel bestanden overzetten en direct wisselen tussen schermen.</li>
-        <li><strong style="color:#0be881;">AI Buddy Assistent:</strong> Slimme AI-ondersteuning ingebouwd tijdens remote support sessies.</li>
-        <li><strong style="color:#0be881;">HWID Beveiliging:</strong> Maximale hardware-beveiliging gekoppeld aan jouw beheer-pc.</li>
+      <ul style="font-size: 13.5px; line-height: 1.65; margin: 16px 0; padding-left: 20px; color: var(--text);">
+        <li><strong>Onbeperkte sessieduur</strong> — geen 15-minuten limiet meer per verbinding.</li>
+        <li><strong>Bestandsoverdracht &amp; multi-monitor</strong> — snel bestanden overzetten en wisselen tussen schermen.</li>
+        <li><strong>AI Buddy-assistent</strong> — ingebouwde AI-ondersteuning tijdens sessies.</li>
+        <li><strong>HWID-beveiliging</strong> — hardwarebinding gekoppeld aan je beheer-pc.</li>
       </ul>
 
-      <div style="background: rgba(11,232,129,0.08); border: 1px solid rgba(11,232,129,0.25); border-radius: 10px; padding: 0.875rem 1rem; margin-bottom: 1.5rem; font-size:0.85rem;">
-        💡 <strong>Slechts €7,95 per maand</strong> voor Pro of €50,00 voor Unlimited. Direct opzegbaar!
+      <div style="background: var(--surface-strong); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13.5px; color: var(--text-muted);">
+        Vanaf <strong style="color: var(--text);">€7,95 per maand</strong> voor Pro, of €50,00 voor Unlimited — maandelijks opzegbaar.
       </div>
 
-      <div class="modal-actions" style="display:flex; gap:0.75rem; justify-content:flex-end;">
-        <button id="free-upsell-dismiss" class="btn btn-outline">Doorgaan met Gratis (15 min limit)</button>
-        <button id="free-upsell-buy" class="btn btn-primary" style="background:#0be881; color:#0b1425; font-weight:700;">Bekijk &amp; Koop Licentie (€7,95)</button>
+      <div class="modal-actions">
+        <button id="free-upsell-dismiss" class="btn btn-outline">Doorgaan met gratis (15 min limiet)</button>
+        <button id="free-upsell-buy" class="btn btn-primary">Licentie bekijken (€7,95)</button>
       </div>
     </div>
   </div>
@@ -631,13 +622,6 @@
             <option value="auto">Automatisch</option>
             <option value="high">Hoog</option>
             <option value="low">Laag (trage verbinding)</option>
-          </select>
-          <label>Verbindingsfailsafe
-            <span class="info-tip" tabindex="0" aria-label="Uitleg verbindingsfailsafe">i<span class="info-tooltip">Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uit laat een onderbreking direct als verbroken zien.</span></span>
-          </label>
-          <select id="failsafe-select" class="monitor-select" title="Verbindingsfailsafe">
-            <option value="on">Aan</option>
-            <option value="off">Uit</option>
           </select>
           <label>Video-codec (volgende verbinding)
             <span class="info-tip" tabindex="0" aria-label="Uitleg video-codec">i<span class="info-tooltip">"Scherp" geeft prioriteit aan een codec die tekst het scherpst weergeeft, maar draait meestal in software en kan de cursor in beeld iets trager laten aanvoelen. "Snel" geeft prioriteit aan een codec die op de meeste pc's hardwareversnelling gebruikt — merkbaar sneller, iets minder scherpe tekst bij inzoomen. Geldt pas vanaf de eerstvolgende keer verbinden, niet voor de huidige sessie.</span></span>

@@ -217,10 +217,53 @@ async function initDatabase() {
   await query(`CREATE INDEX IF NOT EXISTS idx_remote_sessions_source_device ON remote_sessions (source_device_id, started_at DESC);`);
   await query(`CREATE INDEX IF NOT EXISTS idx_remote_sessions_started_at ON remote_sessions (started_at DESC);`);
 
+  // Geo-IP lookup cache (ip-api.com free tier) — looked up on demand from the
+  // admin panel's IP-history view, cached so the same IP is never looked up
+  // more than once per 30 days.
+  await query(`
+    CREATE TABLE IF NOT EXISTS ip_geo_cache (
+      ip_address text PRIMARY KEY,
+      city text,
+      region text,
+      country text,
+      country_code text,
+      looked_up_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS ip_blacklist (
+      ip_address text PRIMARY KEY,
+      user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+      reason text,
+      blacklisted_at timestamptz NOT NULL DEFAULT now(),
+      blacklisted_by text
+    );
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS user_warnings (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      message text NOT NULL,
+      sent_at timestamptz NOT NULL DEFAULT now(),
+      sent_by text
+    );
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_user_warnings_user_id ON user_warnings (user_id, sent_at DESC);`);
+
+  // Tracks how a license came to exist — mostly for admin visibility, not
+  // enforcement. Defaults to AdminCreated (matches adminCreateLicense's
+  // existing behavior); upgradeUserLicense sets 'Checkout' explicitly for
+  // the one call site that represents a genuine Mollie-driven purchase.
+  await query(`ALTER TABLE licenses ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'AdminCreated';`);
+
   await query("CREATE INDEX IF NOT EXISTS idx_contact_requests_created_at ON contact_requests (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_download_events_created_at ON download_events (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_licenses_user_id ON licenses (user_id);");
   await query("CREATE INDEX IF NOT EXISTS idx_session_events_created_at ON session_events (created_at DESC);");
+  await query("CREATE INDEX IF NOT EXISTS idx_session_events_user_id ON session_events (user_id);");
+  await query("CREATE INDEX IF NOT EXISTS idx_remote_sessions_user_id ON remote_sessions (user_id);");
 
   // Seed admin account if it doesn't exist
   await seedAdminAccount();
@@ -371,9 +414,18 @@ async function adminGetUsers({ page = 1, limit = 20, search = "" } = {}) {
   const result = await query(
     `SELECT u.id, u.email, u.company, u.created_at,
        l.plan, l.status, l.is_trial, l.expires_at,
-       (SELECT created_at FROM session_events WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1) AS last_seen
+       activity.last_seen,
+       COALESCE(activity.known_ip_count, 0) AS known_ip_count
      FROM users u
      LEFT JOIN licenses l ON l.user_id = u.id
+     LEFT JOIN LATERAL (
+       SELECT MAX(ts) AS last_seen, COUNT(DISTINCT ip) AS known_ip_count
+       FROM (
+         SELECT created_at AS ts, ip_address AS ip FROM session_events WHERE user_id = u.id AND ip_address IS NOT NULL
+         UNION ALL
+         SELECT started_at AS ts, ip_address AS ip FROM remote_sessions WHERE user_id = u.id AND ip_address IS NOT NULL
+       ) combined
+     ) activity ON true
      WHERE u.email ILIKE $1 OR u.company ILIKE $1
      ORDER BY u.created_at DESC
      LIMIT $2 OFFSET $3`,
@@ -391,6 +443,108 @@ async function adminGetUsers({ page = 1, limit = 20, search = "" } = {}) {
   };
 }
 
+// Cache-first geo-IP lookup via ip-api.com's free tier (45 req/min, no key
+// needed) — never throws, never blocks the caller. Cached indefinitely past
+// 30 days old before a re-lookup is attempted, so normal admin-panel usage
+// (small N, mostly repeat IPs) stays nowhere near the free-tier rate limit.
+async function getGeoForIp(ip) {
+  if (!databaseEnabled() || !ip) return null;
+  const cached = await query(
+    "SELECT * FROM ip_geo_cache WHERE ip_address = $1 AND looked_up_at > now() - interval '30 days'",
+    [ip]
+  );
+  if (cached && cached.rows.length > 0) {
+    const r = cached.rows[0];
+    return { city: r.city, region: r.region, country: r.country, countryCode: r.country_code };
+  }
+  try {
+    const res = await fetch(`http://ip-api.com/json/${encodeURIComponent(ip)}?fields=status,country,countryCode,regionName,city`);
+    const data = await res.json();
+    if (data.status !== "success") return null;
+    const geo = { city: data.city || null, region: data.regionName || null, country: data.country || null, countryCode: data.countryCode || null };
+    await query(
+      `INSERT INTO ip_geo_cache (ip_address, city, region, country, country_code, looked_up_at)
+       VALUES ($1, $2, $3, $4, $5, now())
+       ON CONFLICT (ip_address) DO UPDATE SET city = $2, region = $3, country = $4, country_code = $5, looked_up_at = now()`,
+      [ip, geo.city, geo.region, geo.country, geo.countryCode]
+    );
+    return geo;
+  } catch {
+    return null;
+  }
+}
+
+async function adminGetUserIpHistory(userId) {
+  const result = await query(
+    `SELECT ip, MAX(ts) AS last_seen, array_agg(DISTINCT source) AS sources
+     FROM (
+       SELECT ip_address AS ip, created_at AS ts, 'license_check' AS source FROM session_events WHERE user_id = $1 AND ip_address IS NOT NULL
+       UNION ALL
+       SELECT ip_address AS ip, started_at AS ts, 'session' AS source FROM remote_sessions WHERE user_id = $1 AND ip_address IS NOT NULL
+     ) combined
+     GROUP BY ip
+     ORDER BY last_seen DESC`,
+    [userId]
+  );
+  const rows = result?.rows || [];
+  const blacklistRes = rows.length
+    ? await query("SELECT ip_address FROM ip_blacklist WHERE ip_address = ANY($1::text[])", [rows.map((r) => r.ip)])
+    : null;
+  const blacklisted = new Set((blacklistRes?.rows || []).map((r) => r.ip_address));
+
+  const history = [];
+  for (const r of rows) {
+    const geo = await getGeoForIp(r.ip);
+    history.push({ ip: r.ip, lastSeen: r.last_seen, sources: r.sources, geo, isBlacklisted: blacklisted.has(r.ip) });
+  }
+  return history;
+}
+
+async function adminGetUserWarnings(userId) {
+  const result = await query("SELECT * FROM user_warnings WHERE user_id = $1 ORDER BY sent_at DESC", [userId]);
+  return result?.rows || [];
+}
+
+async function adminSendUserWarning(userId, message, adminEmail) {
+  const userRes = await query("SELECT email FROM users WHERE id = $1", [userId]);
+  const email = userRes?.rows[0]?.email;
+  if (!email) throw new Error("Gebruiker niet gevonden.");
+  const { sendLicenseWarningEmail } = require("./mailer");
+  const emailSent = await sendLicenseWarningEmail(email, message);
+  const result = await query(
+    "INSERT INTO user_warnings (user_id, message, sent_by) VALUES ($1, $2, $3) RETURNING *",
+    [userId, message, adminEmail || null]
+  );
+  return { ...result?.rows[0], emailSent };
+}
+
+async function adminRegenerateLicenseKeyForUser(userId) {
+  return regenerateLicenseKey(userId);
+}
+
+async function adminRevokeLicense(licenseId) {
+  const result = await query(
+    "UPDATE licenses SET status = 'Blocked', updated_at = now() WHERE id = $1 RETURNING *",
+    [licenseId]
+  );
+  return result?.rows[0] || null;
+}
+
+async function adminBlacklistIp(ip, userId, reason, adminEmail) {
+  const result = await query(
+    `INSERT INTO ip_blacklist (ip_address, user_id, reason, blacklisted_by)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (ip_address) DO UPDATE SET user_id = $2, reason = $3, blacklisted_by = $4, blacklisted_at = now()
+     RETURNING *`,
+    [ip, userId || null, reason || null, adminEmail || null]
+  );
+  return result?.rows[0];
+}
+
+async function adminUnblacklistIp(ip) {
+  await query("DELETE FROM ip_blacklist WHERE ip_address = $1", [ip]);
+}
+
 async function adminGetUser(userId) {
   const user = await query("SELECT * FROM users WHERE id = $1", [userId]);
   const licenses = await query("SELECT * FROM licenses WHERE user_id = $1 ORDER BY created_at DESC", [userId]);
@@ -399,11 +553,15 @@ async function adminGetUser(userId) {
     "SELECT * FROM session_events WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50",
     [userId]
   );
+  const ipHistory = await adminGetUserIpHistory(userId);
+  const warnings = await adminGetUserWarnings(userId);
   return {
     user: user?.rows[0] || null,
     licenses: licenses?.rows || [],
     transactions: transactions?.rows || [],
     sessions: sessions?.rows || [],
+    ipHistory,
+    warnings,
   };
 }
 
@@ -582,50 +740,6 @@ async function adminDeleteAdmin(id) {
   await query("DELETE FROM admin_accounts WHERE id = $1", [id]);
 }
 
-// ── Website visitor analytics (admin) ────────────────────────────────────────────
-
-async function adminGetAnalytics({ days = 30 } = {}) {
-  const [daily, topPaths, topReferrers, totalUniques] = await Promise.all([
-    query(
-      `SELECT date_trunc('day', created_at) AS day, COUNT(*) AS views, COUNT(DISTINCT ip_address) AS uniques
-       FROM page_views
-       WHERE created_at > now() - ($1::text || ' days')::interval
-       GROUP BY day
-       ORDER BY day ASC`,
-      [days]
-    ),
-    query(
-      `SELECT path, COUNT(*) AS views
-       FROM page_views
-       WHERE created_at > now() - ($1::text || ' days')::interval
-       GROUP BY path
-       ORDER BY views DESC
-       LIMIT 10`,
-      [days]
-    ),
-    query(
-      `SELECT COALESCE(NULLIF(referrer, ''), 'Direct') AS referrer, COUNT(*) AS views
-       FROM page_views
-       WHERE created_at > now() - ($1::text || ' days')::interval
-       GROUP BY referrer
-       ORDER BY views DESC
-       LIMIT 10`,
-      [days]
-    ),
-    query(
-      `SELECT COUNT(DISTINCT ip_address) AS count
-       FROM page_views
-       WHERE created_at > now() - ($1::text || ' days')::interval`,
-      [days]
-    ),
-  ]);
-  return {
-    daily: (daily?.rows || []).map((r) => ({ day: r.day, views: parseInt(r.views), uniques: parseInt(r.uniques) })),
-    topPaths: (topPaths?.rows || []).map((r) => ({ path: r.path, views: parseInt(r.views) })),
-    topReferrers: (topReferrers?.rows || []).map((r) => ({ referrer: r.referrer, views: parseInt(r.views) })),
-    totalUniques: parseInt(totalUniques?.rows[0]?.count || 0),
-  };
-}
 
 async function adminGetFullStatistics({ days = 30, filterInternal = false, filterBots = false } = {}) {
   const [
@@ -952,6 +1066,13 @@ async function verifyLicenseInDb({ licenseKey, email, hwidHash, platform = "wind
     return { valid: true, plan: "Trial (Offline)", status: "Active", isTrial: true, expiresAt: null };
   }
 
+  if (ipAddress) {
+    const blocked = await query("SELECT 1 FROM ip_blacklist WHERE ip_address = $1", [ipAddress]);
+    if (blocked && blocked.rows.length > 0) {
+      return { valid: false, reason: "Dit IP-adres is geblokkeerd. Neem contact op met de beheerder." };
+    }
+  }
+
   // Resolve the user first (via whichever of key/email was given), then always
   // verify against that user's single most-recent license — not necessarily
   // the exact license row the key happens to point at. This matches the
@@ -1144,7 +1265,7 @@ async function updateLicenseTransactionStatus(molliePaymentId, status, failureRe
 // active/expired status needs refreshing.
 async function upgradeUserLicense({ userId, plan, mollieSubscriptionId = null }) {
   const result = await query(
-    `UPDATE licenses SET plan = $1, status = 'Active', is_trial = false,
+    `UPDATE licenses SET plan = $1, status = 'Active', is_trial = false, source = 'Checkout',
        mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
      WHERE id = (SELECT id FROM licenses WHERE user_id = $3 ORDER BY created_at DESC LIMIT 1)
      RETURNING *`,
@@ -1212,7 +1333,6 @@ module.exports = {
   saveDownloadEvent,
   saveNewsletterSignup,
   recordPageView,
-  adminGetAnalytics,
   recordRemoteSession,
   resolveUserIdByLicenseOrEmail,
   adminGetCommercialUsageStats,
@@ -1254,8 +1374,15 @@ module.exports = {
   adminCountSuperAdmins,
   adminGetAdminById,
   adminDeleteAdmin,
-  adminGetAnalytics,
   adminGetFullStatistics,
+  getGeoForIp,
+  adminGetUserIpHistory,
+  adminGetUserWarnings,
+  adminSendUserWarning,
+  adminRegenerateLicenseKeyForUser,
+  adminRevokeLicense,
+  adminBlacklistIp,
+  adminUnblacklistIp,
   recordSessionEvent,
   verifyLicenseInDb,
   getPool,

@@ -24,7 +24,6 @@ const {
   adminCountSuperAdmins,
   adminGetAdminById,
   adminDeleteAdmin,
-  adminGetAnalytics,
   adminGetFullStatistics,
   adminGetCommercialUsageStats,
   databaseEnabled,
@@ -340,17 +339,6 @@ router.delete("/api/admins/:id", requireAuth, requireSuperAdmin, async (req, res
     }
     await adminDeleteAdmin(req.params.id);
     res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
-// ── Analytics API ─────────────────────────────────────────────────────────────
-router.get("/api/analytics", requireAuth, async (req, res) => {
-  try {
-    const days = parseInt(req.query.days) || 30;
-    const data = await adminGetAnalytics({ days });
-    res.json({ ok: true, ...data });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

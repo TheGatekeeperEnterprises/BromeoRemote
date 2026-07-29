@@ -99,4 +99,27 @@ async function sendPasswordResetEmail(email, resetUrl) {
   return true;
 }
 
-module.exports = { sendContactNotification, sendPasswordResetEmail };
+async function sendLicenseWarningEmail(email, message) {
+  const activeTransporter = getTransporter();
+  if (!activeTransporter) {
+    console.warn(`SMTP is niet volledig ingesteld; waarschuwingsmail niet verzonden naar ${email}.`);
+    return false;
+  }
+
+  const html = `
+    <h2>Bericht van BromeoRemote</h2>
+    <p>${escapeHtml(message).replace(/\n/g, "<br>")}</p>
+  `;
+
+  await activeTransporter.sendMail({
+    from: config.smtp.from,
+    to: email,
+    subject: "BromeoRemote — Belangrijk bericht over je account",
+    text: message,
+    html,
+  });
+
+  return true;
+}
+
+module.exports = { sendContactNotification, sendPasswordResetEmail, sendLicenseWarningEmail };

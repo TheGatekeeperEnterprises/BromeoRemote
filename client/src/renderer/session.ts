@@ -77,14 +77,11 @@ export interface SessionCallbacks {
 }
 
 const CHUNK_SIZE = 48 * 1024; // stay comfortably under the ~64KB/256KB SCTP message ceilings
-// Shorter than the ~47s failure ceiling seen in practice (see docs/47seconds.md
-// §4.9a) so the path gets refreshed well before whatever degrades it has a
-// chance to accumulate — a single 30s interval let ~4 refreshes happen before
-// still eventually failing, so refreshing more often is the next thing worth
-// tuning.
-const ICE_REFRESH_INTERVAL_MS = 15_000;
+// Brief grace window before a "disconnected"/"failed" state is treated as
+// truly dead — gives a momentary blip a chance to self-heal via the
+// browser's own native ICE consent-freshness checks, without this app
+// actively attempting any recovery itself.
 const DISCONNECTED_GRACE_MS = 20_000;
-const DISCONNECT_RETRY_INTERVAL_MS = 4_000;
 
 // Adaptive bitrate ("auto" quality) tuning. Below MIN, text stops being
 // legible no matter what; above MAX there's no visible benefit and it's just
@@ -143,20 +140,11 @@ export class PeerSession {
   private candidateQueue: RTCIceCandidateInit[] = [];
   private pendingSystemCommands: SystemCommand[] = [];
   private statsTimer: ReturnType<typeof setInterval> | null = null;
-  private iceRefreshTimer: ReturnType<typeof setInterval> | null = null;
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private disconnectRetryTimer: ReturnType<typeof setInterval> | null = null;
-  private iceRestartInFlight = false;
   private lastVideoBytes: number | null = null;
   private lastVideoBytesTimestamp: number | null = null;
   private incomingFiles = new Map<string, { name: string; total: number; chunks: string[]; received: number }>();
   private lastMouseMoveSent = 0;
-  // See docs/47seconds.md — this is the mitigation for the mid-session
-  // TURN-relay drop, not a fix for its root cause. Genuinely on by default
-  // (a session that quietly re-stitches itself beats one that just drops),
-  // but selectable via setFailsafeEnabled for anyone who'd rather see a
-  // real disconnect than repeated background reconnect attempts.
-  private failsafeEnabled = true;
   // "auto" quality (the default) drives the bitrate cap continuously off
   // real measured conditions instead of leaving it permanently uncapped —
   // see updateAdaptiveBitrate. Manual "high"/"low" picks disable this.
@@ -214,7 +202,6 @@ export class PeerSession {
       if (this.pc.connectionState === "connected") {
         this.clearDisconnectTimer();
         this.startStatsLoop();
-        this.startIceRefreshLoop();
 
         if (this.role === "viewer") this.connectedAt = Date.now();
 
@@ -239,21 +226,11 @@ export class PeerSession {
           }).catch(() => {});
         }
       } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
-        // "failed" (never reached "connected" at all — e.g. this machine's
-        // TURN allocate silently failing, see docs/WEBRTC-TURN-DEBUGGING.md
-        // §4) used to fall into the closed/failed branch below and get zero
-        // retry attempts, unlike a post-connect "disconnected" drop. Since
-        // the underlying TURN failure is intermittent rather than absolute
-        // (packets round-trip fine, Chromium's own STUN/TURN handling is
-        // what's flaky), a full ICE restart — fresh candidate gathering,
-        // fresh TURN allocate attempt — has a real chance of succeeding on
-        // a retry even when the first attempt didn't.
         this.stopStatsLoop();
-        this.scheduleDisconnectRecovery();
+        this.scheduleDisconnectClose();
       } else if (this.pc.connectionState === "closed") {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
-        this.stopIceRefreshLoop();
         this.reportCompletedSession();
       }
     };
@@ -674,57 +651,18 @@ export class PeerSession {
     await sender.setParameters(params).catch(() => undefined);
   }
 
-  /** Settings-driven toggle for the periodic ICE-restart failsafe — see failsafeEnabled's own comment. */
-  setFailsafeEnabled(enabled: boolean): void {
-    this.failsafeEnabled = enabled;
-    if (!enabled) this.stopIceRefreshLoop(); // stop an already-running proactive loop immediately
-  }
-
-  private startIceRefreshLoop(): void {
-    if (this.role !== "viewer" || this.iceRefreshTimer || !this.failsafeEnabled) return;
-    this.iceRefreshTimer = setInterval(() => {
-      void this.restartIce("scheduled");
-    }, ICE_REFRESH_INTERVAL_MS);
-  }
-
-  private stopIceRefreshLoop(): void {
-    if (this.iceRefreshTimer) clearInterval(this.iceRefreshTimer);
-    this.iceRefreshTimer = null;
-    this.iceRestartInFlight = false;
-  }
-
-  // "disconnected" (was connected, lost it) and "failed" (never connected
-  // at all) both land here — same recovery treatment for both, see the
-  // connectionstatechange handler's comment on why "failed" needed to be
-  // added to the states that reach this function.
-  private isRecoveringState(): boolean {
-    return this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed";
-  }
-
-  private scheduleDisconnectRecovery(): void {
-    const reason = this.pc.connectionState === "failed" ? "failed" : "disconnected";
-    if (this.role === "viewer" && this.failsafeEnabled) void this.restartIce(reason);
-    // A single restart attempt can itself fail to land (e.g. it starts while
-    // signalingState isn't stable yet, or its own candidate gather stalls) —
-    // keep retrying every few seconds for the whole grace window instead of
-    // trying once and just waiting out the clock. restartIce() already no-ops
-    // safely if one is still in flight or the state isn't right for it.
-    if (this.role === "viewer" && this.failsafeEnabled && !this.disconnectRetryTimer) {
-      this.disconnectRetryTimer = setInterval(() => {
-        if (this.isRecoveringState()) void this.restartIce(this.pc.connectionState === "failed" ? "failed" : "disconnected");
-      }, DISCONNECT_RETRY_INTERVAL_MS);
-    }
-    // The grace-period close below always runs regardless of the failsafe
-    // toggle — turning the active recovery attempts off shouldn't mean a
-    // dead connection hangs forever, just that nothing actively fights to
-    // revive it first.
+  // No active recovery attempts (no ICE restart, no retries) — a brief
+  // "disconnected"/"failed" blip either self-heals natively via the
+  // browser's own ICE consent-freshness checks, or the connection is
+  // genuinely dead and this just closes it after a short grace window
+  // instead of leaving it hanging indefinitely.
+  private scheduleDisconnectClose(): void {
     if (this.disconnectTimer) return;
     this.disconnectTimer = setTimeout(() => {
       this.disconnectTimer = null;
-      this.clearDisconnectRetryTimer();
-      if (this.isRecoveringState()) {
-        console.warn(`[ice] ${this.pc.connectionState} recovery timed out, closing peer connection`);
-        this.pc.close();
+      if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
+        console.warn(`[ice] ${this.pc.connectionState}, closing peer connection`);
+        this.close();
       }
     }, DISCONNECTED_GRACE_MS);
   }
@@ -732,29 +670,6 @@ export class PeerSession {
   private clearDisconnectTimer(): void {
     if (this.disconnectTimer) clearTimeout(this.disconnectTimer);
     this.disconnectTimer = null;
-    this.clearDisconnectRetryTimer();
-  }
-
-  private clearDisconnectRetryTimer(): void {
-    if (this.disconnectRetryTimer) clearInterval(this.disconnectRetryTimer);
-    this.disconnectRetryTimer = null;
-  }
-
-  private async restartIce(reason: "scheduled" | "disconnected" | "failed"): Promise<void> {
-    if (this.role !== "viewer" || this.iceRestartInFlight || this.pc.connectionState === "closed") return;
-    if (this.pc.signalingState !== "stable") return;
-    this.iceRestartInFlight = true;
-    try {
-      console.log(`[ice] restarting ICE (${reason})`);
-      this.pc.restartIce?.();
-      const offer = await this.pc.createOffer({ iceRestart: true });
-      await this.pc.setLocalDescription(offer);
-      this.signaling.send({ type: "signal", targetId: this.peerId, payload: { sdp: offer } });
-    } catch (err) {
-      console.warn("[ice] ICE restart failed:", err);
-    } finally {
-      this.iceRestartInFlight = false;
-    }
   }
 
   // Temporary diagnostic for the ~40-47s mid-session drop investigation
@@ -835,7 +750,6 @@ export class PeerSession {
   close(stopCaptureTracks = true): void {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
-    this.stopIceRefreshLoop();
     this.reportCompletedSession();
     this.pendingSystemCommands = [];
     this.controlChannel?.close();

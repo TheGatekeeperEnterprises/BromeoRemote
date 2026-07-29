@@ -359,7 +359,6 @@ const el = {
   videoWrap: document.querySelector<HTMLDivElement>(".video-wrap")!,
   fitModeSelect: $<HTMLSelectElement>("fit-mode-select"),
   qualitySelect: $<HTMLSelectElement>("quality-select"),
-  failsafeSelect: $<HTMLSelectElement>("failsafe-select"),
   codecPreferenceSelect: $<HTMLSelectElement>("codec-preference-select"),
   resolutionPreferenceSelect: $<HTMLSelectElement>("resolution-preference-select"),
   idleTimeoutSelect: $<HTMLSelectElement>("idle-timeout-select"),
@@ -469,10 +468,6 @@ let unseenNotifyCount = 0;
 let savedDevices: SavedDevice[] = [];
 let sessionHistoryExpanded = false;
 let lastConnectAttempt: { targetId: string; passwordHash: string; viewOnly: boolean; permissions: SessionPermissions } | null = null;
-// Gates auto-reconnect to sessions that actually connected at least once —
-// an initial connection attempt that never got off the ground (bad
-// password, offline target, ...) shouldn't trigger a retry loop.
-let sessionReachedConnectedOnce = false;
 let mediaRecorder: MediaRecorder | null = null;
 let recordedChunks: Blob[] = [];
 let recordingTimerHandle: ReturnType<typeof setInterval> | null = null;
@@ -592,7 +587,6 @@ async function init(): Promise<void> {
   updateThemeIcon(cfg.theme);
   applyRemoteFitMode((localStorage.getItem("bromeo:remote-fit-mode") as RemoteFitMode | null) ?? "fit");
   applyQualityLevel((localStorage.getItem("bromeo:quality-level") as QualityLevel | null) ?? "auto", false);
-  applyFailsafeSetting(localStorage.getItem("bromeo:failsafe-reconnect") !== "0", false);
   applyCodecPreference((localStorage.getItem("bromeo:codec-preference") as CodecPreferenceMode | null) ?? "sharp");
   applyResolutionPreference((localStorage.getItem("bromeo:resolution-preference") as ResolutionMode | null) ?? "sharp", false);
   applyIdleTimeout(localStorage.getItem(IDLE_TIMEOUT_KEY) ?? "0", false);
@@ -823,18 +817,6 @@ function applyQualityLevel(level: QualityLevel, notifyPeer = true): void {
 
 function qualityLabel(level: QualityLevel): string {
   return { auto: "automatisch", high: "hoog", low: "laag" }[level];
-}
-
-// See docs/47seconds.md and PeerSession's failsafeEnabled comment — this is
-// the mitigation for the mid-session TURN-relay drop, not a fix for its
-// root cause, exposed here as an opt-out for anyone who'd rather see a real
-// disconnect than repeated background reconnect attempts.
-function applyFailsafeSetting(enabled: boolean, notifyPeer = true): void {
-  el.failsafeSelect.value = enabled ? "on" : "off";
-  localStorage.setItem("bromeo:failsafe-reconnect", enabled ? "1" : "0");
-  if (notifyPeer && currentRole === "viewer" && currentSession) {
-    currentSession.setFailsafeEnabled(enabled);
-  }
 }
 
 // Unlike quality/failsafe, this can't be applied to an already-running
@@ -1270,11 +1252,7 @@ function updateSessionState(state: RTCPeerConnectionState | "starting"): void {
     connecting: "Verbinden",
     connected: "Verbonden",
     disconnected: "Onderbroken",
-    // "Herstellen" not "Mislukt" — session.ts now retries a "failed" state
-    // the same as "disconnected" for up to ~20s (see docs/WEBRTC-TURN-DEBUGGING.md)
-    // instead of it being an immediate dead end, so labeling it as a hard
-    // failure here would contradict the silent recovery actually happening.
-    failed: "Herstellen",
+    failed: "Mislukt",
     closed: "Gesloten",
   };
   el.sessionState.textContent = labels[state];
@@ -1608,11 +1586,6 @@ function wireUi(): void {
   el.qualitySelect.onchange = () => {
     applyQualityLevel(el.qualitySelect.value as QualityLevel);
     toast(`Kwaliteit ingesteld op ${qualityLabel(el.qualitySelect.value as QualityLevel)}.`);
-  };
-  el.failsafeSelect.onchange = () => {
-    const enabled = el.failsafeSelect.value === "on";
-    applyFailsafeSetting(enabled);
-    toast(enabled ? "Verbindingsfailsafe ingeschakeld." : "Verbindingsfailsafe uitgeschakeld.");
   };
   el.codecPreferenceSelect.onchange = () => {
     const mode = el.codecPreferenceSelect.value as CodecPreferenceMode;
@@ -2534,14 +2507,11 @@ function onHostViewerConnectionState(peerId: string, state: RTCPeerConnectionSta
     // silent-to-them until someone happened to toggle the mic again.
     if (hostMicStream) void entry.session.setMicrophoneTrack(hostMicStream.getAudioTracks()[0]);
   } else if (state === "closed") {
-    // Not "failed" — the host side is passive during ICE-restart recovery
-    // (only the viewer/offerer side calls restartIce, see session.ts), but
-    // still needs to hold this PeerSession open while that recovery is
-    // attempted, otherwise removeHostViewer would close the connection out
-    // from under an incoming renegotiated offer. session.ts's own recovery
-    // grace window closes the pc itself (producing this "closed" state) if
-    // the viewer's retries don't land within it — that's the real signal
-    // this viewer is actually gone, not the first "failed" blip.
+    // Not "failed" — a "failed"/"disconnected" blip can still self-heal
+    // natively (no active recovery attempts on either side anymore, see
+    // session.ts), so the host waits for the viewer's own short grace-period
+    // close (producing this "closed" state) before tearing down, instead of
+    // reacting to the first "failed" blip.
     removeHostViewer(peerId, { sendBye: false, toastMessage: `${entry.label} heeft de verbinding verbroken.` });
   }
 }
@@ -2935,7 +2905,6 @@ function applyViewerPermissionsUi(permissions: SessionPermissions, viewOnly: boo
 function startViewerSession(peerId: string, viewOnly: boolean, permissions = defaultPermissions(viewOnly)): void {
   currentRole = "viewer";
   currentPeerId = peerId;
-  sessionReachedConnectedOnce = false;
   sessionPermissions = normalizePermissions(permissions, viewOnly);
   sessionViewOnly = !sessionPermissions.control;
   sessionStartedAt = Date.now();
@@ -2975,33 +2944,12 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     },
     onConnectionState: (state) => {
       updateSessionState(state);
-      if (state === "connected") sessionReachedConnectedOnce = true;
-      if (state === "disconnected" || state === "failed") {
-        // "failed" now gets the same treatment as "disconnected" — session.ts's
-        // internal ICE-restart recovery (see its scheduleDisconnectRecovery/
-        // restartIce, and docs/WEBRTC-TURN-DEBUGGING.md) actively retries for
-        // up to ~20s on both, including the case where the connection never
-        // succeeded in the first place (e.g. a flaky TURN allocate on this
-        // machine). Tearing the UI down the instant "failed" first appears
-        // would race that recovery and close the peer connection out from
-        // under it before it gets a chance to work. Only "closed" — which
-        // session.ts reaches either via an explicit close() elsewhere or by
-        // giving up after its own recovery window — means it's truly over.
-        el.sessionStats.textContent = "Verbinding wordt hersteld";
-        return;
-      }
       if (state === "closed") {
-        // currentPeerId is already null by the time a *deliberate* hangup
-        // (disconnect button, idle timeout, peer-initiated bye, ...) reaches
-        // here, since endSession() clears it before pc.close() — so this
-        // only fires for a genuine, unexpected drop of a session that was
-        // actually connected. explicit restart-and-reconnect keeps its own
-        // path via restartRequestedFor; this covers everything else (e.g.
-        // the NAT-timeout-driven drop a direct P2P path can hit — see
-        // docs/WEBRTC-TURN-DEBUGGING.md).
-        const surpriseDrop = currentPeerId === peerId && sessionReachedConnectedOnce;
-        const reconnectInfo =
-          restartRequestedFor === peerId ? lastConnectAttempt : surpriseDrop && lastConnectAttempt?.targetId === peerId ? lastConnectAttempt : null;
+        // Auto-reconnect only ever fires for the *explicit* "Herstart
+        // verbinding" button (restartRequestedFor), never for an unexpected
+        // drop — a surprise "closed" just ends the session and leaves it
+        // ended, matching a plain disconnect.
+        const reconnectInfo = restartRequestedFor === peerId ? lastConnectAttempt : null;
         restartRequestedFor = null;
         endSession();
         if (reconnectInfo) scheduleAutoReconnect(reconnectInfo.targetId, reconnectInfo.passwordHash, reconnectInfo.viewOnly, reconnectInfo.permissions);
@@ -3065,7 +3013,6 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
   });
   currentSession.startAsViewer(el.codecPreferenceSelect.value as CodecPreferenceMode);
   applyQualityLevel(el.qualitySelect.value as QualityLevel);
-  applyFailsafeSetting(el.failsafeSelect.value === "on");
   applyResolutionPreference(el.resolutionPreferenceSelect.value as ResolutionMode);
   el.connectStatus.textContent = "Verbonden.";
 }
@@ -3766,7 +3713,7 @@ function checkAndShowFreeUpsell(licenseStatus: any): void {
 
     buyBtn.onclick = () => {
       modal.classList.add("hidden");
-      void window.bromeo?.openExternal?.("https://bromeoremote.com/dashboard.html");
+      void window.bromeo?.openExternal?.("https://bromeoremote.com/?account=1");
     };
   }
 }

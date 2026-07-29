@@ -101,7 +101,6 @@ const logo2 = require("./assets/logo2.png");
 
 const DEVICE_ID_KEY = "bromeoremote_device_id";
 const QUALITY_LEVEL_KEY = "bromeoremote_quality_level";
-const FAILSAFE_RECONNECT_KEY = "bromeoremote_failsafe_reconnect";
 const RENDER_QUALITY_MODE_KEY = "bromeoremote_render_quality_mode";
 const CODEC_PREFERENCE_KEY = "bromeoremote_codec_preference";
 const RESOLUTION_PREFERENCE_KEY = "bromeoremote_resolution_preference";
@@ -294,9 +293,6 @@ export default function App(): React.JSX.Element {
   const lastConnectRef = useRef<{ targetId: string; passwordHash: string } | null>(null);
   const restartRequestedForRef = useRef<string | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
-  // Gates auto-reconnect to sessions that actually connected at least once —
-  // an initial attempt that never got off the ground shouldn't retry-loop.
-  const sessionReachedConnectedOnceRef = useRef(false);
   const filesTransferredCountRef = useRef(0);
   const [totpRequired, setTotpRequired] = useState<"totp-required" | "bad-totp" | null>(null);
   const [totpCode, setTotpCode] = useState("");
@@ -659,16 +655,6 @@ export default function App(): React.JSX.Element {
     setQualityLevelState(level);
     AsyncStorage.setItem(QUALITY_LEVEL_KEY, level).catch(() => undefined);
     sessionRef.current?.sendSystemCommand({ kind: "quality-request", level });
-  }
-  // See docs/47seconds.md and MobileSession's own failsafeEnabled comment —
-  // on by default (a session that quietly re-stitches itself beats one that
-  // just drops), but selectable in Settings for anyone who'd rather see a
-  // real disconnect than repeated background reconnect attempts.
-  const [failsafeReconnect, setFailsafeReconnectState] = useState(true);
-  function setFailsafeReconnect(enabled: boolean): void {
-    setFailsafeReconnectState(enabled);
-    AsyncStorage.setItem(FAILSAFE_RECONNECT_KEY, enabled ? "1" : "0").catch(() => undefined);
-    sessionRef.current?.setFailsafeEnabled(enabled);
   }
   // Controls how big a layout box RTCView's native SurfaceViewRenderer gets
   // to decode/render into — see getZoomTiers' own comment for the full
@@ -1226,9 +1212,6 @@ export default function App(): React.JSX.Element {
     AsyncStorage.getItem(QUALITY_LEVEL_KEY).then((v) => {
       if (v === "auto" || v === "high" || v === "low") setQualityLevelState(v);
     });
-    AsyncStorage.getItem(FAILSAFE_RECONNECT_KEY).then((v) => {
-      if (v !== null) setFailsafeReconnectState(v === "1");
-    });
     AsyncStorage.getItem(RENDER_QUALITY_MODE_KEY).then((v) => {
       if (v === "tiered" || v === "always-max") {
         renderQualityModeRef.current = v;
@@ -1478,7 +1461,6 @@ export default function App(): React.JSX.Element {
     setVirtualCursor({ xPct: 0.5, yPct: 0.5 });
     sessionStartedAtRef.current = Date.now();
     filesTransferredCountRef.current = 0;
-    sessionReachedConnectedOnceRef.current = false;
     const session = new MobileSession(DEFAULT_ICE_SERVERS, signaling, peerId, {
       onRemoteStream: (stream) => {
         setRemoteStream(stream);
@@ -1486,33 +1468,12 @@ export default function App(): React.JSX.Element {
         setInSession(true);
       },
       onConnectionState: (state) => {
-        if (state === "connected") sessionReachedConnectedOnceRef.current = true;
-        if (state === "disconnected" || state === "failed") {
-          // "failed" gets the same treatment as "disconnected" — session.ts's
-          // internal ICE-restart recovery retries for up to ~20s on both,
-          // including a connection that never succeeded in the first place.
-          // Only "closed" (session.ts giving up, or an explicit close())
-          // means it's truly over — see client's mirrored fix and
-          // docs/WEBRTC-TURN-DEBUGGING.md.
-          setStatsText("Verbinding wordt hersteld");
-          return;
-        }
         if (state === "closed") {
           console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
-          // sessionStartedAtRef is already null by the time a *deliberate*
-          // hangup (disconnect button, peer-initiated bye, ...) reaches
-          // here, since endSession() clears it before session.close() —
-          // so surpriseDrop only true for a genuine unexpected drop of a
-          // session that actually connected (e.g. the NAT-timeout-driven
-          // drop a direct P2P path can hit — see
-          // docs/WEBRTC-TURN-DEBUGGING.md).
-          const surpriseDrop = sessionStartedAtRef.current != null && sessionReachedConnectedOnceRef.current;
-          const reconnect =
-            restartRequestedForRef.current === peerId
-              ? lastConnectRef.current
-              : surpriseDrop && lastConnectRef.current?.targetId === peerId
-                ? lastConnectRef.current
-                : null;
+          // Auto-reconnect only ever fires for the *explicit* "Herstart
+          // verbinding" action (restartRequestedFor), never for an
+          // unexpected drop — matches client/src/renderer/app.ts.
+          const reconnect = restartRequestedForRef.current === peerId ? lastConnectRef.current : null;
           restartRequestedForRef.current = null;
           endSession();
           if (reconnect) {
@@ -1612,7 +1573,6 @@ export default function App(): React.JSX.Element {
     // the desktop viewer applying its own saved setting right after connecting.
     session.sendSystemCommand({ kind: "quality-request", level: qualityLevel });
     session.sendSystemCommand({ kind: "resolution-preference", mode: resolutionPreference });
-    session.setFailsafeEnabled(failsafeReconnect);
     setConnectStatus("Verbonden.");
   }
 
@@ -1637,8 +1597,9 @@ export default function App(): React.JSX.Element {
     const translator = new RemoteInputTranslator();
     const session = new MobileSession(DEFAULT_ICE_SERVERS, signaling, peerId, {
       onConnectionState: (state) => {
-        // "failed" is now recoverable too (see session.ts's scheduleDisconnectRecovery) —
-        // only "closed" means the viewer's recovery window has actually run out.
+        // A "failed"/"disconnected" blip can still self-heal natively — wait
+        // for the viewer's own short grace-period close (see session.ts)
+        // before tearing down, instead of reacting to the first blip.
         if (state === "disconnected" || state === "failed") return;
         if (state === "closed") endSession();
       },
@@ -2865,18 +2826,6 @@ export default function App(): React.JSX.Element {
                 </View>
                 <Text style={styles.muted}>
                   "Scherp" (standaard) neemt het scherm op in de volledige, originele resolutie — het scherpst bij inzoomen, maar kan op tragere pc's de opgevraagde framerate niet bijhouden (merkbaar als vertraging van de cursor in beeld). "Snel" beperkt de opname tot maximaal 1080p, zodat de pc de framerate makkelijker bijhoudt. Geldt direct, ook tijdens een lopende sessie.
-                </Text>
-                <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Verbindingsfailsafe</Text>
-                  <Switch
-                    value={failsafeReconnect}
-                    onValueChange={setFailsafeReconnect}
-                    trackColor={{ false: colors.switchOff, true: colors.primary }}
-                    thumbColor="#fff"
-                  />
-                </View>
-                <Text style={styles.muted}>
-                  Ververst de verbinding elke 15s en probeert opnieuw bij een korte onderbreking, voordat de sessie écht wordt afgesloten. Uitzetten laat een onderbreking direct als verbroken zien.
                 </Text>
                 <View style={styles.settingsRow}>
                   <Text style={styles.settingsLabel}>Thema</Text>
