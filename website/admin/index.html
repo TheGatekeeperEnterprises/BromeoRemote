@@ -1571,7 +1571,7 @@ async function loadAnalytics() {
   referrersList.innerHTML = (data.topReferrers || []).length
     ? (data.topReferrers).map(r => `
         <div style="background:var(--card-bg2); border-radius:8px; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
-          <span style="font-family:monospace; font-size:0.85rem; color:#e2e8f0;">${r.referrer}</span>
+          <span style="font-family:monospace; font-size:0.85rem; color:var(--text-h);">${r.referrer}</span>
           <span style="font-weight:700; color:var(--accent2); background:rgba(56,189,248,0.1); padding:0.25rem 0.6rem; border-radius:6px;">${r.views}</span>
         </div>`).join('')
     : '<div class="empty-state">Geen referrers.</div>';
