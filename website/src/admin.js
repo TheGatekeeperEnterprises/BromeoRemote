@@ -26,6 +26,11 @@ const {
   adminDeleteAdmin,
   adminGetFullStatistics,
   adminGetCommercialUsageStats,
+  adminSendUserWarning,
+  adminRegenerateLicenseKeyForUser,
+  adminRevokeLicense,
+  adminBlacklistIp,
+  adminUnblacklistIp,
   databaseEnabled,
   getPool,
 } = require("./database");
@@ -296,6 +301,54 @@ router.delete("/api/licenses/:id", requireAuth, async (req, res) => {
 router.post("/api/users/:id/cancel-subscription", requireAuth, async (req, res) => {
   try {
     await cancelUserSubscription(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/users/:id/send-warning", requireAuth, async (req, res) => {
+  try {
+    const { message } = req.body;
+    if (!message || !message.trim()) return res.status(400).json({ ok: false, error: "Bericht is verplicht." });
+    const warning = await adminSendUserWarning(req.params.id, message.trim(), req.session.adminEmail);
+    res.json({ ok: true, warning });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/users/:id/regenerate-license-key", requireAuth, async (req, res) => {
+  try {
+    const license = await adminRegenerateLicenseKeyForUser(req.params.id);
+    res.json({ ok: true, license });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/licenses/:id/revoke", requireAuth, async (req, res) => {
+  try {
+    const license = await adminRevokeLicense(req.params.id);
+    res.json({ ok: true, license });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/ips/:ip/blacklist", requireAuth, async (req, res) => {
+  try {
+    const { reason, userId } = req.body;
+    const entry = await adminBlacklistIp(req.params.ip, userId, reason, req.session.adminEmail);
+    res.json({ ok: true, entry });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.delete("/api/ips/:ip/blacklist", requireAuth, async (req, res) => {
+  try {
+    await adminUnblacklistIp(req.params.ip);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

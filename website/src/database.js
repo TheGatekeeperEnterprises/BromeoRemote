@@ -417,7 +417,9 @@ async function adminGetUsers({ page = 1, limit = 20, search = "" } = {}) {
        activity.last_seen,
        COALESCE(activity.known_ip_count, 0) AS known_ip_count
      FROM users u
-     LEFT JOIN licenses l ON l.user_id = u.id
+     LEFT JOIN LATERAL (
+       SELECT * FROM licenses WHERE user_id = u.id ORDER BY created_at DESC LIMIT 1
+     ) l ON true
      LEFT JOIN LATERAL (
        SELECT MAX(ts) AS last_seen, COUNT(DISTINCT ip) AS known_ip_count
        FROM (
@@ -1264,9 +1266,14 @@ async function updateLicenseTransactionStatus(molliePaymentId, status, failureRe
 // payment where the subscription already exists and only the license's
 // active/expired status needs refreshing.
 async function upgradeUserLicense({ userId, plan, mollieSubscriptionId = null }) {
+  // expires_at is cleared here — a paid plan tied to an active Mollie
+  // subscription has no fixed expiry date of its own (billing status is
+  // governed by mollie_subscription_id / the recurring payments, not a
+  // date), so any stale trial/previous expiry must not carry over onto the
+  // now-paid license.
   const result = await query(
     `UPDATE licenses SET plan = $1, status = 'Active', is_trial = false, source = 'Checkout',
-       mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
+       expires_at = NULL, mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
      WHERE id = (SELECT id FROM licenses WHERE user_id = $3 ORDER BY created_at DESC LIMIT 1)
      RETURNING *`,
     [plan, mollieSubscriptionId, userId]
@@ -1276,7 +1283,7 @@ async function upgradeUserLicense({ userId, plan, mollieSubscriptionId = null })
 
 async function downgradeUserLicenseToFree(userId) {
   const result = await query(
-    `UPDATE licenses SET plan = 'Free', status = 'Active', mollie_subscription_id = NULL, updated_at = now()
+    `UPDATE licenses SET plan = 'Free', status = 'Active', expires_at = NULL, mollie_subscription_id = NULL, updated_at = now()
      WHERE id = (SELECT id FROM licenses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1)
      RETURNING *`,
     [userId]
