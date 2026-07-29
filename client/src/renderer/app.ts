@@ -3718,6 +3718,16 @@ function resetMicrophoneState(): void {
   el.voiceAudio.srcObject = null;
 }
 
+function updateFooterLicenseInfo(status: { valid: boolean; plan?: string; isTrial?: boolean } | null | undefined): void {
+  const footerText = document.getElementById("footer-license-info");
+  if (!footerText) return;
+  if (status?.valid) {
+    footerText.textContent = `· Licentie: ${status.plan || "Free"}${status.isTrial ? " (Trial)" : ""}`;
+  } else {
+    footerText.textContent = "· Licentie: Free";
+  }
+}
+
 async function initLicenseSection(): Promise<void> {
   const emailInput = document.getElementById("license-email-input") as HTMLInputElement | null;
   const keyInput = document.getElementById("license-key-input") as HTMLInputElement | null;
@@ -3726,11 +3736,18 @@ async function initLicenseSection(): Promise<void> {
 
   if (!emailInput || !keyInput || !verifyBtn || !statusText) return;
 
+  let cachedEmail = "";
+  let cachedKey = "";
+  let cachedHwid = "";
+
   if (window.bromeo?.getLicenseStatus) {
     try {
       const info = await window.bromeo.getLicenseStatus();
-      if (info.licenseEmail) emailInput.value = info.licenseEmail;
-      if (info.licenseKey) keyInput.value = info.licenseKey;
+      cachedEmail = info.licenseEmail || "";
+      cachedKey = info.licenseKey || "";
+      cachedHwid = info.hwid || "";
+      if (cachedEmail) emailInput.value = cachedEmail;
+      if (cachedKey) keyInput.value = cachedKey;
 
       if (info.licenseStatus) {
         if (info.licenseStatus.valid) {
@@ -3740,12 +3757,31 @@ async function initLicenseSection(): Promise<void> {
           statusText.style.color = "#ff4d6d";
           statusText.textContent = `Licentiestatus: ${info.licenseStatus.reason || "Ongeldig"}`;
         }
+        updateFooterLicenseInfo(info.licenseStatus);
       } else {
         statusText.textContent = `Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).`;
+        updateFooterLicenseInfo(null);
       }
     } catch {
       statusText.textContent = `Licentiestatus: Standaard Gratis (15 min per sessie).`;
+      updateFooterLicenseInfo(null);
     }
+  }
+
+  // Silently re-check with the server on startup so admin-side license changes
+  // (e.g. a trial added after the last manual check) show up without the user
+  // having to re-open this tab and click Verify themselves.
+  if ((cachedEmail || cachedKey) && window.bromeo?.verifyLicense) {
+    void window.bromeo
+      .verifyLicense(cachedKey, cachedEmail)
+      .then((res) => {
+        if (res.valid) {
+          statusText.style.color = "#0be881";
+          statusText.textContent = `Licentiestatus: Actief (${res.plan || "Free"}) — HWID: ${cachedHwid.slice(0, 12)}...`;
+        }
+        updateFooterLicenseInfo(res);
+      })
+      .catch(() => {});
   }
 
   verifyBtn.onclick = async () => {
@@ -3772,6 +3808,7 @@ async function initLicenseSection(): Promise<void> {
         statusText.textContent = `❌ ${res.reason || "Licentie controle mislukt."}`;
         toast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
       }
+      updateFooterLicenseInfo(res);
     } catch (err: any) {
       statusText.style.color = "#ff4d6d";
       statusText.textContent = `❌ Fout bij verbinden: ${err.message || err}`;
