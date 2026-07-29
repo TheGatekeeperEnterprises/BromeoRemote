@@ -7,23 +7,50 @@
   <link rel="icon" href="/assets/icon.png">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      /* Light Mode (Default) */
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --border-focus: #10b981;
+      --input-bg: #f1f5f9;
+      --text: #1e293b;
+      --muted: #64748b;
+      --accent: #10b981;
+      --accent-text: #ffffff;
+      --danger: #ef4444;
+    }
+    [data-theme="dark"] {
+      /* Dark Mode */
+      --bg: #0b1425;
+      --card-bg: rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.1);
+      --border-focus: #0be881;
+      --input-bg: rgba(255,255,255,0.06);
+      --text: #e8edf5;
+      --muted: #8898aa;
+      --accent: #0be881;
+      --accent-text: #0b1425;
+      --danger: #ff4d6d;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0b1425;
-      color: #e8edf5;
+      background: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
     }
     .login-card {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 3rem;
       width: 100%;
       max-width: 420px;
       backdrop-filter: blur(20px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     }
     .logo {
       display: flex;
@@ -34,31 +61,31 @@
     .logo img { height: 36px; }
     .logo span {
       font-size: 0.75rem;
-      color: #0be881;
+      color: var(--accent);
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 2px;
     }
     h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    p { color: #8898aa; font-size: 0.9rem; margin-bottom: 2rem; }
-    label { display: block; font-size: 0.8rem; color: #8898aa; margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    p { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
     input {
       width: 100%;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.12);
+      background: var(--input-bg);
+      border: 1px solid var(--border);
       border-radius: 10px;
       padding: 0.8rem 1rem;
-      color: #e8edf5;
+      color: var(--text);
       font-size: 0.95rem;
       outline: none;
       margin-bottom: 1.25rem;
       transition: border-color 0.2s;
     }
-    input:focus { border-color: #0be881; }
+    input:focus { border-color: var(--border-focus); }
     button {
       width: 100%;
-      background: #0be881;
-      color: #0b1425;
+      background: var(--accent);
+      color: var(--accent-text);
       border: none;
       border-radius: 10px;
       padding: 0.9rem;
@@ -70,8 +97,12 @@
     }
     button:hover { opacity: 0.9; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .error { color: #ff4d6d; font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
+    .error { color: var(--danger); font-size: 0.85rem; margin-top: 0.75rem; text-align: center; }
   </style>
+  <script>
+    let currentTheme = localStorage.getItem('br_admin_theme') || 'light';
+    if (currentTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  </script>
 </head>
 <body>
   <div class="login-card">

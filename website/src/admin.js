@@ -114,6 +114,9 @@ router.get("/login", (req, res) => {
   res.sendFile(path.join(adminDir, "login.html"));
 });
 
+// Serve static assets in admin directory (e.g. world.svg)
+router.use(express.static(adminDir, { index: false }));
+
 router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins", "/analytics", "/commercial-usage"], requireAuth, (req, res) => {
   res.sendFile(path.join(adminDir, "index.html"));
 });

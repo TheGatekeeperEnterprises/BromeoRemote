@@ -8,16 +8,49 @@
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
+      /* Light Mode (Default) */
+      --bg: #f8fafc;
+      --bg2: #ffffff;
+      --bg3: #f1f5f9;
+      --border: #e2e8f0;
+      --border2: #cbd5e1;
+      --accent: #10b981;
+      --accent2: #0ea5e9;
+      --text: #1e293b;
+      --text-h: #0f172a;
+      --muted: #64748b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      
+      --sec-bg: #f1f5f9;
+      --card-bg1: #ffffff;
+      --card-bg2: #f8fafc;
+      --card-bg3: #ffffff;
+      --map-land: #cbd5e1;
+      --map-border: #94a3b8;
+    }
+
+    [data-theme="dark"] {
+      /* Dark Mode */
       --bg: #0b1425;
       --bg2: #111d35;
       --bg3: #162040;
       --border: rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.06);
       --accent: #0be881;
       --accent2: #00c9ff;
       --text: #e8edf5;
+      --text-h: #ffffff;
       --muted: #8898aa;
       --danger: #ff4d6d;
       --warning: #ffb84d;
+      
+      --sec-bg: #121e36;
+      --card-bg1: #172647;
+      --card-bg2: #0f172a;
+      --card-bg3: #0b1426;
+      --map-land: #1e293b;
+      --map-border: #0f172a;
     }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
 
@@ -74,7 +107,7 @@
     .badge-blue { background: rgba(0,201,255,0.12); color: var(--accent2); }
     .badge-red { background: rgba(255,77,109,0.12); color: var(--danger); }
     .badge-warn { background: rgba(255,184,77,0.12); color: var(--warning); }
-    .badge-gray { background: rgba(255,255,255,0.06); color: var(--muted); }
+    .badge-gray { background: var(--border2); color: var(--muted); }
 
     /* Buttons */
     .btn { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.5rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; border: none; }
@@ -109,7 +142,7 @@
     /* Stat pill buttons */
     .stat-pill-btn {
       background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid var(--border);
       color: #94a3b8;
       border-radius: 6px;
       padding: 0.35rem 0.75rem;
@@ -186,6 +219,12 @@
       </div>
     </nav>
     <div class="sidebar-footer">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <span style="font-size:0.8rem; color:var(--muted); font-weight:600;">Thema</span>
+        <div onclick="toggleTheme()" style="background:var(--bg3); border:1px solid var(--border); border-radius:20px; padding:2px; display:flex; cursor:pointer; width:44px; position:relative;">
+          <div id="theme-knob" style="width:18px; height:18px; background:var(--accent); border-radius:50%; transition:transform 0.2s ease; transform:translateX(0);"></div>
+        </div>
+      </div>
       <div class="admin-info" id="adminEmail">—</div>
       <button class="logout-btn" onclick="logout()">Uitloggen</button>
     </div>
@@ -399,17 +438,17 @@
 
     <!-- Analytics / Statistics Page -->
     <div id="page-analytics" class="page-hidden">
-      <div class="topbar" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:1rem; margin-bottom:1.5rem;">
+      <div class="topbar" style="border-bottom:1px solid var(--border2); padding-bottom:1rem; margin-bottom:1.5rem;">
         <div>
           <span style="font-size:0.75rem; font-weight:700; letter-spacing:1px; color:#38bdf8; text-transform:uppercase;">WEBSITE STATISTICS</span>
-          <h1 style="font-size:1.75rem; margin:0.25rem 0 0.5rem 0; font-weight:800; color:#fff;">Traffic, visitors, response times, and downloads</h1>
+          <h1 style="font-size:1.75rem; margin:0.25rem 0 0.5rem 0; font-weight:800; color:var(--text-h);">Traffic, visitors, response times, and downloads</h1>
           <p class="muted small" style="margin:0; font-size:0.875rem;">Review live website activity, recent visitors, full page interest, and software download timing from one professional statistics page.</p>
         </div>
       </div>
 
       <div class="content" style="display:flex; flex-direction:column; gap:1.5rem;">
         <!-- Top Sub-nav Buttons -->
-        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; background:#121e36; padding:0.6rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06);">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; background:var(--sec-bg); padding:0.6rem; border-radius:10px; border:1px solid var(--border2);">
           <button class="stat-pill-btn active" onclick="scrollToStatSec('sec-filters')">Filters</button>
           <button class="stat-pill-btn" onclick="scrollToStatSec('sec-overzicht')">Overzicht</button>
           <button class="stat-pill-btn" onclick="scrollToStatSec('sec-prestaties')">Prestaties</button>
@@ -424,25 +463,25 @@
         </div>
 
         <!-- Traffic Filters -->
-        <div id="sec-filters" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1rem; margin-bottom:1rem; color:#fff;">Traffic filters</h3>
+        <div id="sec-filters" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1rem; margin-bottom:1rem; color:var(--text-h);">Traffic filters</h3>
           <div style="display:flex; gap:2rem; flex-wrap:wrap;">
-            <label class="checkbox-row" style="cursor:pointer;">
+            <label class="checkbox-row" style="cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
               <input id="stat-filter-internal" type="checkbox" onchange="loadAnalytics()" />
-              <span style="font-size:0.875rem; color:#cbd5e1;">Show internal admin / owner traffic</span>
+              <span style="font-size:0.875rem; color:var(--text);">Show internal admin / owner traffic</span>
             </label>
-            <label class="checkbox-row" style="cursor:pointer;">
+            <label class="checkbox-row" style="cursor:pointer; display:flex; align-items:center; gap:0.5rem;">
               <input id="stat-filter-bots" type="checkbox" onchange="loadAnalytics()" />
-              <span style="font-size:0.875rem; color:#cbd5e1;">Show bot / spider traffic</span>
+              <span style="font-size:0.875rem; color:var(--text);">Show bot / spider traffic</span>
             </label>
           </div>
         </div>
 
         <!-- 10 Overview Stat Cards -->
         <div id="sec-overzicht" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">UNIQUE VISITORS (7D)</div>
-            <div class="stat-value" id="stat-uniques7d" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+            <div class="stat-value" id="stat-uniques7d" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
           <div class="stat-card-grid" style="background:#1b2a1a; border:1px solid rgba(11,232,129,0.2); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#86efac;">NEW USERS (7D)</div>
@@ -460,74 +499,74 @@
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#fde047;">ACTIVE LICENSES</div>
             <div class="stat-value" id="stat-activeLicenses" style="font-size:1.75rem; font-weight:800; color:#facc15; margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">PAGE VIEWS (7D)</div>
-            <div class="stat-value" id="stat-pageviews7d" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+            <div class="stat-value" id="stat-pageviews7d" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">AVG RESPONSE</div>
-            <div class="stat-value" id="stat-avgResponse" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">2 ms</div>
+            <div class="stat-value" id="stat-avgResponse" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">2 ms</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">DATA SERVED</div>
-            <div class="stat-value" id="stat-dataServed" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0.0 MB</div>
+            <div class="stat-value" id="stat-dataServed" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0.0 MB</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">EXPIRED TRIALS WITHOUT UPGRADE</div>
-            <div class="stat-value" id="stat-expiredTrials" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+            <div class="stat-value" id="stat-expiredTrials" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
-          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid var(--border); border-radius:10px; padding:1rem;">
             <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">COUNTRIES WITH ACTIVE LICENSES</div>
-            <div class="stat-value" id="stat-countriesActive" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+            <div class="stat-value" id="stat-countriesActive" style="font-size:1.75rem; font-weight:800; color:var(--text-h); margin-top:0.5rem;">0</div>
           </div>
         </div>
 
         <!-- Week, Month, and Year Performance -->
-        <div id="sec-prestaties" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Week, month, and year performance</h3>
+        <div id="sec-prestaties" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Week, month, and year performance</h3>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
-            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+            <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
               <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS WEEK</div>
-              <div id="perf-week-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Laatste 7 Dagen</div>
+              <div id="perf-week-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Laatste 7 Dagen</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-week-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-week-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-week-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-week-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-week-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-week-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-week-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-week-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
               </div>
-              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-week-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+              <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-week-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
 
-            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+            <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
               <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS MONTH</div>
-              <div id="perf-month-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Deze Maand</div>
+              <div id="perf-month-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Deze Maand</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-month-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-month-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-month-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-month-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-month-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-month-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-month-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-month-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
               </div>
-              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-month-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+              <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-month-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
 
-            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+            <div style="background:var(--card-bg1); border:1px solid var(--border); border-radius:10px; padding:1.25rem;">
               <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS YEAR</div>
-              <div id="perf-year-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Dit Jaar (2026)</div>
+              <div id="perf-year-label" style="font-size:1.1rem; font-weight:700; color:var(--text-h); margin:0.25rem 0 1rem 0;">Dit Jaar (2026)</div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-year-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-year-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-year-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
-                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-year-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-year-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-year-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-year-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-year-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
               </div>
-              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-year-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+              <div style="background:var(--card-bg2); padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-year-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
             </div>
           </div>
         </div>
 
         <!-- Traffic timeline and line graph -->
-        <div id="sec-grafiek" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+        <div id="sec-grafiek" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
-            <h3 style="font-size:1.1rem; margin:0; color:#fff;">Traffic timeline and line graph</h3>
+            <h3 style="font-size:1.1rem; margin:0; color:var(--text-h);">Traffic timeline and line graph</h3>
             <div style="display:flex; gap:0.5rem;">
               <button class="btn btn-outline btn-sm active">Weekly line</button>
               <button class="btn btn-outline btn-sm">Monthly line</button>
@@ -536,17 +575,17 @@
           </div>
 
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">LAST 30 DAYS</div><div style="font-weight:700; font-size:0.9rem; color:#38bdf8;">Live range</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">NEW USERS</div><div id="graph-tot-users" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">VIEWS</div><div id="graph-tot-views" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">DOWNLOADS</div><div id="graph-tot-downloads" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">TRIALS</div><div id="graph-tot-trials" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">PAID TX</div><div id="graph-tot-tx" style="font-weight:700; font-size:1rem;">0</div></div>
-            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">REVENUE</div><div id="graph-tot-revenue" style="font-weight:700; font-size:1rem; color:#0be881;">EUR 0.00</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">LAST 30 DAYS</div><div style="font-weight:700; font-size:0.9rem; color:#38bdf8;">Live range</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">NEW USERS</div><div id="graph-tot-users" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">VIEWS</div><div id="graph-tot-views" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">DOWNLOADS</div><div id="graph-tot-downloads" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">TRIALS</div><div id="graph-tot-trials" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">PAID TX</div><div id="graph-tot-tx" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:var(--card-bg1); padding:0.75rem; border-radius:8px;"><div class="small muted">REVENUE</div><div id="graph-tot-revenue" style="font-weight:700; font-size:1rem; color:#0be881;">EUR 0.00</div></div>
           </div>
 
           <!-- SVG Graph -->
-          <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; overflow:hidden;">
+          <div style="background:var(--card-bg3); border-radius:10px; padding:1.25rem; border:1px solid var(--border2); position:relative; overflow:hidden;">
             <svg id="analytics-svg-graph" viewBox="0 0 900 240" style="width:100%; height:240px; display:block;"></svg>
             <div style="display:flex; gap:1.5rem; justify-content:center; margin-top:1rem; font-size:0.8rem; font-weight:600;">
               <span style="color:#4ade80;">● Users</span>
@@ -562,16 +601,16 @@
         </div>
 
         <!-- World Activity Map (Simplemaps Worldmap v1.1 - world.svg) -->
-        <div id="sec-wereldkaart" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">World activity map</h3>
+        <div id="sec-wereldkaart" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">World activity map</h3>
           <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; align-items:start;">
-            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; min-height:360px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
+            <div style="background:var(--card-bg3); border-radius:10px; padding:1.25rem; border:1px solid var(--border2); position:relative; min-height:360px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
               
               <!-- Zoom Controls -->
               <div style="position:absolute; top:1rem; left:1rem; display:flex; gap:0.3rem; z-index:10;">
-                <button class="btn btn-outline btn-sm" onclick="zoomWorldMap(1.2)" title="Zoom in" style="background:#121e36;">+</button>
-                <button class="btn btn-outline btn-sm" onclick="zoomWorldMap(0.8)" title="Zoom uit" style="background:#121e36;">-</button>
-                <button class="btn btn-ghost btn-sm" onclick="resetWorldMapZoom()" title="Reset weergave" style="background:#121e36;">RESET</button>
+                <button class="btn btn-outline btn-sm" onclick="zoomWorldMap(1.2)" title="Zoom in" style="background:var(--sec-bg);">+</button>
+                <button class="btn btn-outline btn-sm" onclick="zoomWorldMap(0.8)" title="Zoom uit" style="background:var(--sec-bg);">-</button>
+                <button class="btn btn-ghost btn-sm" onclick="resetWorldMapZoom()" title="Reset weergave" style="background:var(--sec-bg);">RESET</button>
               </div>
 
               <!-- Interactive Simplemaps Vector SVG (loaded dynamically from world.svg) -->
@@ -580,13 +619,13 @@
               </div>
 
               <!-- Map Footer exact text match with BromeoGrid -->
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:0.5rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem; border-top:1px solid var(--border2); padding-top:0.5rem;">
                 <p class="muted small" style="margin:0; font-size:0.75rem; color:#94a3b8;">Kaartdata: Simplemaps worldmap (v1.1).</p>
                 <span class="muted small" style="font-size:0.75rem;">Zoom: <span id="map-zoom-level">100%</span></span>
               </div>
             </div>
 
-            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); max-height:360px; overflow-y:auto;">
+            <div style="background:var(--card-bg3); border-radius:10px; padding:1.25rem; border:1px solid var(--border2); max-height:360px; overflow-y:auto;">
               <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:1rem;">
                 <span style="color:#38bdf8; font-weight:600;">● Traffic weight</span>
                 <span style="color:#facc15; font-weight:600;">● Licensed / paid heavier</span>
@@ -597,19 +636,19 @@
         </div>
 
         <!-- Video engagement -->
-        <div id="sec-video" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Video engagement</h3>
+        <div id="sec-video" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Video engagement</h3>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">VIDEO CLICKS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
-            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">TOTAL WATCH TIME</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
-            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">AVG WATCH</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
-            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">COMPLETED PLAYS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
+            <div style="background:var(--card-bg2); padding:1rem; border-radius:8px;"><div class="small muted">VIDEO CLICKS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
+            <div style="background:var(--card-bg2); padding:1rem; border-radius:8px;"><div class="small muted">TOTAL WATCH TIME</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
+            <div style="background:var(--card-bg2); padding:1rem; border-radius:8px;"><div class="small muted">AVG WATCH</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
+            <div style="background:var(--card-bg2); padding:1rem; border-radius:8px;"><div class="small muted">COMPLETED PLAYS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
           </div>
         </div>
 
         <!-- Country activity overview table -->
-        <div id="sec-landen" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Country activity overview</h3>
+        <div id="sec-landen" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Country activity overview</h3>
           <table style="width:100%;">
             <thead>
               <tr>
@@ -629,8 +668,8 @@
         </div>
 
         <!-- Top pages in the last 7 days -->
-        <div id="sec-paginas" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Top pages in the last 7 days</h3>
+        <div id="sec-paginas" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Top pages in the last 7 days</h3>
           <table style="width:100%;">
             <thead>
               <tr>
@@ -645,20 +684,20 @@
         </div>
 
         <!-- Top Referrers -->
-        <div id="sec-referrers" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Top referrers</h3>
+        <div id="sec-referrers" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Top referrers</h3>
           <div id="analyticsReferrersList" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
         </div>
 
         <!-- Recent Visitor Activity -->
-        <div id="sec-bezoekers" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Recent visitor activity</h3>
+        <div id="sec-bezoekers" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Recent visitor activity</h3>
           <div id="analyticsRecentVisitorsList" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
         </div>
 
         <!-- Software Download Activity -->
-        <div id="sec-downloads" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
-          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Software download activity</h3>
+        <div id="sec-downloads" class="card" style="background:var(--sec-bg); border:1px solid var(--border); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:var(--text-h);">Software download activity</h3>
           <table style="width:100%;">
             <thead>
               <tr>
@@ -799,6 +838,28 @@
   </div>
 
 <script>
+// ── Thema instellingen ────────────────────────────────────────────────────────
+let currentTheme = localStorage.getItem('br_admin_theme') || 'light';
+if (currentTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+
+function initThemeKnob() {
+  const knob = document.getElementById('theme-knob');
+  if (knob) knob.style.transform = currentTheme === 'dark' ? 'translateX(22px)' : 'translateX(0)';
+}
+
+function toggleTheme() {
+  currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+  if (currentTheme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('br_admin_theme', currentTheme);
+  initThemeKnob();
+}
+
+document.addEventListener('DOMContentLoaded', initThemeKnob);
+
 // ── State ─────────────────────────────────────────────────────────────────────
 let currentPage = 'dashboard';
 let usersPage = 1;
@@ -1198,7 +1259,7 @@ async function initWorldMapSvg() {
       <div id="svg-map-wrapper" style="width:100%; height:100%; transition: transform 0.25s ease-out; transform-origin: center center;">
         ${svgText}
       </div>
-      <div id="map-tooltip" style="position:absolute; display:none; background:#0b1426; border:1px solid #38bdf8; color:#fff; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.8rem; pointer-events:none; z-index:100; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
+      <div id="map-tooltip" style="position:absolute; display:none; background:var(--card-bg3); border:1px solid #38bdf8; color:var(--text-h); padding:0.5rem 0.75rem; border-radius:6px; font-size:0.8rem; pointer-events:none; z-index:100; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
     `;
 
     const svg = container.querySelector('svg');
@@ -1210,8 +1271,8 @@ async function initWorldMapSvg() {
 
       const paths = svg.querySelectorAll('path');
       paths.forEach((p) => {
-        p.style.fill = '#1e293b';
-        p.style.stroke = '#0f172a';
+        p.style.fill = 'var(--map-land)';
+        p.style.stroke = 'var(--map-border)';
         p.style.strokeWidth = '0.5px';
         p.style.transition = 'fill 0.15s, stroke 0.15s';
         p.style.cursor = 'pointer';
@@ -1237,8 +1298,8 @@ async function initWorldMapSvg() {
         });
 
         p.addEventListener('mouseleave', () => {
-          p.style.fill = '#1e293b';
-          p.style.stroke = '#0f172a';
+          p.style.fill = 'var(--map-land)';
+          p.style.stroke = 'var(--map-border)';
           const tooltip = document.getElementById('map-tooltip');
           if (tooltip) tooltip.style.display = 'none';
         });
@@ -1251,10 +1312,28 @@ async function initWorldMapSvg() {
   }
 }
 
+let analyticsFiltersLoaded = false;
 async function loadAnalytics() {
   void initWorldMapSvg();
-  const filterInternal = document.getElementById('stat-filter-internal')?.checked || false;
-  const filterBots = document.getElementById('stat-filter-bots')?.checked || false;
+  
+  const chkInternal = document.getElementById('stat-filter-internal');
+  const chkBots = document.getElementById('stat-filter-bots');
+  
+  if (chkInternal && chkBots && !analyticsFiltersLoaded) {
+    const savedInternal = localStorage.getItem('br_stat_filter_internal');
+    const savedBots = localStorage.getItem('br_stat_filter_bots');
+    if (savedInternal !== null) chkInternal.checked = savedInternal === 'true';
+    if (savedBots !== null) chkBots.checked = savedBots === 'true';
+    analyticsFiltersLoaded = true;
+  }
+  
+  const filterInternal = chkInternal ? chkInternal.checked : false;
+  const filterBots = chkBots ? chkBots.checked : false;
+  
+  if (chkInternal && chkBots) {
+    localStorage.setItem('br_stat_filter_internal', filterInternal);
+    localStorage.setItem('br_stat_filter_bots', filterBots);
+  }
 
   const res = await fetch(`/admin/api/analytics?filterInternal=${filterInternal}&filterBots=${filterBots}`);
   const data = await res.json();
@@ -1328,7 +1407,7 @@ async function loadAnalytics() {
   const referrersList = document.getElementById('analyticsReferrersList');
   referrersList.innerHTML = (data.topReferrers || []).length
     ? (data.topReferrers).map(r => `
-        <div style="background:#0f172a; border-radius:8px; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
+        <div style="background:var(--card-bg2); border-radius:8px; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
           <span style="font-family:monospace; font-size:0.85rem; color:#e2e8f0;">${r.referrer}</span>
           <span style="font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.1); padding:0.25rem 0.6rem; border-radius:6px;">${r.views}</span>
         </div>`).join('')
@@ -1338,10 +1417,10 @@ async function loadAnalytics() {
   const recentList = document.getElementById('analyticsRecentVisitorsList');
   recentList.innerHTML = (data.recentVisitors || []).length
     ? (data.recentVisitors).map(v => `
-        <div style="background:#0f172a; border-radius:10px; padding:1rem; border:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+        <div style="background:var(--card-bg2); border-radius:10px; padding:1rem; border:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
           <div>
             <div style="font-size:0.75rem; color:#94a3b8;">${new Date(v.timestamp).toLocaleString('nl-NL')}</div>
-            <div style="font-weight:700; font-size:0.9rem; color:#fff; margin-top:0.25rem;">VISITOR ${v.visitor}</div>
+            <div style="font-weight:700; font-size:0.9rem; color:var(--text-h); margin-top:0.25rem;">VISITOR ${v.visitor}</div>
             <div style="font-family:monospace; font-size:0.8rem; color:#38bdf8; margin-top:0.25rem;">PATH ${v.path}</div>
           </div>
           <div style="text-align:right;">
@@ -1414,7 +1493,7 @@ function renderSvgGraph(daily) {
     ${daily.map((d, i) => {
       const x = padding + (i / Math.max(daily.length - 1, 1)) * (width - padding * 2);
       const y = height - padding - (d.visitors / maxVal) * (height - padding * 2);
-      return `<circle cx="${x}" cy="${y}" r="3.5" fill="#60a5fa" stroke="#0b1426" stroke-width="1.5"><title>${d.label}: ${d.visitors} visitors (${d.views} views)</title></circle>`;
+      return `<circle cx="${x}" cy="${y}" r="3.5" fill="#60a5fa" stroke="var(--card-bg3)" stroke-width="1.5"><title>${d.label}: ${d.visitors} visitors (${d.views} views)</title></circle>`;
     }).join('')}
   `;
 }
@@ -1423,14 +1502,14 @@ function renderDailyCarousel(daily) {
   const carousel = document.getElementById('analytics-daily-carousel');
   if (!carousel) return;
   carousel.innerHTML = [...daily].reverse().map(d => `
-    <div style="background:#172647; border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:0.875rem 1rem; min-width:140px; flex-shrink:0;">
-      <div style="font-weight:700; font-size:0.85rem; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.4rem; margin-bottom:0.4rem;">${d.label}</div>
+    <div style="background:var(--card-bg1); border:1px solid var(--border2); border-radius:10px; padding:0.875rem 1rem; min-width:140px; flex-shrink:0;">
+      <div style="font-weight:700; font-size:0.85rem; color:var(--text-h); border-bottom:1px solid var(--border2); padding-bottom:0.4rem; margin-bottom:0.4rem;">${d.label}</div>
       <div style="font-size:0.75rem; color:#94a3b8; display:flex; flex-direction:column; gap:0.2rem;">
-        <div>Users: <strong style="color:#fff;">${d.users}</strong></div>
-        <div>Views: <strong style="color:#fff;">${d.views}</strong></div>
-        <div>Visitors: <strong style="color:#fff;">${d.visitors}</strong></div>
-        <div>Downloads: <strong style="color:#fff;">${d.downloads}</strong></div>
-        <div>Trials: <strong style="color:#fff;">${d.trials}</strong></div>
+        <div>Users: <strong style="color:var(--text-h);">${d.users}</strong></div>
+        <div>Views: <strong style="color:var(--text-h);">${d.views}</strong></div>
+        <div>Visitors: <strong style="color:var(--text-h);">${d.visitors}</strong></div>
+        <div>Downloads: <strong style="color:var(--text-h);">${d.downloads}</strong></div>
+        <div>Trials: <strong style="color:var(--text-h);">${d.trials}</strong></div>
         <div style="color:#0be881; font-weight:700; margin-top:0.2rem;">EUR ${d.revenue.toFixed(2)}</div>
       </div>
     </div>`).join('');
@@ -1454,10 +1533,10 @@ function renderCountryOverview(countries) {
 
   if (list) {
     list.innerHTML = defaultCountries.map(c => `
-      <div style="background:#172647; border-radius:8px; padding:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+      <div style="background:var(--card-bg1); border-radius:8px; padding:0.75rem; display:flex; justify-content:space-between; align-items:center;">
         <div style="display:flex; align-items:center; gap:0.5rem;">
           <span style="font-size:1.1rem;">${c.flag}</span>
-          <span style="font-size:0.85rem; font-weight:600; color:#fff;">${c.name}</span>
+          <span style="font-size:0.85rem; font-weight:600; color:var(--text-h);">${c.name}</span>
         </div>
         <div style="font-weight:700; font-size:0.85rem; color:#0be881;">EUR ${c.revenue.toFixed(2)}</div>
       </div>`).join('');
