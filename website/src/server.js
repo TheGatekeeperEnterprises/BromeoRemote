@@ -412,7 +412,7 @@ app.post("/api/user/forgot-password", contactLimiter, async (req, res, next) => 
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
       const user = await setPasswordResetToken(email, tokenHash, expiresAt);
       if (user) {
-        const resetUrl = `${config.publicBaseUrl}/dashboard.html?resetToken=${token}`;
+        const resetUrl = `${config.publicBaseUrl}/?resetToken=${token}`;
         await sendPasswordResetEmail(user.email, resetUrl);
       }
     }
@@ -453,6 +453,15 @@ app.post("/api/webhooks/mollie", express.urlencoded({ extended: true }), async (
     console.error("[Mollie Webhook] processing failed:", error.message);
     res.status(500).send("Webhook processing failed");
   }
+});
+
+// dashboard.html no longer exists — the whole account/license flow is now a
+// modal on the homepage (see public/app.js's initAccountModal). This keeps
+// old bookmarks and already-sent password-reset emails working instead of
+// 404ing; registered before static serving so it takes precedence.
+app.get("/dashboard.html", (req, res) => {
+  const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+  res.redirect(302, "/" + query);
 });
 
 app.use("/releases", express.static(releasesDir));

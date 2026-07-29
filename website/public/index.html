@@ -28,7 +28,7 @@
         <a href="#contact">Contact</a>
       </nav>
         <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
-          <a class="header-cta" href="/dashboard.html" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Mijn Dashboard / Licentie</a>
+          <button type="button" class="header-cta" id="accountModalTrigger" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Mijn Dashboard / Licentie</button>
           <a class="header-cta" href="#downloads">Download gratis</a>
         </div>
       </header>
@@ -206,7 +206,7 @@
                 <li><strong>HWID hardware-beveiliging</strong></li>
                 <li>Multi-monitor &amp; gordijnmodus</li>
               </ul>
-              <a href="/dashboard.html?plan=Pro" class="download-action primary">Abonneren (€7,95)</a>
+              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro">Abonneren (€7,95)</button>
             </article>
 
             <article class="pricing-card">
@@ -219,7 +219,7 @@
                 <li>Onbeheerde toegang met 2FA</li>
                 <li>Prioriteitsondersteuning</li>
               </ul>
-              <a href="/dashboard.html?plan=Unlimited" class="download-action primary" style="background: var(--cyan); color: #fff;">Abonneren (€50,00)</a>
+              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited">Abonneren (€50,00)</button>
             </article>
           </div>
         </div>
@@ -393,6 +393,175 @@
           <span>🔒 End-to-end versleuteld</span>
           <span>🛡️ 100% Virusvrij</span>
           <span>⚡ Geen registratie verplicht</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT / LICENSE MODAL POPUP -->
+    <div id="accountModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="account-modal-title">
+      <div class="download-modal-backdrop" data-close-modal></div>
+      <div class="download-modal-card account-modal-card">
+        <button class="download-modal-close" data-close-modal aria-label="Sluit venster">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <!-- AUTH VIEW (UNAUTHENTICATED) -->
+        <div id="authView">
+          <div class="portal-header">
+            <h2 id="account-modal-title" class="download-modal-title">Mijn BromeoRemote Account</h2>
+            <p class="download-modal-subtitle">Meld je aan of maak een gratis account aan om je licentiesleutel te bekijken en te beheren.</p>
+          </div>
+
+          <div class="auth-tabs">
+            <button type="button" class="tab-btn active" id="tabLoginBtn" data-show-tab="login">Inloggen</button>
+            <button type="button" class="tab-btn" id="tabRegisterBtn" data-show-tab="register">Account Aanmaken (Gratis)</button>
+          </div>
+
+          <!-- LOGIN FORM -->
+          <form id="loginForm">
+            <div class="form-group">
+              <label for="loginEmail">E-mailadres</label>
+              <input type="email" id="loginEmail" required placeholder="jouw@email.nl">
+            </div>
+            <div class="form-group">
+              <label for="loginPassword">Wachtwoord</label>
+              <input type="password" id="loginPassword" required placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-submit" id="btnAuthSubmit">Inloggen</button>
+            <p class="error-msg" id="authError" hidden></p>
+            <p style="text-align:center; margin-top:0.75rem;">
+              <span class="logout-link" style="color:#8898aa;" id="forgotPasswordLink">Wachtwoord vergeten?</span>
+            </p>
+          </form>
+
+          <!-- FORGOT PASSWORD FORM -->
+          <form id="forgotForm" style="display:none;">
+            <p style="color:#8898aa; font-size:0.9rem; margin-bottom:1rem;">Vul je e-mailadres in, dan sturen we je een link om je wachtwoord opnieuw in te stellen.</p>
+            <div class="form-group">
+              <label for="forgotEmail">E-mailadres</label>
+              <input type="email" id="forgotEmail" required placeholder="jouw@email.nl">
+            </div>
+            <button type="submit" class="btn-submit">Resetlink versturen</button>
+            <p class="error-msg" id="forgotError" hidden></p>
+            <p class="error-msg" id="forgotSuccess" hidden style="color:#0be881;"></p>
+            <p style="text-align:center; margin-top:0.75rem;">
+              <span class="logout-link" style="color:#8898aa;" id="backToLoginLink">Terug naar inloggen</span>
+            </p>
+          </form>
+
+          <!-- RESET PASSWORD FORM (shown when ?resetToken= is present) -->
+          <form id="resetPasswordForm" style="display:none;">
+            <div class="form-group">
+              <label for="resetNewPassword">Nieuw wachtwoord (min. 6 tekens)</label>
+              <input type="password" id="resetNewPassword" required minlength="6" placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-submit">Wachtwoord instellen</button>
+            <p class="error-msg" id="resetError" hidden></p>
+          </form>
+
+          <!-- REGISTER FORM -->
+          <form id="registerForm" style="display: none;">
+            <div class="form-group">
+              <label for="regEmail">E-mailadres *</label>
+              <input type="email" id="regEmail" required placeholder="jouw@email.nl">
+            </div>
+            <div class="form-group">
+              <label for="regCompany">Bedrijfsnaam (optioneel)</label>
+              <input type="text" id="regCompany" placeholder="Bedrijf B.V.">
+            </div>
+            <div class="form-group">
+              <label for="regPassword">Wachtwoord (min. 6 tekens) *</label>
+              <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
+            </div>
+            <button type="submit" class="btn-submit">Gratis Account Aanmaken</button>
+            <p class="error-msg" id="regError" hidden></p>
+          </form>
+        </div>
+
+        <!-- DASHBOARD VIEW (AUTHENTICATED) -->
+        <div id="dashboardView" class="dashboard-view">
+          <div class="user-bar">
+            <div>
+              <span style="color:#8898aa; font-size:0.85rem;">Ingelogd als:</span>
+              <strong id="userEmailDisplay" style="margin-left:0.5rem; color:#e8edf5;">-</strong>
+            </div>
+            <span class="logout-link" id="logoutLink">Uitloggen</span>
+          </div>
+
+          <h2 style="font-size:1.4rem; margin-bottom:0.5rem; text-align:left;">Mijn Licentiesleutel</h2>
+          <p style="color:#8898aa; font-size:0.9rem; text-align:left; margin-bottom:1.5rem;">
+            Vul dit e-mailadres en onderstaande licentiesleutel in bij de BromeoRemote software om je licentie en functies te activeren.
+          </p>
+
+          <div class="license-box">
+            <span style="font-size:0.75rem; color:#8898aa; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Licentiesleutel</span>
+            <div class="license-key">
+              <span id="licenseKeyDisplay">Laden...</span>
+              <span style="display:flex; gap:0.5rem; flex-shrink:0;">
+                <button type="button" class="copy-btn" id="copyLicenseKeyBtn">Kopiëren</button>
+                <button type="button" class="copy-btn" style="background:rgba(255,255,255,0.1); color:#e8edf5;" id="regenerateLicenseKeyBtn">Nieuwe sleutel</button>
+              </span>
+            </div>
+            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+              <span class="badge badge-green" id="planBadge">GRATIS</span>
+              <span style="font-size:0.85rem; color:#8898aa;" id="expiresDisplay">Permanente gratis licentie</span>
+              <span class="logout-link" id="cancelSubLink" style="display:none; margin-left:auto;">Abonnement opzeggen</span>
+            </div>
+          </div>
+
+          <h3 style="font-size:1.2rem; text-align:left; margin-top:2.5rem; margin-bottom:0.5rem;">Licentie Upgraden</h3>
+          <p style="color:#8898aa; font-size:0.9rem; text-align:left;">
+            Standaard is de software gratis. Upgrade voor onbeperkte sessieduur of extra functies zoals AI Buddy.
+          </p>
+
+          <div class="plans-grid">
+            <div class="plan-card" id="planCardFree">
+              <span class="badge badge-gray">Huidig / Basis</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Gratis</h4>
+              <div class="plan-price">€0 <span>/mnd</span></div>
+              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem;">
+                <li>Remote desktop besturing</li>
+                <li>Max. 15 min per sessie</li>
+                <li>Standaard beeldkwaliteit</li>
+              </ul>
+            </div>
+
+            <div class="plan-card" id="planCardPro">
+              <span class="badge badge-green">Meest Gekozen</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Pro</h4>
+              <div class="plan-price">€7,95 <span>/mnd</span></div>
+              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
+                <li><strong>Onbeperkte sessieduur</strong></li>
+                <li>Bestandsoverdracht &amp; Chat</li>
+                <li>HWID Hardware-beveiliging</li>
+                <li>Multi-monitor &amp; gordijnmodus</li>
+              </ul>
+              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro">Upgraden naar Pro (€7,95/mnd)</button>
+            </div>
+
+            <div class="plan-card" id="planCardUnlimited">
+              <span class="badge badge-cyan">Unlimited</span>
+              <h4 style="font-size:1.1rem; margin-top:0.5rem;">Unlimited</h4>
+              <div class="plan-price">€50 <span>/mnd</span></div>
+              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
+                <li><strong>Onbeperkt apparaten &amp; sessies</strong></li>
+                <li><strong>AI Buddy assistent ingebouwd</strong></li>
+                <li>Onbeheerde toegang met 2FA</li>
+                <li>Prioriteitsondersteuning</li>
+              </ul>
+              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited">Upgraden naar Unlimited (€50,00/mnd)</button>
+            </div>
+          </div>
+
+          <div class="instructions-box">
+            <h3>💡 Hoe activeer je de licentie in de BromeoRemote software?</h3>
+            <ol>
+              <li>Open de BromeoRemote software op je computer.</li>
+              <li>Ga naar de <strong>Instellingen / Licentie</strong> pagina in het menu.</li>
+              <li>Vul jouw e-mailadres (<code><span class="current-user-email">jouw@email.nl</span></code>) en je <strong>Licentiesleutel</strong> in.</li>
+              <li>Klik op <strong>Licentie Controleren &amp; Activeren</strong>. De functies en sessieduur worden direct ontgrendeld!</li>
+            </ol>
+          </div>
         </div>
       </div>
     </div>

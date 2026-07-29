@@ -1553,3 +1553,232 @@ button:focus-visible {
   font-size: 0.84rem;
   flex-wrap: wrap;
 }
+
+/* ── Account / license modal — was dashboard.html's own page + inline
+   <style> block before it got folded into a homepage popup. Everything
+   below is scoped under #accountModal so none of it leaks onto the rest
+   of the homepage (dashboard.html previously styled `body` directly,
+   which only worked because it was the only thing on that page). */
+
+.account-modal-card {
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+  text-align: center;
+}
+
+#accountModal .auth-tabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+#accountModal .tab-btn {
+  background: none;
+  border: none;
+  color: #8898aa;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+#accountModal .tab-btn.active {
+  color: #0be881;
+  border-bottom-color: #0be881;
+}
+
+#accountModal .form-group {
+  margin-bottom: 1.25rem;
+  text-align: left;
+}
+
+#accountModal .form-group label {
+  display: block;
+  font-size: 0.8rem;
+  color: #8898aa;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+#accountModal .form-group input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  color: #e8edf5;
+  font-size: 0.95rem;
+  outline: none;
+}
+
+#accountModal .form-group input:focus {
+  border-color: #0be881;
+}
+
+#accountModal .btn-submit {
+  width: 100%;
+  background: #0be881;
+  color: #0b1425;
+  border: none;
+  border-radius: 10px;
+  padding: 0.9rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-top: 0.5rem;
+}
+
+#accountModal .btn-submit:hover {
+  opacity: 0.9;
+}
+
+#accountModal .dashboard-view {
+  display: none;
+}
+
+#accountModal .license-box {
+  background: rgba(11, 232, 129, 0.08);
+  border: 1px solid rgba(11, 232, 129, 0.3);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+#accountModal .license-key {
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0be881;
+  letter-spacing: 1px;
+  word-break: break-all;
+  margin: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+#accountModal .copy-btn {
+  background: #0be881;
+  color: #0b1425;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+#accountModal .plans-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+#accountModal .plan-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.75rem;
+  text-align: left;
+}
+
+#accountModal .plan-card.active-plan {
+  border-color: #0be881;
+  background: rgba(11, 232, 129, 0.05);
+}
+
+#accountModal .plan-price {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #e8edf5;
+  margin: 0.5rem 0;
+}
+
+#accountModal .plan-price span {
+  font-size: 0.9rem;
+  color: #8898aa;
+  font-weight: 400;
+}
+
+#accountModal .badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+#accountModal .badge-green {
+  background: rgba(11, 232, 129, 0.2);
+  color: #0be881;
+}
+
+#accountModal .badge-cyan {
+  background: rgba(14, 165, 183, 0.2);
+  color: #0ea5b7;
+}
+
+#accountModal .badge-gray {
+  background: rgba(255, 255, 255, 0.1);
+  color: #8898aa;
+}
+
+#accountModal .instructions-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 2rem;
+  text-align: left;
+}
+
+#accountModal .instructions-box h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: #0be881;
+}
+
+#accountModal .instructions-box ol {
+  margin-left: 1.25rem;
+  font-size: 0.9rem;
+  color: #8898aa;
+}
+
+#accountModal .instructions-box li {
+  margin-bottom: 0.4rem;
+}
+
+#accountModal .error-msg {
+  color: #ff4d6d;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
+  text-align: center;
+}
+
+#accountModal .user-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+#accountModal .logout-link {
+  color: #ff4d6d;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-decoration: underline;
+}

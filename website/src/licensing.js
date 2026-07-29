@@ -87,7 +87,7 @@ async function createSubscriptionCheckout(email, userId, plan = 'Pro') {
     customerId,
     sequenceType: 'first',
     description: `BromeoRemote ${planName}`,
-    redirectUrl: baseUrl() + '/dashboard.html?payment=success',
+    redirectUrl: baseUrl() + '/?payment=success',
     webhookUrl: baseUrl() + '/api/webhooks/mollie',
     metadata: { userId, plan },
   });
