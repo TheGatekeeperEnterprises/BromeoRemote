@@ -14,6 +14,8 @@ const {
   saveNewsletterSignup,
   recordPageView,
   recordSessionEvent,
+  recordRemoteSession,
+  resolveUserIdByLicenseOrEmail,
   userRegister,
   userLogin,
   userGetPortalData,
@@ -294,6 +296,32 @@ app.post("/api/license/verify", apiLimiter, async (req, res, next) => {
       return res.status(403).json(result);
     }
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Fase 1 commercial-use measurement: viewer side reports one row per
+// completed session. Unauthenticated by design, same precedent as
+// /api/license/verify — most Free accounts never register at all, so
+// source_device_id (not a login) is the primary identity here.
+app.post("/api/session/report", apiLimiter, async (req, res, next) => {
+  try {
+    const { deviceId, targetDeviceId, platform, startedAt, endedAt, licenseKey, email } = req.body;
+    if (!deviceId || !startedAt || !endedAt) {
+      return res.status(400).json({ ok: false, error: "deviceId, startedAt en endedAt zijn verplicht." });
+    }
+    const userId = await resolveUserIdByLicenseOrEmail({ licenseKey, email });
+    await recordRemoteSession({
+      userId,
+      sourceDeviceId: deviceId,
+      targetDeviceId,
+      platform,
+      ipAddress: req.ip,
+      startedAt,
+      endedAt,
+    });
+    res.json({ ok: true });
   } catch (error) {
     next(error);
   }

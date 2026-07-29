@@ -439,6 +439,7 @@
     const params = new URLSearchParams(window.location.search);
     const resetToken = params.get("resetToken");
     const paymentStatus = params.get("payment");
+    const openAccount = params.get("account") === "1"; // desktop/mobile app's "Upgraden" link
 
     if (resetToken) {
       document.getElementById("authView").style.display = "block";
@@ -453,6 +454,10 @@
     } else {
       checkAuth({ openIfLoggedIn: paymentStatus === "success" });
       if (paymentStatus === "success") history.replaceState({}, "", "/");
+      if (openAccount) {
+        openModal();
+        history.replaceState({}, "", "/");
+      }
     }
   }
 

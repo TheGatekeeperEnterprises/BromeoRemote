@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, desktopCapturer, ipcMain, dialog, clipboard, nativeImage, Tray, Menu, Notification, screen } from "electron";
+import { app, BrowserWindow, session, desktopCapturer, ipcMain, dialog, clipboard, nativeImage, Tray, Menu, Notification, screen, shell } from "electron";
 import { join } from "path";
 import { writeFile, readFile, stat } from "fs/promises";
 import { appendFileSync, writeFileSync } from "fs";
@@ -513,6 +513,37 @@ ipcMain.handle("bromeo:get-config", () => {
 
 ipcMain.handle("bromeo:verify-license", (_e, key?: string, email?: string) => {
   return verifyClientLicense(key, email);
+});
+
+ipcMain.handle("bromeo:open-external", (_e, url: string) => {
+  if (!/^https:\/\/(www\.)?bromeoremote\.com\//.test(url)) return false;
+  void shell.openExternal(url);
+  return true;
+});
+
+interface ReportSessionPayload {
+  deviceId: string;
+  targetDeviceId?: string;
+  platform: string;
+  startedAt: number;
+  endedAt: number;
+}
+
+ipcMain.handle("bromeo:report-session", async (_e, payload: ReportSessionPayload) => {
+  try {
+    const cfg = store.get();
+    await fetch("https://bromeoremote.com/api/session/report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        licenseKey: cfg.licenseKey || undefined,
+        email: cfg.licenseEmail || undefined,
+      }),
+    });
+  } catch {
+    // Fase 1 measurement only — never let a reporting failure surface to the user.
+  }
 });
 
 ipcMain.handle("bromeo:get-license-status", () => {

@@ -20,7 +20,7 @@ const LICENSE_STATUS_KEY = "bromeoremote_license_status";
 // Purely informational (goes into session_events.app_version for analytics,
 // not used for any gating) — bump alongside versionCode in
 // android/app/build.gradle when cutting a new release.
-const APP_VERSION = "0.0.16";
+const APP_VERSION = "0.0.17";
 
 export interface LicenseFeatures {
   sessionLimitMinutes: number | null;

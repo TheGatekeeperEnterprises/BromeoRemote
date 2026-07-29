@@ -19,6 +19,9 @@ contextBridge.exposeInMainWorld("bromeo", {
   getConfig: () => ipcRenderer.invoke("bromeo:get-config"),
   verifyLicense: (key?: string, email?: string) => ipcRenderer.invoke("bromeo:verify-license", key, email),
   getLicenseStatus: () => ipcRenderer.invoke("bromeo:get-license-status"),
+  openExternal: (url: string) => ipcRenderer.invoke("bromeo:open-external", url),
+  reportSession: (payload: { deviceId: string; targetDeviceId?: string; platform: string; startedAt: number; endedAt: number }) =>
+    ipcRenderer.invoke("bromeo:report-session", payload),
   setUnattended: (enabled: boolean, password: string | null) =>
     ipcRenderer.invoke("bromeo:set-unattended", enabled, password),
   checkPassword: (passwordHash: string, totpCode?: string, fromId?: string, fromLabel?: string, trustDevice?: boolean) =>

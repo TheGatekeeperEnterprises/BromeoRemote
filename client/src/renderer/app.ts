@@ -3728,13 +3728,37 @@ function updateFooterLicenseInfo(status: { valid: boolean; plan?: string; isTria
   }
 }
 
+function updateExpiryText(expiresAt: string | null | undefined): void {
+  const expiryText = document.getElementById("license-expiry-text");
+  if (!expiryText) return;
+  if (!expiresAt) {
+    expiryText.textContent = "";
+    return;
+  }
+  const date = new Date(expiresAt);
+  const dateLabel = date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  const daysLeft = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
+  if (daysLeft < 0) {
+    expiryText.textContent = `Verlopen op ${dateLabel}.`;
+  } else if (daysLeft === 0) {
+    expiryText.textContent = `Verloopt vandaag (${dateLabel}).`;
+  } else {
+    expiryText.textContent = `Verloopt op ${dateLabel} (nog ${daysLeft} ${daysLeft === 1 ? "dag" : "dagen"}).`;
+  }
+}
+
 async function initLicenseSection(): Promise<void> {
   const emailInput = document.getElementById("license-email-input") as HTMLInputElement | null;
   const keyInput = document.getElementById("license-key-input") as HTMLInputElement | null;
   const verifyBtn = document.getElementById("license-verify-btn") as HTMLButtonElement | null;
+  const upgradeBtn = document.getElementById("license-upgrade-btn") as HTMLButtonElement | null;
   const statusText = document.getElementById("license-status-text") as HTMLElement | null;
 
   if (!emailInput || !keyInput || !verifyBtn || !statusText) return;
+
+  upgradeBtn?.addEventListener("click", () => {
+    void window.bromeo?.openExternal?.("https://bromeoremote.com/?account=1");
+  });
 
   let cachedEmail = "";
   let cachedKey = "";
@@ -3758,6 +3782,7 @@ async function initLicenseSection(): Promise<void> {
           statusText.textContent = `Licentiestatus: ${info.licenseStatus.reason || "Ongeldig"}`;
         }
         updateFooterLicenseInfo(info.licenseStatus);
+        updateExpiryText(info.licenseStatus.expiresAt);
       } else {
         statusText.textContent = `Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).`;
         updateFooterLicenseInfo(null);
@@ -3778,6 +3803,7 @@ async function initLicenseSection(): Promise<void> {
         if (res.valid) {
           statusText.style.color = "#0be881";
           statusText.textContent = `Licentiestatus: Actief (${res.plan || "Free"}) — HWID: ${cachedHwid.slice(0, 12)}...`;
+          updateExpiryText(res.expiresAt);
         }
         updateFooterLicenseInfo(res);
       })
@@ -3803,10 +3829,12 @@ async function initLicenseSection(): Promise<void> {
         statusText.style.color = "#0be881";
         statusText.textContent = `✅ Licentie Geactiveerd! Plan: ${res.plan || "Pro"}`;
         toast(`Licentie succesvol geactiveerd voor ${res.userEmail || email}!`);
+        updateExpiryText(res.expiresAt);
       } else {
         statusText.style.color = "#ff4d6d";
         statusText.textContent = `❌ ${res.reason || "Licentie controle mislukt."}`;
         toast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
+        updateExpiryText(null);
       }
       updateFooterLicenseInfo(res);
     } catch (err: any) {

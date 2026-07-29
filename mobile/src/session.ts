@@ -121,6 +121,10 @@ export class MobileSession {
   private failsafeEnabled = true;
   private currentResolutionScale = 1;
   private sustainedHighRttTicks = 0;
+  // Fase 1 commercial-use measurement (viewer side only — matches desktop's
+  // client/src/renderer/session.ts). Set on connect, consumed and reported
+  // on close; never affects the session.
+  private connectedAt: number | null = null;
   constructor(private iceServers: any[], private signaling: Signaling, private peerId: string, private callbacks: SessionCallbacks) {
     console.log("[ice] configured ICE urls:", iceServers.flatMap(iceUrls), "policy=all");
     this.pc = new RTCPeerConnection({
@@ -154,7 +158,10 @@ export class MobileSession {
         this.clearDisconnectTimer();
         this.startStatsLoop();
         this.startIceRefreshLoop();
-        if (this.role === "viewer") this.enforceLicenseSessionLimit();
+        if (this.role === "viewer") {
+          this.enforceLicenseSessionLimit();
+          this.connectedAt = Date.now();
+        }
       } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
         // Mirrors client/src/renderer/session.ts's fix — "failed" (never
         // reached "connected" at all) used to get zero retry attempts,
@@ -167,6 +174,7 @@ export class MobileSession {
         this.stopStatsLoop();
         this.stopIceRefreshLoop();
         this.clearLicenseTimers();
+        this.reportCompletedSession();
       }
     });
     this.pc.addEventListener("track", (event: any) => {
@@ -664,11 +672,42 @@ export class MobileSession {
     this.licenseLimitTimer = null;
   }
 
+  // Fase 1 commercial-use measurement — fire-and-forget, viewer side only,
+  // one row per completed session (matches desktop's
+  // client/src/renderer/session.ts reportCompletedSession). Never affects
+  // the session; called from both the "closed" state branch and close()
+  // since a locally-initiated close() isn't guaranteed to also dispatch a
+  // "closed" connectionstatechange event.
+  private reportCompletedSession(): void {
+    if (this.role !== "viewer" || !this.connectedAt) return;
+    const startedAt = this.connectedAt;
+    this.connectedAt = null;
+    getLicenseStatus()
+      .then((info) => {
+        if (!info.hwid) return;
+        return fetch("https://bromeoremote.com/api/session/report", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            deviceId: info.hwid,
+            targetDeviceId: this.peerId,
+            platform: "android",
+            startedAt,
+            endedAt: Date.now(),
+            licenseKey: info.licenseKey || undefined,
+            email: info.licenseEmail || undefined,
+          }),
+        });
+      })
+      .catch(() => {});
+  }
+
   close(): void {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
     this.stopIceRefreshLoop();
     this.clearLicenseTimers();
+    this.reportCompletedSession();
     this.controlChannel?.close();
     this.clipboardChannel?.close();
     this.chatChannel?.close();

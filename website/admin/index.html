@@ -162,6 +162,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/></svg>
         Beheerders
       </div>
+      <div class="nav-item" data-page="commercial-usage" onclick="navigate('commercial-usage')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Commercieel Gebruik
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div class="admin-info" id="adminEmail">—</div>
@@ -348,6 +352,28 @@
           <table>
             <thead><tr><th>E-mail</th><th>Rol</th><th>Aangemaakt</th><th></th></tr></thead>
             <tbody id="adminsTableBody"><tr><td colspan="4" class="loading">Laden...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Commercial Usage Page (Fase 1 — alleen meten, geen enforcement) -->
+    <div id="page-commercial-usage" class="page-hidden">
+      <div class="topbar">
+        <h1>Commercieel Gebruik — Fase 1 (meten)</h1>
+        <select class="search-input" id="commercialDaysFilter" style="width:160px;" onchange="loadCommercialUsage();">
+          <option value="7">Laatste 7 dagen</option>
+          <option value="30" selected>Laatste 30 dagen</option>
+          <option value="90">Laatste 90 dagen</option>
+        </select>
+      </div>
+      <div class="content">
+        <p class="muted small" style="margin-bottom:1rem;">Alleen meting — er wordt niets beperkt. Scores zijn gebaseerd op device-gedrag, niet op een account (de meeste gratis gebruikers hebben geen geregistreerd account).</p>
+        <div class="card">
+          <div class="card-header"><h2>Devices gesorteerd op score</h2></div>
+          <table>
+            <thead><tr><th>Device</th><th>Account</th><th>Score</th><th>Targets (7d/30d)</th><th>Sessies (24u/7d)</th><th>Minuten (24u/7d)</th><th>Gem. duur</th><th>Actieve dagen (30d)</th><th>Max gelijktijdig</th><th>Redenen</th></tr></thead>
+            <tbody id="commercialUsageBody"><tr><td colspan="10" class="loading">Laden...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -542,6 +568,7 @@ function navigate(page, id, push = true) {
   if (page === 'leads') { loadContactRequests(); loadNewsletterSignups(); }
   if (page === 'admins') loadAdmins();
   if (page === 'analytics') loadAnalytics();
+  if (page === 'commercial-usage') loadCommercialUsage();
 }
 
 function handleRoute() {
@@ -561,6 +588,8 @@ function handleRoute() {
     navigate('admins', null, false);
   } else if (path === '/admin/analytics') {
     navigate('analytics', null, false);
+  } else if (path === '/admin/commercial-usage') {
+    navigate('commercial-usage', null, false);
   } else {
     navigate('dashboard', null, false);
   }
@@ -893,6 +922,34 @@ async function loadAnalytics() {
   referrersBody.innerHTML = data.topReferrers.length
     ? data.topReferrers.map(r => `<tr><td>${r.referrer}</td><td>${r.views}</td></tr>`).join('')
     : '<tr><td colspan="2" class="empty-state">Geen data.</td></tr>';
+}
+
+// ── Commercial usage (Fase 1) ────────────────────────────────────────────────────
+function scoreBadge(score) {
+  const cls = score >= 80 ? 'badge-red' : score >= 60 ? 'badge-warn' : score >= 40 ? 'badge-blue' : 'badge-gray';
+  return `<span class="badge ${cls}">${score}</span>`;
+}
+
+async function loadCommercialUsage() {
+  const days = document.getElementById('commercialDaysFilter')?.value || 30;
+  const tbody = document.getElementById('commercialUsageBody');
+  tbody.innerHTML = '<tr><td colspan="10" class="loading">Laden...</td></tr>';
+  const res = await fetch(`/admin/api/commercial-usage?days=${days}`);
+  const data = await res.json();
+  if (!data.ok) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${data.error}</td></tr>`; return; }
+  if (!data.devices.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nog geen sessiedata.</td></tr>'; return; }
+  tbody.innerHTML = data.devices.map(d => `<tr>
+    <td><span class="value-mono" title="${d.deviceId}">${d.deviceId.slice(0, 12)}...</span></td>
+    <td>${d.email || '<span style="color:var(--muted)">Geen account</span>'}</td>
+    <td>${scoreBadge(d.score)}</td>
+    <td>${d.metrics.uniqueTargets7d} / ${d.metrics.uniqueTargets30d}</td>
+    <td>${d.metrics.sessions24h} / ${d.metrics.sessions7d}</td>
+    <td>${d.metrics.minutes24h} / ${d.metrics.minutes7d}</td>
+    <td>${formatDuration(d.metrics.avgSessionSeconds)}</td>
+    <td>${d.metrics.activeDays30d}</td>
+    <td>${d.metrics.maxConcurrent}</td>
+    <td>${d.reasonCodes.map(c => `<span class="badge badge-gray" style="margin:1px;">${c}</span>`).join('')}</td>
+  </tr>`).join('');
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────

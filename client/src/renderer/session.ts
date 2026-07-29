@@ -166,6 +166,10 @@ export class PeerSession {
   private currentResolutionScale = 1;
   private sustainedFloorTicks = 0;
   private lastSentLimitationReason: string | null | undefined = undefined; // undefined = never sent yet
+  // Fase 1 commercial-use measurement (viewer side only — the account/license
+  // lives on the operator, not the host-being-helped device). Set on connect,
+  // consumed and reported on close; never affects the session itself.
+  private connectedAt: number | null = null;
 
   constructor(
     private role: Role,
@@ -212,6 +216,8 @@ export class PeerSession {
         this.startStatsLoop();
         this.startIceRefreshLoop();
 
+        if (this.role === "viewer") this.connectedAt = Date.now();
+
         if ((window as any).bromeo?.getLicenseStatus) {
           (window as any).bromeo.getLicenseStatus().then((status: any) => {
             const sessionLimitMinutes = status?.licenseStatus?.features?.sessionLimitMinutes ?? 15;
@@ -248,6 +254,7 @@ export class PeerSession {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
         this.stopIceRefreshLoop();
+        this.reportCompletedSession();
       }
     };
     this.pc.ontrack = (ev) => {
@@ -258,6 +265,29 @@ export class PeerSession {
       if (ev.streams[0]) this.callbacks.onRemoteStream?.(ev.streams[0]);
     };
     this.pc.ondatachannel = (ev) => this.bindChannel(ev.channel);
+  }
+
+  // Fase 1 commercial-use measurement — fire-and-forget, viewer side only,
+  // one row per completed session (avoids needing to correlate separate
+  // connect/disconnect events server-side). Never affects the session.
+  private reportCompletedSession(): void {
+    if (this.role !== "viewer" || !this.connectedAt) return;
+    const startedAt = this.connectedAt;
+    this.connectedAt = null;
+    if (!(window as any).bromeo?.reportSession || !(window as any).bromeo?.getConfig) return;
+    void (window as any).bromeo
+      .getConfig()
+      .then((cfg: any) => {
+        if (!cfg?.deviceId) return;
+        return (window as any).bromeo.reportSession({
+          deviceId: cfg.deviceId,
+          targetDeviceId: this.peerId,
+          platform: "windows",
+          startedAt,
+          endedAt: Date.now(),
+        });
+      })
+      .catch(() => {});
   }
 
   private bindChannel(channel: RTCDataChannel): void {
@@ -806,6 +836,7 @@ export class PeerSession {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
     this.stopIceRefreshLoop();
+    this.reportCompletedSession();
     this.pendingSystemCommands = [];
     this.controlChannel?.close();
     this.filesChannel?.close();

@@ -195,6 +195,28 @@ async function initDatabase() {
   `);
   await query(`CREATE INDEX IF NOT EXISTS idx_page_views_created_at ON page_views (created_at DESC);`);
 
+  // Completed remote-control sessions (viewer side only) — used for Fase 1
+  // commercial-use measurement, not enforcement. See docs discussion: an
+  // account/user_id may not exist (Free tier works with no registered
+  // account), so source_device_id is the primary identity here, with
+  // user_id attached only when a license/email happened to be cached.
+  await query(`
+    CREATE TABLE IF NOT EXISTS remote_sessions (
+      id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id uuid REFERENCES users(id) ON DELETE SET NULL,
+      source_device_id text NOT NULL,
+      target_device_id text,
+      platform text,
+      ip_address text,
+      started_at timestamptz NOT NULL,
+      ended_at timestamptz NOT NULL,
+      duration_seconds integer NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  await query(`CREATE INDEX IF NOT EXISTS idx_remote_sessions_source_device ON remote_sessions (source_device_id, started_at DESC);`);
+  await query(`CREATE INDEX IF NOT EXISTS idx_remote_sessions_started_at ON remote_sessions (started_at DESC);`);
+
   await query("CREATE INDEX IF NOT EXISTS idx_contact_requests_created_at ON contact_requests (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_download_events_created_at ON download_events (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_licenses_user_id ON licenses (user_id);");
@@ -272,6 +294,28 @@ async function recordPageView({ path, referrer, ip, userAgent }) {
   await query(
     `INSERT INTO page_views (path, referrer, ip_address, user_agent) VALUES ($1, $2, $3, $4);`,
     [path, referrer || null, ip || null, userAgent || null],
+  );
+  return null;
+}
+
+// Best-effort user lookup for tagging session reports — unlike
+// verifyLicenseInDb, this doesn't check validity/expiry/HWID, it's only used
+// to attach an optional user_id to a remote_sessions row for reporting.
+async function resolveUserIdByLicenseOrEmail({ licenseKey, email }) {
+  if (!databaseEnabled() || (!licenseKey && !email)) return null;
+  const res = licenseKey
+    ? await query("SELECT user_id FROM licenses WHERE license_key::text = $1", [licenseKey.trim()])
+    : await query("SELECT id AS user_id FROM users WHERE email = $1", [email.trim().toLowerCase()]);
+  return res?.rows[0]?.user_id || null;
+}
+
+async function recordRemoteSession({ userId, sourceDeviceId, targetDeviceId, platform, ipAddress, startedAt, endedAt }) {
+  if (!databaseEnabled()) return null;
+  const durationSeconds = Math.max(0, Math.round((new Date(endedAt).getTime() - new Date(startedAt).getTime()) / 1000));
+  await query(
+    `INSERT INTO remote_sessions (user_id, source_device_id, target_device_id, platform, ip_address, started_at, ended_at, duration_seconds)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`,
+    [userId || null, sourceDeviceId, targetDeviceId || null, platform || null, ipAddress || null, startedAt, endedAt, durationSeconds],
   );
   return null;
 }
@@ -583,6 +627,110 @@ async function adminGetAnalytics({ days = 30 } = {}) {
   };
 }
 
+// ── Commercial-use measurement (Fase 1: alleen meten, geen enforcement) ─────────
+// Computed on-demand (not a background job / stored score) — this is for manual
+// admin review of the signal quality, not automated flagging yet.
+
+async function adminGetCommercialUsageStats({ days = 30 } = {}) {
+  const [perDevice, sharedTargets, concurrency] = await Promise.all([
+    query(
+      `SELECT
+         rs.source_device_id,
+         (array_agg(rs.user_id ORDER BY rs.started_at DESC) FILTER (WHERE rs.user_id IS NOT NULL))[1] AS user_id,
+         COUNT(DISTINCT rs.target_device_id) FILTER (WHERE rs.started_at > now() - interval '7 days') AS unique_targets_7d,
+         COUNT(DISTINCT rs.target_device_id) AS unique_targets_30d,
+         COUNT(*) FILTER (WHERE rs.started_at > now() - interval '24 hours') AS sessions_24h,
+         COUNT(*) FILTER (WHERE rs.started_at > now() - interval '7 days') AS sessions_7d,
+         COALESCE(SUM(rs.duration_seconds) FILTER (WHERE rs.started_at > now() - interval '24 hours'), 0) AS duration_24h,
+         COALESCE(SUM(rs.duration_seconds) FILTER (WHERE rs.started_at > now() - interval '7 days'), 0) AS duration_7d,
+         COALESCE(AVG(rs.duration_seconds), 0) AS avg_duration,
+         COUNT(DISTINCT date_trunc('day', rs.started_at)) AS active_days_30d
+       FROM remote_sessions rs
+       WHERE rs.started_at > now() - ($1::text || ' days')::interval
+       GROUP BY rs.source_device_id`,
+      [days]
+    ),
+    query(
+      `SELECT source_device_id
+       FROM (
+         SELECT target_device_id, source_device_id
+         FROM remote_sessions
+         WHERE target_device_id IS NOT NULL AND started_at > now() - ($1::text || ' days')::interval
+         GROUP BY target_device_id, source_device_id
+       ) t
+       WHERE target_device_id IN (
+         SELECT target_device_id
+         FROM remote_sessions
+         WHERE target_device_id IS NOT NULL AND started_at > now() - ($1::text || ' days')::interval
+         GROUP BY target_device_id
+         HAVING COUNT(DISTINCT source_device_id) > 1
+       )`,
+      [days]
+    ),
+    query(
+      `SELECT source_device_id, MAX(running) AS max_concurrent
+       FROM (
+         SELECT
+           source_device_id,
+           SUM(delta) OVER (PARTITION BY source_device_id ORDER BY t, delta DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running
+         FROM (
+           SELECT source_device_id, started_at AS t, 1 AS delta FROM remote_sessions WHERE started_at > now() - ($1::text || ' days')::interval
+           UNION ALL
+           SELECT source_device_id, ended_at AS t, -1 AS delta FROM remote_sessions WHERE started_at > now() - ($1::text || ' days')::interval
+         ) events
+       ) running_totals
+       GROUP BY source_device_id`,
+      [days]
+    ),
+  ]);
+
+  const sharedTargetDevices = new Set((sharedTargets?.rows || []).map((r) => r.source_device_id));
+  const concurrencyByDevice = new Map((concurrency?.rows || []).map((r) => [r.source_device_id, parseInt(r.max_concurrent) || 0]));
+
+  const userIds = (perDevice?.rows || []).map((r) => r.user_id).filter(Boolean);
+  let emailByUserId = new Map();
+  if (userIds.length) {
+    const usersRes = await query(`SELECT id, email FROM users WHERE id = ANY($1::uuid[])`, [userIds]);
+    emailByUserId = new Map((usersRes?.rows || []).map((u) => [u.id, u.email]));
+  }
+
+  const results = (perDevice?.rows || []).map((r) => {
+    const metrics = {
+      uniqueTargets7d: parseInt(r.unique_targets_7d) || 0,
+      uniqueTargets30d: parseInt(r.unique_targets_30d) || 0,
+      sessions24h: parseInt(r.sessions_24h) || 0,
+      sessions7d: parseInt(r.sessions_7d) || 0,
+      minutes24h: Math.round((parseInt(r.duration_24h) || 0) / 60),
+      minutes7d: Math.round((parseInt(r.duration_7d) || 0) / 60),
+      avgSessionSeconds: Math.round(parseFloat(r.avg_duration) || 0),
+      activeDays30d: parseInt(r.active_days_30d) || 0,
+      maxConcurrent: concurrencyByDevice.get(r.source_device_id) || 0,
+      sharedTarget: sharedTargetDevices.has(r.source_device_id),
+    };
+
+    let score = 0;
+    const reasonCodes = [];
+    if (metrics.uniqueTargets30d > 10) { score += 20; reasonCodes.push("TOO_MANY_UNIQUE_DEVICES"); }
+    if (metrics.sessions24h > 20) { score += 20; reasonCodes.push("HIGH_DAILY_SESSION_COUNT"); }
+    if (metrics.minutes24h > 300) { score += 15; reasonCodes.push("HIGH_DAILY_USAGE_MINUTES"); }
+    if (metrics.activeDays30d >= 15) { score += 15; reasonCodes.push("BUSINESS_HOURS_PATTERN"); }
+    if (metrics.maxConcurrent > 2) { score += 20; reasonCodes.push("HIGH_CONCURRENT_USAGE"); }
+    if (metrics.sharedTarget) { score += 15; reasonCodes.push("MULTIPLE_OPERATOR_PATTERN"); }
+
+    return {
+      deviceId: r.source_device_id,
+      userId: r.user_id || null,
+      email: r.user_id ? emailByUserId.get(r.user_id) || null : null,
+      metrics,
+      score,
+      reasonCodes,
+    };
+  });
+
+  results.sort((a, b) => b.score - a.score);
+  return results;
+}
+
 // Record a session event from the client/app
 async function recordSessionEvent({ userId, hwidHash, ipAddress, platform, eventType, durationSeconds, appVersion }) {
   if (!databaseEnabled()) return null;
@@ -865,6 +1013,9 @@ module.exports = {
   saveNewsletterSignup,
   recordPageView,
   adminGetAnalytics,
+  recordRemoteSession,
+  resolveUserIdByLicenseOrEmail,
+  adminGetCommercialUsageStats,
   // User Portal Auth
   userRegister,
   userLogin,

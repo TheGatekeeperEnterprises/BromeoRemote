@@ -40,6 +40,8 @@ export interface BromeoBridge {
     features?: any;
   }>;
   getLicenseStatus(): Promise<{ licenseKey: string | null; licenseEmail: string | null; licenseStatus: any; hwid: string }>;
+  openExternal(url: string): Promise<boolean>;
+  reportSession(payload: { deviceId: string; targetDeviceId?: string; platform: string; startedAt: number; endedAt: number }): Promise<void>;
   setUnattended(enabled: boolean, password: string | null): Promise<{ unattendedEnabled: boolean; hasUnattendedPassword: boolean }>;
   checkPassword(
     passwordHash: string,

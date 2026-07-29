@@ -25,6 +25,7 @@ const {
   adminGetAdminById,
   adminDeleteAdmin,
   adminGetAnalytics,
+  adminGetCommercialUsageStats,
   databaseEnabled,
   getPool,
 } = require("./database");
@@ -99,7 +100,7 @@ router.get("/login", (req, res) => {
   res.sendFile(path.join(adminDir, "login.html"));
 });
 
-router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins", "/analytics"], requireAuth, (req, res) => {
+router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins", "/analytics", "/commercial-usage"], requireAuth, (req, res) => {
   res.sendFile(path.join(adminDir, "index.html"));
 });
 
@@ -333,6 +334,17 @@ router.get("/api/analytics", requireAuth, async (req, res) => {
     const days = parseInt(req.query.days) || 30;
     const data = await adminGetAnalytics({ days });
     res.json({ ok: true, ...data });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Commercial usage (Fase 1: alleen meten) ─────────────────────────────────────
+router.get("/api/commercial-usage", requireAuth, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const devices = await adminGetCommercialUsageStats({ days });
+    res.json({ ok: true, devices });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
