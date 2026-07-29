@@ -3747,6 +3747,30 @@ function updateExpiryText(expiresAt: string | null | undefined): void {
   }
 }
 
+function checkAndShowFreeUpsell(licenseStatus: any): void {
+  const modal = document.getElementById("free-upsell-modal");
+  const dismissBtn = document.getElementById("free-upsell-dismiss");
+  const buyBtn = document.getElementById("free-upsell-buy");
+  if (!modal || !dismissBtn || !buyBtn) return;
+
+  const isPaid = licenseStatus && licenseStatus.valid && licenseStatus.plan &&
+    (licenseStatus.plan === "Pro" || licenseStatus.plan === "Professional" || licenseStatus.plan === "Unlimited" || licenseStatus.plan === "Enterprise");
+
+  if (!isPaid) {
+    // Show pop-up on startup for Free users
+    modal.classList.remove("hidden");
+
+    dismissBtn.onclick = () => {
+      modal.classList.add("hidden");
+    };
+
+    buyBtn.onclick = () => {
+      modal.classList.add("hidden");
+      void window.bromeo?.openExternal?.("https://bromeoremote.com/dashboard.html");
+    };
+  }
+}
+
 async function initLicenseSection(): Promise<void> {
   const emailInput = document.getElementById("license-email-input") as HTMLInputElement | null;
   const keyInput = document.getElementById("license-key-input") as HTMLInputElement | null;
@@ -3783,13 +3807,16 @@ async function initLicenseSection(): Promise<void> {
         }
         updateFooterLicenseInfo(info.licenseStatus);
         updateExpiryText(info.licenseStatus.expiresAt);
+        checkAndShowFreeUpsell(info.licenseStatus);
       } else {
         statusText.textContent = `Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).`;
         updateFooterLicenseInfo(null);
+        checkAndShowFreeUpsell(null);
       }
     } catch {
       statusText.textContent = `Licentiestatus: Standaard Gratis (15 min per sessie).`;
       updateFooterLicenseInfo(null);
+      checkAndShowFreeUpsell(null);
     }
   }
 

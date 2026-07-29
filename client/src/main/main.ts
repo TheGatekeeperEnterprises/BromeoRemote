@@ -556,6 +556,31 @@ ipcMain.handle("bromeo:get-license-status", () => {
   };
 });
 
+ipcMain.handle("bromeo:report-session-event", async (_e, data: { eventType: string; durationSeconds: number }) => {
+  try {
+    const hwid = getClientHwid();
+    const key = store.get().licenseKey || "";
+    const mail = store.get().licenseEmail || "";
+
+    await fetch("https://bromeoremote.com/api/session/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        licenseKey: key,
+        email: mail,
+        hwid,
+        eventType: data.eventType || "remote_session",
+        durationSeconds: data.durationSeconds,
+        platform: process.platform,
+        appVersion: app.getVersion(),
+      }),
+    });
+    return true;
+  } catch {
+    return false;
+  }
+});
+
 ipcMain.handle("bromeo:set-notify-forward", (_e, targetId: string | null) => {
   const updated = store.update({ notifyForwardId: targetId && targetId.trim() ? targetId.trim() : null });
   return updated.notifyForwardId;

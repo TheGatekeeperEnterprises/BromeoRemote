@@ -327,6 +327,34 @@ app.post("/api/session/report", apiLimiter, async (req, res, next) => {
   }
 });
 
+app.post("/api/session/event", apiLimiter, async (req, res, next) => {
+  try {
+    const { licenseKey, email, hwid, platform, eventType, durationSeconds, appVersion } = req.body;
+    const ipAddress = req.ip;
+    const normHwid = normalizeDeviceId(hwid);
+    const hwidHash = normHwid ? protectForStorage(normHwid) : null;
+
+    let userId = null;
+    if (licenseKey || email) {
+      userId = await resolveUserIdByLicenseOrEmail({ licenseKey, email });
+    }
+
+    await recordSessionEvent({
+      userId,
+      hwidHash,
+      ipAddress,
+      platform: platform || "windows",
+      eventType: eventType || "remote_session",
+      durationSeconds: durationSeconds ? parseInt(durationSeconds) : null,
+      appVersion,
+    });
+
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // ── User Portal Auth API ───────────────────────────────────────────────────────
 app.post("/api/user/register", contactLimiter, async (req, res, next) => {
   try {

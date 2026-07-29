@@ -722,6 +722,19 @@ async function loadUserDetail(userId) {
       </tr>`).join('')}
     </tbody></table>`;
   }
+function formatSessionDuration(s) {
+  if (s.session_duration_seconds) {
+    const sec = s.session_duration_seconds;
+    if (sec < 60) return `${sec}s`;
+    if (sec < 3600) return `${Math.floor(sec / 60)}m ${sec % 60}s`;
+    return `${Math.floor(sec / 3600)}u ${Math.floor((sec % 3600) / 60)}m`;
+  }
+  if (s.event_type === 'license_check') {
+    return '<span style="color:var(--muted); font-size:0.8rem;">Direct (Check)</span>';
+  }
+  return '–';
+}
+
   // Sessions
   const sb = document.getElementById('sessionsBox');
   if (!data.sessions.length) {
@@ -729,9 +742,9 @@ async function loadUserDetail(userId) {
   } else {
     sb.innerHTML = `<table><thead><tr><th>Type</th><th>Platform</th><th>Duur</th><th>Tijdstip</th></tr></thead><tbody>
       ${data.sessions.map(s => `<tr>
-        <td><span class="badge ${s.event_type === 'connect' ? 'badge-green' : s.event_type === 'disconnect' ? 'badge-gray' : 'badge-blue'}">${s.event_type}</span></td>
+        <td><span class="badge ${s.event_type === 'connect' || s.event_type === 'remote_session' ? 'badge-green' : s.event_type === 'disconnect' ? 'badge-gray' : 'badge-blue'}">${s.event_type}</span></td>
         <td>${s.platform}</td>
-        <td>${s.session_duration_seconds ? formatDuration(s.session_duration_seconds) : '–'}</td>
+        <td>${formatSessionDuration(s)}</td>
         <td>${new Date(s.created_at).toLocaleString('nl-NL')}</td>
       </tr>`).join('')}
     </tbody></table>`;
@@ -775,8 +788,8 @@ async function loadSessions() {
   tbody.innerHTML = data.sessions.map(s => `<tr>
     <td>${s.email || '<span style="color:var(--muted)">Onbekend</span>'}</td>
     <td>${s.platform}</td>
-    <td><span class="badge ${s.event_type === 'connect' ? 'badge-green' : 'badge-gray'}">${s.event_type}</span></td>
-    <td>${s.session_duration_seconds ? formatDuration(s.session_duration_seconds) : '–'}</td>
+    <td><span class="badge ${s.event_type === 'connect' || s.event_type === 'remote_session' ? 'badge-green' : s.event_type === 'license_check' ? 'badge-blue' : 'badge-gray'}">${s.event_type}</span></td>
+    <td>${formatSessionDuration(s)}</td>
     <td>${s.ip_address || '–'}</td>
     <td>${new Date(s.created_at).toLocaleString('nl-NL')}</td>
   </tr>`).join('');

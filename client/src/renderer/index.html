@@ -503,6 +503,38 @@
     <button id="install-update-btn" class="btn btn-primary btn-sm hidden">Herstart &amp; installeer update</button>
   </footer>
 
+  <div id="free-upsell-modal" class="modal-backdrop hidden">
+    <div class="modal" style="max-width: 520px; text-align: left; padding: 2rem;">
+      <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1rem;">
+        <span style="font-size:1.75rem;">🚀</span>
+        <div>
+          <h2 style="margin:0; font-size:1.3rem; color: #0be881;">Ontgrendel BromeoRemote Pro!</h2>
+          <p class="muted small" style="margin:0.25rem 0 0 0;">Je gebruikt momenteel de gratis versie van BromeoRemote.</p>
+        </div>
+      </div>
+      
+      <p style="font-size:0.9rem; margin-bottom:1rem; line-height:1.5;">
+        Upgrade naar een betaalde licentie en profiteer direct van alle grote voordelen:
+      </p>
+
+      <ul style="font-size:0.875rem; line-height:1.6; margin-bottom:1.5rem; padding-left:1.25rem; color: #e8edf5;">
+        <li><strong style="color:#0be881;">Onbeperkte Sessieduur:</strong> Geen 15-minuten limiet meer per verbinding.</li>
+        <li><strong style="color:#0be881;">Bestandsoverdracht &amp; Multi-Monitor:</strong> Razendsnel bestanden overzetten en direct wisselen tussen schermen.</li>
+        <li><strong style="color:#0be881;">AI Buddy Assistent:</strong> Slimme AI-ondersteuning ingebouwd tijdens remote support sessies.</li>
+        <li><strong style="color:#0be881;">HWID Beveiliging:</strong> Maximale hardware-beveiliging gekoppeld aan jouw beheer-pc.</li>
+      </ul>
+
+      <div style="background: rgba(11,232,129,0.08); border: 1px solid rgba(11,232,129,0.25); border-radius: 10px; padding: 0.875rem 1rem; margin-bottom: 1.5rem; font-size:0.85rem;">
+        💡 <strong>Slechts €7,95 per maand</strong> voor Pro of €50,00 voor Unlimited. Direct opzegbaar!
+      </div>
+
+      <div class="modal-actions" style="display:flex; gap:0.75rem; justify-content:flex-end;">
+        <button id="free-upsell-dismiss" class="btn btn-outline">Doorgaan met Gratis (15 min limit)</button>
+        <button id="free-upsell-buy" class="btn btn-primary" style="background:#0be881; color:#0b1425; font-weight:700;">Bekijk &amp; Koop Licentie (€7,95)</button>
+      </div>
+    </div>
+  </div>
+
   <div id="totp-required-modal" class="modal-backdrop hidden">
     <div class="modal">
       <h3>Verificatiecode vereist</h3>
