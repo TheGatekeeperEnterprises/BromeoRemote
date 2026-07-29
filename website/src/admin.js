@@ -25,6 +25,7 @@ const {
   adminGetAdminById,
   adminDeleteAdmin,
   adminGetAnalytics,
+  adminGetFullStatistics,
   adminGetCommercialUsageStats,
   databaseEnabled,
   getPool,
@@ -32,6 +33,19 @@ const {
 const { cancelUserSubscription } = require("./licensing");
 
 const router = express.Router();
+
+// ── Analytics API ─────────────────────────────────────────────────────────────
+router.get(["/api/analytics", "/api/statistics"], requireAuth, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const filterInternal = req.query.filterInternal === "true";
+    const filterBots = req.query.filterBots === "true";
+    const stats = await adminGetFullStatistics({ days, filterInternal, filterBots });
+    res.json({ ok: true, ...stats });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // ── Session middleware ────────────────────────────────────────────────────────
 function createAdminSession() {

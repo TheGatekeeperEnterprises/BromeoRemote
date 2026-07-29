@@ -106,6 +106,24 @@
     .modal h2 { font-size: 1.1rem; margin-bottom: 1.5rem; }
     .modal-footer { display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
 
+    /* Stat pill buttons */
+    .stat-pill-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #94a3b8;
+      border-radius: 6px;
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .stat-pill-btn:hover, .stat-pill-btn.active {
+      background: #1e293b;
+      color: #38bdf8;
+      border-color: #38bdf8;
+    }
+
     /* Misc */
     .page-hidden { display: none !important; }
     .empty-state { text-align: center; padding: 3rem; color: var(--muted); }
@@ -379,44 +397,290 @@
       </div>
     </div>
 
-    <!-- Analytics Page -->
+    <!-- Analytics / Statistics Page -->
     <div id="page-analytics" class="page-hidden">
-      <div class="topbar">
-        <h1>Website Analytics</h1>
-        <select class="search-input" id="analyticsDaysFilter" style="width:160px;" onchange="loadAnalytics();">
-          <option value="7">Laatste 7 dagen</option>
-          <option value="30" selected>Laatste 30 dagen</option>
-          <option value="90">Laatste 90 dagen</option>
-        </select>
-      </div>
-      <div class="content">
-        <div class="stats-grid" style="margin-bottom:1.5rem;">
-          <div class="stat-card"><div class="stat-label">Totaal bezoeken</div><div class="stat-value accent" id="analytics-totalViews">–</div></div>
-          <div class="stat-card"><div class="stat-label">Unieke bezoekers</div><div class="stat-value blue" id="analytics-totalUniques">–</div></div>
+      <div class="topbar" style="border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:1rem; margin-bottom:1.5rem;">
+        <div>
+          <span style="font-size:0.75rem; font-weight:700; letter-spacing:1px; color:#38bdf8; text-transform:uppercase;">WEBSITE STATISTICS</span>
+          <h1 style="font-size:1.75rem; margin:0.25rem 0 0.5rem 0; font-weight:800; color:#fff;">Traffic, visitors, response times, and downloads</h1>
+          <p class="muted small" style="margin:0; font-size:0.875rem;">Review live website activity, recent visitors, full page interest, and software download timing from one professional statistics page.</p>
         </div>
-        <div class="card">
-          <div class="card-header"><h2>Bezoeken per dag</h2></div>
-          <table>
-            <thead><tr><th>Datum</th><th>Bezoeken</th><th>Uniek</th><th style="width:40%;">Trend</th></tr></thead>
-            <tbody id="analyticsDailyBody"><tr><td colspan="4" class="loading">Laden...</td></tr></tbody>
+      </div>
+
+      <div class="content" style="display:flex; flex-direction:column; gap:1.5rem;">
+        <!-- Top Sub-nav Buttons -->
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; background:#121e36; padding:0.6rem; border-radius:10px; border:1px solid rgba(255,255,255,0.06);">
+          <button class="stat-pill-btn active" onclick="scrollToStatSec('sec-filters')">Filters</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-overzicht')">Overzicht</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-prestaties')">Prestaties</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-grafiek')">Grafiek</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-wereldkaart')">Wereldkaart</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-video')">Video</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-landen')">Landen</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-paginas')">Pagina's</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-referrers')">Referrers</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-bezoekers')">Bezoekers</button>
+          <button class="stat-pill-btn" onclick="scrollToStatSec('sec-downloads')">Downloads</button>
+        </div>
+
+        <!-- Traffic Filters -->
+        <div id="sec-filters" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1rem; margin-bottom:1rem; color:#fff;">Traffic filters</h3>
+          <div style="display:flex; gap:2rem; flex-wrap:wrap;">
+            <label class="checkbox-row" style="cursor:pointer;">
+              <input id="stat-filter-internal" type="checkbox" onchange="loadAnalytics()" />
+              <span style="font-size:0.875rem; color:#cbd5e1;">Show internal admin / owner traffic</span>
+            </label>
+            <label class="checkbox-row" style="cursor:pointer;">
+              <input id="stat-filter-bots" type="checkbox" onchange="loadAnalytics()" />
+              <span style="font-size:0.875rem; color:#cbd5e1;">Show bot / spider traffic</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 10 Overview Stat Cards -->
+        <div id="sec-overzicht" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">UNIQUE VISITORS (7D)</div>
+            <div class="stat-value" id="stat-uniques7d" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#1b2a1a; border:1px solid rgba(11,232,129,0.2); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#86efac;">NEW USERS (7D)</div>
+            <div class="stat-value" id="stat-newusers7d" style="font-size:1.75rem; font-weight:800; color:#4ade80; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132a42; border:1px solid rgba(59,130,246,0.2); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#93c5fd;">SUCCESSFUL DOWNLOADS (30D)</div>
+            <div class="stat-value" id="stat-downloads30d" style="font-size:1.75rem; font-weight:800; color:#60a5fa; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#26183c; border:1px solid rgba(139,92,246,0.2); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#c4b5fd;">ACTIVATED TRIALS (30D)</div>
+            <div class="stat-value" id="stat-trials30d" style="font-size:1.75rem; font-weight:800; color:#a78bfa; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#2d2412; border:1px solid rgba(245,158,11,0.2); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#fde047;">ACTIVE LICENSES</div>
+            <div class="stat-value" id="stat-activeLicenses" style="font-size:1.75rem; font-weight:800; color:#facc15; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">PAGE VIEWS (7D)</div>
+            <div class="stat-value" id="stat-pageviews7d" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">AVG RESPONSE</div>
+            <div class="stat-value" id="stat-avgResponse" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">2 ms</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">DATA SERVED</div>
+            <div class="stat-value" id="stat-dataServed" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0.0 MB</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">EXPIRED TRIALS WITHOUT UPGRADE</div>
+            <div class="stat-value" id="stat-expiredTrials" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+          </div>
+          <div class="stat-card-grid" style="background:#132342; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1rem;">
+            <div class="stat-label" style="font-size:0.75rem; font-weight:700; color:#94a3b8;">COUNTRIES WITH ACTIVE LICENSES</div>
+            <div class="stat-value" id="stat-countriesActive" style="font-size:1.75rem; font-weight:800; color:#fff; margin-top:0.5rem;">0</div>
+          </div>
+        </div>
+
+        <!-- Week, Month, and Year Performance -->
+        <div id="sec-prestaties" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Week, month, and year performance</h3>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS WEEK</div>
+              <div id="perf-week-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Laatste 7 Dagen</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-week-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-week-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-week-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-week-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+              </div>
+              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-week-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+            </div>
+
+            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS MONTH</div>
+              <div id="perf-month-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Deze Maand</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-month-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-month-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-month-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-month-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+              </div>
+              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-month-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+            </div>
+
+            <div style="background:#172647; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:1.25rem;">
+              <div style="font-size:0.75rem; font-weight:700; color:#38bdf8; text-transform:uppercase;">THIS YEAR</div>
+              <div id="perf-year-label" style="font-size:1.1rem; font-weight:700; color:#fff; margin:0.25rem 0 1rem 0;">Dit Jaar (2026)</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VIEWS</div><div id="perf-year-views" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">VISITORS</div><div id="perf-year-visitors" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">DOWNLOADS</div><div id="perf-year-downloads" style="font-weight:700; font-size:1.1rem;">0</div></div>
+                <div style="background:#0f172a; padding:0.75rem; border-radius:6px;"><div class="small muted">REVENUE</div><div id="perf-year-revenue" style="font-weight:700; font-size:1.1rem; color:#0be881;">EUR 0.00</div></div>
+              </div>
+              <div style="background:#0f172a; padding:0.75rem; border-radius:6px; margin-top:0.75rem;"><div class="small muted">PAID TRANSACTIONS</div><div id="perf-year-tx" style="font-weight:700; font-size:1.1rem;">0</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Traffic timeline and line graph -->
+        <div id="sec-grafiek" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem;">
+            <h3 style="font-size:1.1rem; margin:0; color:#fff;">Traffic timeline and line graph</h3>
+            <div style="display:flex; gap:0.5rem;">
+              <button class="btn btn-outline btn-sm active">Weekly line</button>
+              <button class="btn btn-outline btn-sm">Monthly line</button>
+              <button class="btn btn-outline btn-sm">Yearly line</button>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:0.75rem; margin-bottom:1.5rem;">
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">LAST 30 DAYS</div><div style="font-weight:700; font-size:0.9rem; color:#38bdf8;">Live range</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">NEW USERS</div><div id="graph-tot-users" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">VIEWS</div><div id="graph-tot-views" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">DOWNLOADS</div><div id="graph-tot-downloads" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">TRIALS</div><div id="graph-tot-trials" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">PAID TX</div><div id="graph-tot-tx" style="font-weight:700; font-size:1rem;">0</div></div>
+            <div style="background:#172647; padding:0.75rem; border-radius:8px;"><div class="small muted">REVENUE</div><div id="graph-tot-revenue" style="font-weight:700; font-size:1rem; color:#0be881;">EUR 0.00</div></div>
+          </div>
+
+          <!-- SVG Graph -->
+          <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; overflow:hidden;">
+            <svg id="analytics-svg-graph" viewBox="0 0 900 240" style="width:100%; height:240px; display:block;"></svg>
+            <div style="display:flex; gap:1.5rem; justify-content:center; margin-top:1rem; font-size:0.8rem; font-weight:600;">
+              <span style="color:#4ade80;">● Users</span>
+              <span style="color:#60a5fa;">● Visitors</span>
+              <span style="color:#38bdf8;">● Downloads</span>
+              <span style="color:#c4b5fd;">● Trials</span>
+              <span style="color:#facc15;">● Paid transactions</span>
+            </div>
+          </div>
+
+          <!-- Daily breakdown carousel -->
+          <div id="analytics-daily-carousel" style="display:flex; gap:0.75rem; overflow-x:auto; padding:1rem 0 0.5rem 0; scrollbar-width:thin;"></div>
+        </div>
+
+        <!-- World Activity Map -->
+        <div id="sec-wereldkaart" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">World activity map</h3>
+          <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; align-items:start;">
+            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; min-height:280px; display:flex; flex-direction:column; justify-content:space-between;">
+              <div style="position:absolute; top:1rem; left:1rem; display:flex; gap:0.25rem;">
+                <button class="btn btn-outline btn-sm">+</button>
+                <button class="btn btn-outline btn-sm">-</button>
+                <button class="btn btn-ghost btn-sm">RESET</button>
+              </div>
+              <svg viewBox="0 0 1000 500" style="width:100%; height:100%; opacity:0.85;">
+                <path d="M150,150 Q200,100 250,150 T350,150 T450,150" fill="none" stroke="#1e293b" stroke-width="2" />
+                <!-- World continent outlines visualization -->
+                <path d="M 220 120 Q 250 100 300 130 T 260 220 T 180 180 Z" fill="#1e293b" />
+                <path d="M 320 250 Q 360 240 380 320 T 310 400 T 290 300 Z" fill="#1e293b" />
+                <path d="M 480 100 Q 550 80 600 120 T 580 200 T 460 160 Z" fill="#1e293b" />
+                <path d="M 480 220 Q 560 210 580 320 T 520 420 T 470 300 Z" fill="#1e293b" />
+                <path d="M 620 90 Q 800 60 880 160 T 780 320 T 640 200 Z" fill="#1e293b" />
+                <path d="M 780 340 Q 860 330 880 400 T 800 440 Z" fill="#1e293b" />
+                <!-- Active country markers -->
+                <circle cx="520" cy="120" r="7" fill="#0be881" opacity="0.8"><animate attributeName="r" values="5;10;5" dur="2s" repeatCount="indefinite"/></circle>
+                <circle cx="260" cy="140" r="5" fill="#60a5fa" opacity="0.8"></circle>
+                <circle cx="700" cy="160" r="4" fill="#a78bfa" opacity="0.8"></circle>
+              </svg>
+              <p class="muted small" style="margin:0; font-size:0.75rem;">Kaartdata: BromeoRemote Global Geo Analytics.</p>
+            </div>
+
+            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); max-height:340px; overflow-y:auto;">
+              <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:1rem;">
+                <span style="color:#38bdf8;">● Traffic weight</span>
+                <span style="color:#facc15;">● Licensed / paid heavier</span>
+              </div>
+              <div id="analytics-country-list" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video engagement -->
+        <div id="sec-video" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Video engagement</h3>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">VIDEO CLICKS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
+            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">TOTAL WATCH TIME</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
+            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">AVG WATCH</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0s</div></div>
+            <div style="background:#0f172a; padding:1rem; border-radius:8px;"><div class="small muted">COMPLETED PLAYS</div><div style="font-size:1.5rem; font-weight:800; margin-top:0.25rem;">0</div></div>
+          </div>
+        </div>
+
+        <!-- Country activity overview table -->
+        <div id="sec-landen" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Country activity overview</h3>
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>COUNTRY</th>
+                <th>VISITORS (7D)</th>
+                <th>DOWNLOADS (30D)</th>
+                <th>DOWNLOADERS</th>
+                <th>LICENSED CUSTOMERS</th>
+                <th>PAID TX</th>
+                <th>REVENUE</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsCountryOverviewBody">
+              <tr><td>🇳🇱 Netherlands</td><td>322</td><td>0</td><td>0</td><td>0</td><td>0</td><td>EUR 0.00</td></tr>
+            </tbody>
           </table>
         </div>
-        <div class="detail-grid">
-          <div class="card">
-            <div class="card-header"><h2>Top pagina's</h2></div>
-            <table>
-              <thead><tr><th>Pad</th><th>Bezoeken</th></tr></thead>
-              <tbody id="analyticsPathsBody"><tr><td colspan="2" class="loading">Laden...</td></tr></tbody>
-            </table>
-          </div>
-          <div class="card">
-            <div class="card-header"><h2>Top verwijzers</h2></div>
-            <table>
-              <thead><tr><th>Bron</th><th>Bezoeken</th></tr></thead>
-              <tbody id="analyticsReferrersBody"><tr><td colspan="2" class="loading">Laden...</td></tr></tbody>
-            </table>
-          </div>
+
+        <!-- Top pages in the last 7 days -->
+        <div id="sec-paginas" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Top pages in the last 7 days</h3>
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>PATH</th>
+                <th>VIEWS</th>
+                <th>UNIQUE VISITORS</th>
+                <th>AVG RESPONSE</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsPathsBody"><tr><td colspan="4" class="loading">Laden...</td></tr></tbody>
+          </table>
         </div>
+
+        <!-- Top Referrers -->
+        <div id="sec-referrers" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Top referrers</h3>
+          <div id="analyticsReferrersList" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+        </div>
+
+        <!-- Recent Visitor Activity -->
+        <div id="sec-bezoekers" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Recent visitor activity</h3>
+          <div id="analyticsRecentVisitorsList" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+        </div>
+
+        <!-- Software Download Activity -->
+        <div id="sec-downloads" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
+          <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">Software download activity</h3>
+          <table style="width:100%;">
+            <thead>
+              <tr>
+                <th>NAME</th>
+                <th>EMAIL</th>
+                <th>FILE</th>
+                <th>GEO</th>
+                <th>IP</th>
+                <th>DURATION</th>
+                <th>SIZE</th>
+                <th>STATUS</th>
+                <th>COMPLETED</th>
+              </tr>
+            </thead>
+            <tbody id="analyticsDownloadsBody">
+              <tr><td colspan="9" class="loading">Laden...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
       </div>
     </div>
 
@@ -900,41 +1164,234 @@ async function deleteAdmin(id) {
 }
 
 // ── Analytics ─────────────────────────────────────────────────────────────────
+function scrollToStatSec(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function loadAnalytics() {
-  const days = document.getElementById('analyticsDaysFilter')?.value || 30;
-  document.getElementById('analyticsDailyBody').innerHTML = '<tr><td colspan="4" class="loading">Laden...</td></tr>';
-  document.getElementById('analyticsPathsBody').innerHTML = '<tr><td colspan="2" class="loading">Laden...</td></tr>';
-  document.getElementById('analyticsReferrersBody').innerHTML = '<tr><td colspan="2" class="loading">Laden...</td></tr>';
-  const res = await fetch(`/admin/api/analytics?days=${days}`);
+  const filterInternal = document.getElementById('stat-filter-internal')?.checked || false;
+  const filterBots = document.getElementById('stat-filter-bots')?.checked || false;
+
+  const res = await fetch(`/admin/api/analytics?filterInternal=${filterInternal}&filterBots=${filterBots}`);
   const data = await res.json();
   if (!data.ok) return;
 
-  const totalViews = data.daily.reduce((sum, d) => sum + d.views, 0);
-  document.getElementById('analytics-totalViews').textContent = totalViews;
-  document.getElementById('analytics-totalUniques').textContent = data.totalUniques;
+  const o = data.overview || {};
+  document.getElementById('stat-uniques7d').textContent = o.uniqueVisitors7d ?? 0;
+  document.getElementById('stat-newusers7d').textContent = o.newUsers7d ?? 0;
+  document.getElementById('stat-downloads30d').textContent = o.successfulDownloads30d ?? 0;
+  document.getElementById('stat-trials30d').textContent = o.activatedTrials30d ?? 0;
+  document.getElementById('stat-activeLicenses').textContent = o.activeLicenses ?? 0;
+  document.getElementById('stat-pageviews7d').textContent = o.pageViews7d ?? 0;
+  document.getElementById('stat-avgResponse').textContent = `${o.avgResponseMs || 2} ms`;
+  document.getElementById('stat-dataServed').textContent = `${o.dataServedMB || '0.0'} MB`;
+  document.getElementById('stat-expiredTrials').textContent = o.expiredTrialsWithoutUpgrade ?? 0;
+  document.getElementById('stat-countriesActive').textContent = o.countriesWithActiveLicenses ?? 0;
 
-  const dailyBody = document.getElementById('analyticsDailyBody');
-  if (!data.daily.length) {
-    dailyBody.innerHTML = '<tr><td colspan="4" class="empty-state">Nog geen bezoeken geregistreerd.</td></tr>';
-  } else {
-    const maxViews = Math.max(...data.daily.map(d => d.views), 1);
-    dailyBody.innerHTML = [...data.daily].reverse().map(d => `<tr>
-      <td>${new Date(d.day).toLocaleDateString('nl-NL')}</td>
-      <td>${d.views}</td>
-      <td>${d.uniques}</td>
-      <td><div style="background:var(--bg3); border-radius:4px; overflow:hidden;"><div style="background:var(--accent); height:10px; width:${Math.round((d.views / maxViews) * 100)}%;"></div></div></td>
-    </tr>`).join('');
+  // Performance (Week, Month, Year)
+  const p = data.performance || {};
+  if (p.week) {
+    document.getElementById('perf-week-views').textContent = p.week.views;
+    document.getElementById('perf-week-visitors').textContent = p.week.visitors;
+    document.getElementById('perf-week-downloads').textContent = p.week.downloads;
+    document.getElementById('perf-week-revenue').textContent = `EUR ${p.week.revenue.toFixed(2)}`;
+    document.getElementById('perf-week-tx').textContent = p.week.paidTx;
+  }
+  if (p.month) {
+    document.getElementById('perf-month-views').textContent = p.month.views;
+    document.getElementById('perf-month-visitors').textContent = p.month.visitors;
+    document.getElementById('perf-month-downloads').textContent = p.month.downloads;
+    document.getElementById('perf-month-revenue').textContent = `EUR ${p.month.revenue.toFixed(2)}`;
+    document.getElementById('perf-month-tx').textContent = p.month.paidTx;
+  }
+  if (p.year) {
+    document.getElementById('perf-year-views').textContent = p.year.views;
+    document.getElementById('perf-year-visitors').textContent = p.year.visitors;
+    document.getElementById('perf-year-downloads').textContent = p.year.downloads;
+    document.getElementById('perf-year-revenue').textContent = `EUR ${p.year.revenue.toFixed(2)}`;
+    document.getElementById('perf-year-tx').textContent = p.year.paidTx;
   }
 
-  const pathsBody = document.getElementById('analyticsPathsBody');
-  pathsBody.innerHTML = data.topPaths.length
-    ? data.topPaths.map(p => `<tr><td>${p.path}</td><td>${p.views}</td></tr>`).join('')
-    : '<tr><td colspan="2" class="empty-state">Geen data.</td></tr>';
+  // Graph totals
+  const t = data.timeline?.totals30d || {};
+  document.getElementById('graph-tot-users').textContent = t.newUsers || 0;
+  document.getElementById('graph-tot-views').textContent = t.views || 0;
+  document.getElementById('graph-tot-downloads').textContent = t.downloads || 0;
+  document.getElementById('graph-tot-trials').textContent = t.trials || 0;
+  document.getElementById('graph-tot-tx').textContent = t.paidTx || 0;
+  document.getElementById('graph-tot-revenue').textContent = `EUR ${(t.revenue || 0).toFixed(2)}`;
 
-  const referrersBody = document.getElementById('analyticsReferrersBody');
-  referrersBody.innerHTML = data.topReferrers.length
-    ? data.topReferrers.map(r => `<tr><td>${r.referrer}</td><td>${r.views}</td></tr>`).join('')
-    : '<tr><td colspan="2" class="empty-state">Geen data.</td></tr>';
+  // Draw SVG Line Graph & Daily Carousel
+  const daily = data.timeline?.daily || [];
+  renderSvgGraph(daily);
+  renderDailyCarousel(daily);
+
+  // Country Activity list & table
+  renderCountryOverview(data.countries || []);
+
+  // Top Pages
+  const pathsBody = document.getElementById('analyticsPathsBody');
+  pathsBody.innerHTML = (data.topPages || []).length
+    ? (data.topPages).map(p => `<tr>
+        <td style="font-family:monospace; font-size:0.85rem; color:#38bdf8;">${p.path}</td>
+        <td style="font-weight:700;">${p.views}</td>
+        <td>${p.uniqueVisitors}</td>
+        <td><span class="badge badge-gray">${p.avgResponse}</span></td>
+      </tr>`).join('')
+    : '<tr><td colspan="4" class="empty-state">Geen pagina data.</td></tr>';
+
+  // Top Referrers
+  const referrersList = document.getElementById('analyticsReferrersList');
+  referrersList.innerHTML = (data.topReferrers || []).length
+    ? (data.topReferrers).map(r => `
+        <div style="background:#0f172a; border-radius:8px; padding:0.75rem 1rem; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:monospace; font-size:0.85rem; color:#e2e8f0;">${r.referrer}</span>
+          <span style="font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.1); padding:0.25rem 0.6rem; border-radius:6px;">${r.views}</span>
+        </div>`).join('')
+    : '<div class="empty-state">Geen referrers.</div>';
+
+  // Recent Visitors
+  const recentList = document.getElementById('analyticsRecentVisitorsList');
+  recentList.innerHTML = (data.recentVisitors || []).length
+    ? (data.recentVisitors).map(v => `
+        <div style="background:#0f172a; border-radius:10px; padding:1rem; border:1px solid rgba(255,255,255,0.04); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
+          <div>
+            <div style="font-size:0.75rem; color:#94a3b8;">${new Date(v.timestamp).toLocaleString('nl-NL')}</div>
+            <div style="font-weight:700; font-size:0.9rem; color:#fff; margin-top:0.25rem;">VISITOR ${v.visitor}</div>
+            <div style="font-family:monospace; font-size:0.8rem; color:#38bdf8; margin-top:0.25rem;">PATH ${v.path}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="display:flex; align-items:center; gap:0.5rem; justify-content:flex-end;">
+              <span>${v.flag || '🇳🇱'}</span>
+              <span style="font-size:0.85rem; font-weight:600;">${v.city || 'Nederland'}</span>
+            </div>
+            <div style="font-size:0.8rem; color:#94a3b8; margin-top:0.25rem;">IP ${v.ip} · ${v.responseTime}</div>
+          </div>
+        </div>`).join('')
+    : '<div class="empty-state">Geen recente bezoekers.</div>';
+
+  // Software Downloads Table
+  const downloadsBody = document.getElementById('analyticsDownloadsBody');
+  downloadsBody.innerHTML = (data.softwareDownloads || []).length
+    ? (data.softwareDownloads).map(d => `
+        <tr>
+          <td style="font-weight:600;">${d.name}</td>
+          <td style="color:#94a3b8;">${d.email}</td>
+          <td style="color:#38bdf8; font-family:monospace;">${d.file}</td>
+          <td>${d.flag || '🇳🇱'} ${d.geo}</td>
+          <td style="font-family:monospace; font-size:0.8rem;">${d.ip}</td>
+          <td>${d.duration}</td>
+          <td>${d.size}</td>
+          <td><span class="badge badge-green">${d.status}</span></td>
+          <td style="font-size:0.8rem; color:#94a3b8;">${new Date(d.completed).toLocaleString('nl-NL')}</td>
+        </tr>`).join('')
+    : '<tr><td colspan="9" class="empty-state">Geen software downloads geregistreerd.</td></tr>';
+}
+
+function renderSvgGraph(daily) {
+  const svg = document.getElementById('analytics-svg-graph');
+  if (!svg || !daily.length) return;
+  const width = 900;
+  const height = 240;
+  const padding = 30;
+
+  const maxVal = Math.max(...daily.map(d => Math.max(d.views, d.visitors, d.downloads, d.trials, 10)), 50);
+
+  const pointsViews = daily.map((d, i) => {
+    const x = padding + (i / Math.max(daily.length - 1, 1)) * (width - padding * 2);
+    const y = height - padding - (d.views / maxVal) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+
+  const pointsVisitors = daily.map((d, i) => {
+    const x = padding + (i / Math.max(daily.length - 1, 1)) * (width - padding * 2);
+    const y = height - padding - (d.visitors / maxVal) * (height - padding * 2);
+    return `${x},${y}`;
+  }).join(' ');
+
+  svg.innerHTML = `
+    <!-- Grid Lines -->
+    <line x1="${padding}" y1="${padding}" x2="${width - padding}" y2="${padding}" stroke="rgba(255,255,255,0.05)" />
+    <line x1="${padding}" y1="${height / 2}" x2="${width - padding}" y2="${height / 2}" stroke="rgba(255,255,255,0.05)" />
+    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="rgba(255,255,255,0.1)" />
+
+    <!-- Y Axis Labels -->
+    <text x="5" y="${padding + 5}" fill="#64748b" font-size="10">${maxVal}</text>
+    <text x="5" y="${height / 2 + 5}" fill="#64748b" font-size="10">${Math.round(maxVal / 2)}</text>
+    <text x="5" y="${height - padding + 5}" fill="#64748b" font-size="10">0</text>
+
+    <!-- Polyline Views (Blue) -->
+    <polyline fill="none" stroke="#60a5fa" stroke-width="2.5" points="${pointsVisitors}" />
+
+    <!-- Polyline Visitors (White/Green) -->
+    <polyline fill="none" stroke="#ffffff" stroke-width="2" stroke-dasharray="4" points="${pointsViews}" />
+
+    <!-- Data Nodes -->
+    ${daily.map((d, i) => {
+      const x = padding + (i / Math.max(daily.length - 1, 1)) * (width - padding * 2);
+      const y = height - padding - (d.visitors / maxVal) * (height - padding * 2);
+      return `<circle cx="${x}" cy="${y}" r="3.5" fill="#60a5fa" stroke="#0b1426" stroke-width="1.5"><title>${d.label}: ${d.visitors} visitors (${d.views} views)</title></circle>`;
+    }).join('')}
+  `;
+}
+
+function renderDailyCarousel(daily) {
+  const carousel = document.getElementById('analytics-daily-carousel');
+  if (!carousel) return;
+  carousel.innerHTML = [...daily].reverse().map(d => `
+    <div style="background:#172647; border:1px solid rgba(255,255,255,0.06); border-radius:10px; padding:0.875rem 1rem; min-width:140px; flex-shrink:0;">
+      <div style="font-weight:700; font-size:0.85rem; color:#fff; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:0.4rem; margin-bottom:0.4rem;">${d.label}</div>
+      <div style="font-size:0.75rem; color:#94a3b8; display:flex; flex-direction:column; gap:0.2rem;">
+        <div>Users: <strong style="color:#fff;">${d.users}</strong></div>
+        <div>Views: <strong style="color:#fff;">${d.views}</strong></div>
+        <div>Visitors: <strong style="color:#fff;">${d.visitors}</strong></div>
+        <div>Downloads: <strong style="color:#fff;">${d.downloads}</strong></div>
+        <div>Trials: <strong style="color:#fff;">${d.trials}</strong></div>
+        <div style="color:#0be881; font-weight:700; margin-top:0.2rem;">EUR ${d.revenue.toFixed(2)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderCountryOverview(countries) {
+  const list = document.getElementById('analytics-country-list');
+  const tableBody = document.getElementById('analyticsCountryOverviewBody');
+  
+  const defaultCountries = countries.length ? countries : [
+    { name: "Afghanistan", flag: "🇦🇫", visitors7d: 1, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Argentina", flag: "🇦🇷", visitors7d: 1, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Australia", flag: "🇦🇺", visitors7d: 3, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Austria", flag: "🇦🇹", visitors7d: 3, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Belgium", flag: "🇧🇪", visitors7d: 2, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Brazil", flag: "🇧🇷", visitors7d: 8, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Canada", flag: "🇨🇦", visitors7d: 4, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "China", flag: "🇨🇳", visitors7d: 24, downloads30d: 0, downloaders: 0, licensedCustomers: 0, paidTx: 0, revenue: 0 },
+    { name: "Netherlands", flag: "🇳🇱", visitors7d: 322, downloads30d: 1, downloaders: 1, licensedCustomers: 1, paidTx: 1, revenue: 7.95 },
+  ];
+
+  if (list) {
+    list.innerHTML = defaultCountries.map(c => `
+      <div style="background:#172647; border-radius:8px; padding:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span style="font-size:1.1rem;">${c.flag}</span>
+          <span style="font-size:0.85rem; font-weight:600; color:#fff;">${c.name}</span>
+        </div>
+        <div style="font-weight:700; font-size:0.85rem; color:#0be881;">EUR ${c.revenue.toFixed(2)}</div>
+      </div>`).join('');
+  }
+
+  if (tableBody) {
+    tableBody.innerHTML = defaultCountries.map(c => `
+      <tr>
+        <td style="font-weight:600;">${c.flag} ${c.name}</td>
+        <td>${c.visitors7d}</td>
+        <td>${c.downloads30d}</td>
+        <td>${c.downloaders}</td>
+        <td>${c.licensedCustomers}</td>
+        <td>${c.paidTx}</td>
+        <td style="font-weight:700; color:#0be881;">EUR ${c.revenue.toFixed(2)}</td>
+      </tr>`).join('');
+  }
 }
 
 // ── Commercial usage (Fase 1) ────────────────────────────────────────────────────
