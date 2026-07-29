@@ -1,6 +1,8 @@
+import { Alert } from "react-native";
 import { RTCPeerConnection, RTCIceCandidate, RTCSessionDescription, RTCRtpSender, MediaStream } from "react-native-webrtc";
 import type { ChatMessage, ClipboardMessage, FileMessage, InputEvent, SystemCommand } from "./shared/protocol";
 import { Signaling } from "./signaling";
+import { getLicenseStatus } from "./license";
 
 // Stays comfortably under the ~64KB/256KB SCTP message ceilings — same
 // constant/value as client/src/renderer/session.ts's CHUNK_SIZE.
@@ -94,6 +96,8 @@ export class MobileSession {
   private incomingFiles = new Map<string, { name: string; total: number; chunks: string[]; received: number }>();
   private statsTimer: ReturnType<typeof setInterval> | null = null;
   private iceRefreshTimer: ReturnType<typeof setInterval> | null = null;
+  private licenseWarnTimer: ReturnType<typeof setTimeout> | null = null;
+  private licenseLimitTimer: ReturnType<typeof setTimeout> | null = null;
   private disconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private disconnectRetryTimer: ReturnType<typeof setInterval> | null = null;
   private iceRestartInFlight = false;
@@ -150,6 +154,7 @@ export class MobileSession {
         this.clearDisconnectTimer();
         this.startStatsLoop();
         this.startIceRefreshLoop();
+        if (this.role === "viewer") this.enforceLicenseSessionLimit();
       } else if (this.pc.connectionState === "disconnected" || this.pc.connectionState === "failed") {
         // Mirrors client/src/renderer/session.ts's fix — "failed" (never
         // reached "connected" at all) used to get zero retry attempts,
@@ -161,6 +166,7 @@ export class MobileSession {
         this.clearDisconnectTimer();
         this.stopStatsLoop();
         this.stopIceRefreshLoop();
+        this.clearLicenseTimers();
       }
     });
     this.pc.addEventListener("track", (event: any) => {
@@ -615,10 +621,54 @@ export class MobileSession {
     this.lastVideoBytesTimestamp = null;
   }
 
+  // Ported from client/src/renderer/session.ts's connected-state handler —
+  // viewer-only (matches desktop), reads the cached license status (no
+  // fresh network call here — the settings screen's verify button already
+  // did that and cached the result) and, on the Free plan's default
+  // sessionLimitMinutes, schedules a 1-minute warning and a hard close at
+  // the limit. Unlike desktop's version, timers get explicitly cleared in
+  // clearLicenseTimers()/close() below so a stale Alert can't fire after
+  // the session already ended some other way.
+  private enforceLicenseSessionLimit(): void {
+    getLicenseStatus()
+      .then((info) => {
+        const sessionLimitMinutes = info.licenseStatus?.features?.sessionLimitMinutes ?? 15;
+        if (!sessionLimitMinutes || sessionLimitMinutes <= 0) return;
+        const ms = sessionLimitMinutes * 60 * 1000;
+        console.log(`[License] Gratis sessielimiet geactiveerd: ${sessionLimitMinutes} minuten`);
+
+        if (ms > 60_000) {
+          this.licenseWarnTimer = setTimeout(() => {
+            Alert.alert(
+              "Sessie verloopt bijna",
+              "Jouw gratis sessie verloopt over 1 minuut. Neem een Pro licentie op bromeoremote.com voor onbeperkte duur!"
+            );
+          }, ms - 60_000);
+        }
+
+        this.licenseLimitTimer = setTimeout(() => {
+          Alert.alert(
+            "Sessie beëindigd",
+            `De gratis limiet van ${sessionLimitMinutes} minuten is bereikt. Neem een Pro licentie (€7,95/mnd) voor onbeperkte sessies.`
+          );
+          this.close();
+        }, ms);
+      })
+      .catch(() => {});
+  }
+
+  private clearLicenseTimers(): void {
+    if (this.licenseWarnTimer) clearTimeout(this.licenseWarnTimer);
+    if (this.licenseLimitTimer) clearTimeout(this.licenseLimitTimer);
+    this.licenseWarnTimer = null;
+    this.licenseLimitTimer = null;
+  }
+
   close(): void {
     this.clearDisconnectTimer();
     this.stopStatsLoop();
     this.stopIceRefreshLoop();
+    this.clearLicenseTimers();
     this.controlChannel?.close();
     this.clipboardChannel?.close();
     this.chatChannel?.close();

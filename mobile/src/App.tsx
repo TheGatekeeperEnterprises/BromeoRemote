@@ -28,6 +28,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RTCView, MediaStream, mediaDevices } from "react-native-webrtc";
 import Svg, { Polyline } from "react-native-svg";
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "./shared/config";
+import { getLicenseStatus, verifyMobileLicense, type LicenseStatus } from "./license";
 import type { CursorShapeName, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, ServerMessage, WindowInfo } from "./shared/protocol";
 import { sha256Hex } from "./crypto";
 import { Signaling } from "./signaling";
@@ -399,6 +400,10 @@ export default function App(): React.JSX.Element {
   const [openaiKeyConfigured, setOpenaiKeyConfigured] = useState(false);
   const [openaiKeyInput, setOpenaiKeyInput] = useState("");
   const aiBuddyScrollRef = useRef<ScrollView>(null);
+  const [licenseEmailInput, setLicenseEmailInput] = useState("");
+  const [licenseKeyInput, setLicenseKeyInput] = useState("");
+  const [licenseStatusInfo, setLicenseStatusInfo] = useState<LicenseStatus | null>(null);
+  const [licenseVerifying, setLicenseVerifying] = useState(false);
 
   async function saveOpenAiKey(): Promise<void> {
     const key = openaiKeyInput.trim();
@@ -1240,6 +1245,35 @@ export default function App(): React.JSX.Element {
       if (v !== null) setShowRemoteCursorState(v === "1");
     });
   }, []);
+
+  useEffect(() => {
+    getLicenseStatus().then((info) => {
+      if (info.licenseEmail) setLicenseEmailInput(info.licenseEmail);
+      if (info.licenseKey) setLicenseKeyInput(info.licenseKey);
+      setLicenseStatusInfo(info.licenseStatus);
+    });
+  }, []);
+
+  async function handleVerifyLicense(): Promise<void> {
+    const email = licenseEmailInput.trim();
+    const key = licenseKeyInput.trim();
+    if (!email && !key) {
+      showToast("Vul een e-mailadres of licentiesleutel in.");
+      return;
+    }
+    setLicenseVerifying(true);
+    try {
+      const res = await verifyMobileLicense(key, email);
+      setLicenseStatusInfo(res);
+      if (res.valid) {
+        showToast(`Licentie succesvol geactiveerd voor ${res.userEmail || email}!`);
+      } else {
+        showToast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
+      }
+    } finally {
+      setLicenseVerifying(false);
+    }
+  }
 
   async function handleServerMessage(msg: ServerMessage): Promise<void> {
     switch (msg.type) {
@@ -3316,6 +3350,43 @@ export default function App(): React.JSX.Element {
               <TouchableOpacity style={styles.primaryBtn} onPress={openKeyboardSettings}>
                 <Text style={styles.primaryBtnText}>Instellingen openen</Text>
               </TouchableOpacity>
+            )}
+          </View>
+
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Licentie</Text>
+            <Text style={styles.muted}>
+              Vul je e-mailadres en licentiesleutel in (te vinden op bromeoremote.com onder "Mijn Dashboard / Licentie")
+              om je licentie op dit apparaat te activeren.
+            </Text>
+            <Text style={styles.label}>E-mailadres</Text>
+            <TextInput
+              style={styles.input}
+              value={licenseEmailInput}
+              onChangeText={setLicenseEmailInput}
+              placeholder="jouw@email.nl"
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+            <Text style={styles.label}>Licentiesleutel</Text>
+            <TextInput
+              style={styles.input}
+              value={licenseKeyInput}
+              onChangeText={setLicenseKeyInput}
+              placeholder="bv. 619ae23d-db7a-43f7-b006-876bc368edf6"
+              autoCapitalize="none"
+            />
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleVerifyLicense} disabled={licenseVerifying}>
+              <Text style={styles.primaryBtnText}>{licenseVerifying ? "Controleren..." : "Licentie Controleren & Activeren"}</Text>
+            </TouchableOpacity>
+            {licenseStatusInfo ? (
+              <Text style={[styles.statusText, licenseStatusInfo.valid ? styles.statusOk : styles.statusBad]}>
+                {licenseStatusInfo.valid
+                  ? `Licentiestatus: Actief (${licenseStatusInfo.plan || "Free"})`
+                  : `Licentiestatus: ${licenseStatusInfo.reason || "Ongeldig"}`}
+              </Text>
+            ) : (
+              <Text style={styles.muted}>Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).</Text>
             )}
           </View>
         </ScrollView>
