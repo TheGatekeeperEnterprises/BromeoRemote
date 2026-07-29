@@ -120,9 +120,15 @@
       document.body.style.overflow = "";
     }
 
-    const modalTriggers = document.querySelectorAll(
-      ".header-cta, .primary-action, .download-action.secondary, [href='#downloads']"
-    );
+    // Was ".header-cta, .primary-action, ..." — both those are generic
+    // styling classes reused on elements that must NOT open this modal: the
+    // "Mijn Dashboard / Licentie" header link (.header-cta, links to
+    // /dashboard.html) and the contact form's submit button (.primary-action,
+    // no href at all). Since every element that *should* open it already
+    // links to #downloads, matching on that href alone is both sufficient
+    // and precise — no risk of an unrelated future button silently
+    // inheriting this behavior just by sharing a styling class.
+    const modalTriggers = document.querySelectorAll(".download-action.secondary, [href='#downloads']");
 
     modalTriggers.forEach((btn) => {
       btn.addEventListener("click", openModal);
