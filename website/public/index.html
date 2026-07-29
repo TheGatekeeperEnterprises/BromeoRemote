@@ -494,22 +494,20 @@
           </p>
 
           <div class="license-box">
-            <span style="font-size:0.75rem; color:#8898aa; text-transform:uppercase; letter-spacing:1px; font-weight:700;">Licentiesleutel</span>
-            <div class="license-key">
-              <span id="licenseKeyDisplay">Laden...</span>
-              <span style="display:flex; gap:0.5rem; flex-shrink:0;">
-                <button type="button" class="copy-btn" id="copyLicenseKeyBtn">Kopiëren</button>
-                <button type="button" class="copy-btn" style="background:rgba(255,255,255,0.1); color:#e8edf5;" id="regenerateLicenseKeyBtn">Nieuwe sleutel</button>
-              </span>
+            <span class="license-key-label">Licentiesleutel</span>
+            <div class="license-key" id="licenseKeyDisplay">Laden...</div>
+            <div class="license-key-actions">
+              <button type="button" class="copy-btn" id="copyLicenseKeyBtn">Kopiëren</button>
+              <button type="button" class="copy-btn copy-btn-secondary" id="regenerateLicenseKeyBtn">Nieuwe sleutel</button>
             </div>
-            <div style="margin-top:0.75rem; display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+            <div class="license-meta">
               <span class="badge badge-green" id="planBadge">GRATIS</span>
-              <span style="font-size:0.85rem; color:#8898aa;" id="expiresDisplay">Permanente gratis licentie</span>
+              <span class="license-expires" id="expiresDisplay">Permanente gratis licentie</span>
               <span class="logout-link" id="cancelSubLink" style="display:none; margin-left:auto;">Abonnement opzeggen</span>
             </div>
           </div>
 
-          <h3 style="font-size:1.2rem; text-align:left; margin-top:2.5rem; margin-bottom:0.5rem;">Licentie Upgraden</h3>
+          <h3 style="font-size:1.2rem; text-align:left; margin-top:1.75rem; margin-bottom:0.5rem;">Licentie Upgraden</h3>
           <p style="color:#8898aa; font-size:0.9rem; text-align:left;">
             Standaard is de software gratis. Upgrade voor onbeperkte sessieduur of extra functies zoals AI Buddy.
           </p>
