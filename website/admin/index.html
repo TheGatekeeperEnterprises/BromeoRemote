@@ -561,11 +561,11 @@
           <div id="analytics-daily-carousel" style="display:flex; gap:0.75rem; overflow-x:auto; padding:1rem 0 0.5rem 0; scrollbar-width:thin;"></div>
         </div>
 
-        <!-- World Activity Map (Simplemaps Worldmap v1.1) -->
+        <!-- World Activity Map (Simplemaps Worldmap v1.1 - world.svg) -->
         <div id="sec-wereldkaart" class="card" style="background:#121e36; border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:1.25rem;">
           <h3 style="font-size:1.1rem; margin-bottom:1rem; color:#fff;">World activity map</h3>
           <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.5rem; align-items:start;">
-            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; min-height:340px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
+            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); position:relative; min-height:360px; display:flex; flex-direction:column; justify-content:space-between; overflow:hidden;">
               
               <!-- Zoom Controls -->
               <div style="position:absolute; top:1rem; left:1rem; display:flex; gap:0.3rem; z-index:10;">
@@ -574,77 +574,9 @@
                 <button class="btn btn-ghost btn-sm" onclick="resetWorldMapZoom()" title="Reset weergave" style="background:#121e36;">RESET</button>
               </div>
 
-              <!-- Interactive Simplemaps Vector SVG -->
-              <div id="simplemaps-container" style="width:100%; height:290px; overflow:hidden; position:relative; cursor:grab;">
-                <svg id="world-map-svg" viewBox="0 0 1000 500" style="width:100%; height:100%; transition: transform 0.25s ease-out; transform-origin: center center;">
-                  <defs>
-                    <filter id="glow-green" x="-20%" y="-20%" width="140%" height="140%">
-                      <feGaussianBlur stdDeviation="3" result="blur" />
-                      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
-                  </defs>
-
-                  <!-- Landmasses (Detailed Simplemaps vector continents & islands) -->
-                  <g fill="#1e293b" stroke="#0f172a" stroke-width="0.8">
-                    <!-- North America -->
-                    <path class="map-country" data-name="Canada / USA" d="M 120 70 L 160 50 L 220 55 L 290 80 L 280 140 L 230 180 L 160 175 L 120 120 Z" />
-                    <path class="map-country" data-name="United States" d="M 150 140 L 280 140 L 290 190 L 220 220 L 170 190 Z" />
-                    <path class="map-country" data-name="Mexico / Central America" d="M 170 190 L 230 220 L 240 260 L 210 270 Z" />
-                    
-                    <!-- South America -->
-                    <path class="map-country" data-name="South America" d="M 270 270 L 340 260 L 370 320 L 330 420 L 280 430 L 270 330 Z" />
-                    
-                    <!-- Europe & UK -->
-                    <path class="map-country" data-name="United Kingdom" d="M 450 110 L 465 105 L 460 135 L 448 130 Z" />
-                    <path class="map-country" data-name="Netherlands / W. Europe" d="M 470 115 L 530 100 L 550 130 L 520 160 L 470 150 Z" />
-                    <path class="map-country" data-name="Scandinavia" d="M 500 60 L 540 50 L 550 95 L 510 100 Z" />
-                    <path class="map-country" data-name="Eastern Europe" d="M 530 100 L 610 90 L 620 150 L 540 150 Z" />
-                    
-                    <!-- Africa -->
-                    <path class="map-country" data-name="Africa" d="M 460 170 L 570 160 L 610 230 L 560 360 L 500 370 L 450 240 Z" />
-
-                    <!-- Asia & Middle East -->
-                    <path class="map-country" data-name="Middle East" d="M 580 170 L 640 160 L 660 210 L 600 230 Z" />
-                    <path class="map-country" data-name="Russia / N. Asia" d="M 610 60 L 890 50 L 920 130 L 620 130 Z" />
-                    <path class="map-country" data-name="China / E. Asia" d="M 690 140 L 840 130 L 850 230 L 730 240 L 670 190 Z" />
-                    <path class="map-country" data-name="India" d="M 670 190 L 730 190 L 720 260 L 680 260 Z" />
-
-                    <!-- Australia & Oceania -->
-                    <path class="map-country" data-name="Australia" d="M 760 330 L 870 320 L 880 410 L 770 420 Z" />
-                    <path class="map-country" data-name="New Zealand" d="M 900 410 L 920 400 L 915 440 L 895 435 Z" />
-                  </g>
-
-                  <!-- Active Traffic Pins (Pulsing glowing markers matching live traffic) -->
-                  <!-- Netherlands / Western Europe (NL) -->
-                  <g transform="translate(485, 125)">
-                    <circle r="9" fill="rgba(11,232,129,0.25)" filter="url(#glow-green)"><animate attributeName="r" values="6;14;6" dur="2s" repeatCount="indefinite"/></circle>
-                    <circle r="4.5" fill="#0be881" stroke="#ffffff" stroke-width="1.5"></circle>
-                  </g>
-                  
-                  <!-- USA -->
-                  <g transform="translate(220, 160)">
-                    <circle r="7" fill="rgba(96,165,250,0.25)"><animate attributeName="r" values="5;11;5" dur="2.4s" repeatCount="indefinite"/></circle>
-                    <circle r="3.5" fill="#60a5fa" stroke="#ffffff" stroke-width="1"></circle>
-                  </g>
-
-                  <!-- China / Asia -->
-                  <g transform="translate(760, 170)">
-                    <circle r="6" fill="rgba(167,139,250,0.25)"><animate attributeName="r" values="4;9;4" dur="2.1s" repeatCount="indefinite"/></circle>
-                    <circle r="3" fill="#a78bfa" stroke="#ffffff" stroke-width="1"></circle>
-                  </g>
-
-                  <!-- Australia -->
-                  <g transform="translate(820, 370)">
-                    <circle r="5" fill="rgba(250,204,21,0.25)"></circle>
-                    <circle r="3" fill="#facc15" stroke="#ffffff" stroke-width="1"></circle>
-                  </g>
-                  
-                  <!-- Brazil -->
-                  <g transform="translate(320, 330)">
-                    <circle r="5" fill="rgba(56,189,248,0.25)"></circle>
-                    <circle r="3" fill="#38bdf8" stroke="#ffffff" stroke-width="1"></circle>
-                  </g>
-                </svg>
+              <!-- Interactive Simplemaps Vector SVG (loaded dynamically from world.svg) -->
+              <div id="simplemaps-container" style="width:100%; height:300px; overflow:hidden; position:relative;">
+                <div style="display:flex; justify-content:center; align-items:center; height:100%; color:#94a3b8; font-size:0.85rem;">world.svg wordt geladen...</div>
               </div>
 
               <!-- Map Footer exact text match with BromeoGrid -->
@@ -654,7 +586,7 @@
               </div>
             </div>
 
-            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); max-height:340px; overflow-y:auto;">
+            <div style="background:#0b1426; border-radius:10px; padding:1.25rem; border:1px solid rgba(255,255,255,0.06); max-height:360px; overflow-y:auto;">
               <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:1rem;">
                 <span style="color:#38bdf8; font-weight:600;">● Traffic weight</span>
                 <span style="color:#facc15; font-weight:600;">● Licensed / paid heavier</span>
@@ -1237,22 +1169,90 @@ function scrollToStatSec(id) {
 
 let currentMapZoom = 1.0;
 function zoomWorldMap(factor) {
-  currentMapZoom = Math.max(0.6, Math.min(3.0, currentMapZoom * factor));
-  const svg = document.getElementById('world-map-svg');
+  currentMapZoom = Math.max(0.6, Math.min(3.5, currentMapZoom * factor));
+  const wrapper = document.getElementById('svg-map-wrapper');
   const label = document.getElementById('map-zoom-level');
-  if (svg) svg.style.transform = `scale(${currentMapZoom})`;
+  if (wrapper) wrapper.style.transform = `scale(${currentMapZoom})`;
   if (label) label.textContent = `${Math.round(currentMapZoom * 100)}%`;
 }
 
 function resetWorldMapZoom() {
   currentMapZoom = 1.0;
-  const svg = document.getElementById('world-map-svg');
+  const wrapper = document.getElementById('svg-map-wrapper');
   const label = document.getElementById('map-zoom-level');
-  if (svg) svg.style.transform = 'scale(1)';
+  if (wrapper) wrapper.style.transform = 'scale(1)';
   if (label) label.textContent = '100%';
 }
 
+let worldSvgLoaded = false;
+async function initWorldMapSvg() {
+  if (worldSvgLoaded) return;
+  const container = document.getElementById('simplemaps-container');
+  if (!container) return;
+
+  try {
+    const res = await fetch('/admin/world.svg');
+    const svgText = await res.text();
+
+    container.innerHTML = `
+      <div id="svg-map-wrapper" style="width:100%; height:100%; transition: transform 0.25s ease-out; transform-origin: center center;">
+        ${svgText}
+      </div>
+      <div id="map-tooltip" style="position:absolute; display:none; background:#0b1426; border:1px solid #38bdf8; color:#fff; padding:0.5rem 0.75rem; border-radius:6px; font-size:0.8rem; pointer-events:none; z-index:100; box-shadow:0 10px 25px rgba(0,0,0,0.5);"></div>
+    `;
+
+    const svg = container.querySelector('svg');
+    if (svg) {
+      svg.setAttribute('width', '100%');
+      svg.setAttribute('height', '100%');
+      svg.setAttribute('id', 'world-map-svg');
+      svg.style.display = 'block';
+
+      const paths = svg.querySelectorAll('path');
+      paths.forEach((p) => {
+        p.style.fill = '#1e293b';
+        p.style.stroke = '#0f172a';
+        p.style.strokeWidth = '0.5px';
+        p.style.transition = 'fill 0.15s, stroke 0.15s';
+        p.style.cursor = 'pointer';
+
+        p.addEventListener('mouseenter', (e) => {
+          p.style.fill = '#38bdf8';
+          p.style.stroke = '#ffffff';
+          const name = p.getAttribute('name') || p.getAttribute('class') || p.getAttribute('id') || 'Land';
+          const tooltip = document.getElementById('map-tooltip');
+          if (tooltip) {
+            tooltip.style.display = 'block';
+            tooltip.innerHTML = `<strong>${name}</strong><br/><span style="color:#0be881;">Actief verkeer &amp; licenties</span>`;
+          }
+        });
+
+        p.addEventListener('mousemove', (e) => {
+          const tooltip = document.getElementById('map-tooltip');
+          const rect = container.getBoundingClientRect();
+          if (tooltip) {
+            tooltip.style.left = `${e.clientX - rect.left + 12}px`;
+            tooltip.style.top = `${e.clientY - rect.top + 12}px`;
+          }
+        });
+
+        p.addEventListener('mouseleave', () => {
+          p.style.fill = '#1e293b';
+          p.style.stroke = '#0f172a';
+          const tooltip = document.getElementById('map-tooltip');
+          if (tooltip) tooltip.style.display = 'none';
+        });
+      });
+    }
+
+    worldSvgLoaded = true;
+  } catch (err) {
+    console.error('Fout bij laden world.svg:', err);
+  }
+}
+
 async function loadAnalytics() {
+  void initWorldMapSvg();
   const filterInternal = document.getElementById('stat-filter-internal')?.checked || false;
   const filterBots = document.getElementById('stat-filter-bots')?.checked || false;
 
