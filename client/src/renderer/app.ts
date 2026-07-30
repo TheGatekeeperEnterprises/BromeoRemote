@@ -491,6 +491,11 @@ let aiBuddySending = false;
 let restartRequestedFor: string | null = null;
 let curtainModeEnabled = false;
 let monitorIsOff = false;
+// Host-drawn whiteboard (host role — the host's own full-screen draw overlay
+// window; see setHostAnnotationOverlayActive in main.ts). Distinct from the
+// viewer-role annotate state above: this side only relays strokes, it never
+// renders them locally.
+let hostWhiteboardActive = false;
 let inputBlocked = false;
 let wallpaperHidden = false;
 let lockOnSessionEnd = false;
@@ -1010,6 +1015,7 @@ function miniControllerState(): MiniControllerState | null {
     canClipboard: sessionPermissions.clipboard,
     canScreenPower: true,
     screenOff: monitorIsOff,
+    whiteboardActive: hostWhiteboardActive,
   };
 }
 
@@ -1177,6 +1183,8 @@ function handleMiniControllerAction(action: string, peerId?: string): void {
     endSessionAndRotatePassword();
   } else if (action === "promote" && peerId) {
     promoteViewerToControl(peerId);
+  } else if (action === "whiteboard") {
+    void window.bromeo.toggleHostAnnotationOverlay();
   }
 }
 
@@ -1436,6 +1444,16 @@ function wireUi(): void {
   el.hostVoiceToggleBtn.onclick = () => void toggleHostMicrophone();
   el.hostCameraToggleBtn.onclick = () => void toggleWebcamOverlay();
   window.bromeo.onMiniControllerAction(handleMiniControllerAction);
+  window.bromeo.onHostAnnotationOverlayState((active) => {
+    hostWhiteboardActive = active;
+    updateMiniController();
+  });
+  window.bromeo.onHostAnnotationStroke((id, points, color) => {
+    broadcastSystemCommand({ kind: "annotation-stroke", id, points, color });
+  });
+  window.bromeo.onHostAnnotationClear(() => {
+    broadcastSystemCommand({ kind: "annotation-clear" });
+  });
 
   el.incomingAccept.onclick = () => respondToIncoming(true);
   el.incomingDecline.onclick = () => respondToIncoming(false);

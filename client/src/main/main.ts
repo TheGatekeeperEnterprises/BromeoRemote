@@ -19,6 +19,9 @@ import type { InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateS
 
 let mainWindow: BrowserWindow | null = null;
 let miniControllerWindow: BrowserWindow | null = null;
+let miniControllerCollapsed = false;
+let hostAnnotationWindow: BrowserWindow | null = null;
+let hostAnnotationOverlayActive = false;
 let tray: Tray | null = null;
 let activeMonitorId: string | null = null;
 // "control a program" mobile feature: when set, setDisplayMediaRequestHandler
@@ -183,6 +186,7 @@ interface MiniControllerState {
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
+  whiteboardActive: boolean;
 }
 
 // Rotates every launch (and on-demand via the panic button) — this is the
@@ -254,25 +258,33 @@ function restoreMainWindow(): void {
   mainWindow.focus();
 }
 
-function positionMiniController(offscreen = false): { x: number; y: number } {
-  const win = miniControllerWindow;
+// TeamViewer-style edge collapse: the panel slides mostly offscreen to a
+// tiny tab, and back, by animating both size and position together — see
+// toggleMiniControllerCollapse. Kept as constants (rather than reading
+// win.getSize()) so the y-position math below always anchors to the
+// expanded panel's height, avoiding a vertical jump between the two sizes.
+const MINI_EXPANDED_SIZE = { width: 360, height: 230 };
+const MINI_COLLAPSED_SIZE = { width: 26, height: 64 };
+
+function miniControllerY(): number {
   const display = screen.getPrimaryDisplay();
-  const { x, y, width, height } = display.workArea;
-  const [windowWidth, windowHeight] = win?.getSize() ?? [360, 230];
+  const { y, height } = display.workArea;
+  return y + Math.max(76, Math.round((height - MINI_EXPANDED_SIZE.height) / 3));
+}
+
+function positionMiniController(width: number, offscreen = false): { x: number; y: number } {
+  const display = screen.getPrimaryDisplay();
+  const { x, width: workWidth } = display.workArea;
   return {
-    x: x + width - (offscreen ? 36 : windowWidth + 12),
-    y: y + Math.max(76, Math.round((height - windowHeight) / 3)),
+    x: x + workWidth - (offscreen ? Math.min(36, width) : width + 12),
+    y: miniControllerY(),
   };
 }
 
 function createMiniControllerWindow(): BrowserWindow {
   const win = new BrowserWindow({
-    width: 360,
-    height: 230,
-    minWidth: 320,
-    minHeight: 210,
-    maxWidth: 420,
-    maxHeight: 280,
+    width: MINI_EXPANDED_SIZE.width,
+    height: MINI_EXPANDED_SIZE.height,
     frame: false,
     resizable: false,
     movable: true,
@@ -302,17 +314,27 @@ function sendMiniControllerState(): void {
   }
 }
 
+function sendMiniControllerCollapsed(): void {
+  miniControllerWindow?.webContents.send("mini-controller-collapsed", miniControllerCollapsed);
+}
+
 function showMiniController(state: MiniControllerState): void {
   miniControllerState = state;
   if (!miniControllerWindow) miniControllerWindow = createMiniControllerWindow();
   const win = miniControllerWindow;
   win.setAlwaysOnTop(true, "screen-saver");
-  const start = positionMiniController(true);
-  const end = positionMiniController(false);
-  win.setPosition(start.x, start.y, false);
+  miniControllerCollapsed = false;
+  const { width, height } = MINI_EXPANDED_SIZE;
+  const start = positionMiniController(width, true);
+  const end = positionMiniController(width, false);
+  win.setBounds({ x: start.x, y: start.y, width, height }, false);
   win.showInactive();
-  win.webContents.once("did-finish-load", sendMiniControllerState);
+  win.webContents.once("did-finish-load", () => {
+    sendMiniControllerState();
+    sendMiniControllerCollapsed();
+  });
   sendMiniControllerState();
+  sendMiniControllerCollapsed();
 
   let step = 0;
   const totalSteps = 10;
@@ -320,7 +342,34 @@ function showMiniController(state: MiniControllerState): void {
     step++;
     const t = 1 - Math.pow(1 - step / totalSteps, 3);
     const nextX = Math.round(start.x + (end.x - start.x) * t);
-    win.setPosition(nextX, end.y, false);
+    win.setBounds({ x: nextX, y: end.y, width, height }, false);
+    if (step >= totalSteps) clearInterval(timer);
+  }, 14);
+}
+
+function toggleMiniControllerCollapse(): void {
+  const win = miniControllerWindow;
+  if (!win) return;
+  miniControllerCollapsed = !miniControllerCollapsed;
+  const targetSize = miniControllerCollapsed ? MINI_COLLAPSED_SIZE : MINI_EXPANDED_SIZE;
+  const startBounds = win.getBounds();
+  const target = positionMiniController(targetSize.width, false);
+  sendMiniControllerCollapsed();
+
+  let step = 0;
+  const totalSteps = 10;
+  const timer = setInterval(() => {
+    step++;
+    const t = 1 - Math.pow(1 - step / totalSteps, 3);
+    win.setBounds(
+      {
+        x: Math.round(startBounds.x + (target.x - startBounds.x) * t),
+        y: Math.round(startBounds.y + (target.y - startBounds.y) * t),
+        width: Math.round(startBounds.width + (targetSize.width - startBounds.width) * t),
+        height: Math.round(startBounds.height + (targetSize.height - startBounds.height) * t),
+      },
+      false
+    );
     if (step >= totalSteps) clearInterval(timer);
   }, 14);
 }
@@ -333,6 +382,60 @@ function updateMiniController(state: MiniControllerState): void {
 function hideMiniController(): void {
   miniControllerState = null;
   miniControllerWindow?.hide();
+  // Never leave the full-screen, mouse-capturing draw overlay orphaned once
+  // the session that could show it ends — that would lock the host out of
+  // their own desktop with no way back in.
+  if (hostAnnotationOverlayActive) setHostAnnotationOverlayActive(false);
+}
+
+function primaryDisplayBounds(): { x: number; y: number; width: number; height: number } {
+  return screen.getPrimaryDisplay().bounds;
+}
+
+function createHostAnnotationWindow(): BrowserWindow {
+  const bounds = primaryDisplayBounds();
+  const win = new BrowserWindow({
+    ...bounds,
+    frame: false,
+    resizable: false,
+    movable: false,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    transparent: true,
+    backgroundColor: "#00000000",
+    hasShadow: false,
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+  win.setMenuBarVisibility(false);
+  win.loadFile(join(__dirname, "../renderer/host-annotate.html"));
+  win.on("closed", () => {
+    hostAnnotationWindow = null;
+  });
+  return win;
+}
+
+// Toggled from the mini controller's Whiteboard button (host draws on their
+// own screen; strokes get relayed to every viewer — see broadcastSystemCommand
+// in app.ts) and from the overlay's own close button. mainWindow is notified
+// either way so it can keep hostWhiteboardActive (and the mini controller's
+// button state) in sync regardless of which side triggered the change.
+function setHostAnnotationOverlayActive(active: boolean): void {
+  hostAnnotationOverlayActive = active;
+  if (active) {
+    if (!hostAnnotationWindow) hostAnnotationWindow = createHostAnnotationWindow();
+    hostAnnotationWindow.setBounds(primaryDisplayBounds());
+    hostAnnotationWindow.setAlwaysOnTop(true, "screen-saver");
+    hostAnnotationWindow.show();
+  } else {
+    hostAnnotationWindow?.hide();
+  }
+  mainWindow?.webContents.send("host-annotation-overlay-state", active);
 }
 
 function sendUpdateStatus(update: UpdateStatus): void {
@@ -418,7 +521,28 @@ ipcMain.handle("bromeo:restore-main-window", () => {
 
 ipcMain.handle("bromeo:mini-controller-action", (_e, action: string, peerId?: string) => {
   if (action === "open") restoreMainWindow();
+  else if (action === "collapse") toggleMiniControllerCollapse();
   else mainWindow?.webContents.send("mini-controller-action", action, peerId);
+  return true;
+});
+
+ipcMain.handle("bromeo:toggle-host-annotation-overlay", () => {
+  setHostAnnotationOverlayActive(!hostAnnotationOverlayActive);
+  return hostAnnotationOverlayActive;
+});
+
+ipcMain.handle("bromeo:close-host-annotation-overlay", () => {
+  setHostAnnotationOverlayActive(false);
+  return true;
+});
+
+ipcMain.handle("bromeo:host-annotation-stroke", (_e, id: string, points: { x: number; y: number }[], color: string) => {
+  mainWindow?.webContents.send("host-annotation-stroke", id, points, color);
+  return true;
+});
+
+ipcMain.handle("bromeo:host-annotation-clear", () => {
+  mainWindow?.webContents.send("host-annotation-clear");
   return true;
 });
 

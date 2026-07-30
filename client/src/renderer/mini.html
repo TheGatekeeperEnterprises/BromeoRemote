@@ -22,30 +22,44 @@
     }
     .panel {
       height: 100%;
-      border: 1px solid rgba(47, 111, 237, 0.28);
-      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid rgba(31, 94, 234, 0.3);
+      border-radius: 12px;
       overflow: hidden;
       background: #ffffff;
-      box-shadow: 0 18px 46px rgba(15, 23, 42, 0.28);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, 0.32);
     }
     .head {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
-      background: linear-gradient(135deg, #1f5eea 0%, #2847d8 100%);
+      padding: 10px 10px 10px 12px;
+      background: linear-gradient(135deg, #1f5eea 0%, #2144c9 100%);
       color: #fff;
       -webkit-app-region: drag;
     }
     .mark {
+      position: relative;
       display: grid;
       place-items: center;
       width: 28px;
       height: 28px;
-      border-radius: 7px;
+      border-radius: 8px;
       background: rgba(255,255,255,0.16);
       border: 1px solid rgba(255,255,255,0.28);
       font-weight: 900;
+      font-size: 11px;
+    }
+    .mark .live-dot {
+      position: absolute;
+      right: -2px;
+      bottom: -2px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      border: 1.5px solid #1f5eea;
     }
     .title { min-width: 0; flex: 1; }
     .title strong {
@@ -65,10 +79,11 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .open {
+    .head-btn {
       -webkit-app-region: no-drag;
-      height: 28px;
-      padding: 0 9px;
+      flex-shrink: 0;
+      height: 26px;
+      padding: 0 8px;
       border: 1px solid rgba(255,255,255,0.34);
       border-radius: 7px;
       background: rgba(255,255,255,0.14);
@@ -78,7 +93,15 @@
       font-weight: 800;
       cursor: pointer;
     }
-    .body { padding: 12px; }
+    .head-btn:hover { background: rgba(255,255,255,0.26); }
+    .collapse-btn {
+      width: 26px;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 13px;
+    }
+    .body { padding: 12px; overflow: hidden; }
     .meta {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -126,6 +149,11 @@
     }
     button.action:hover { border-color: #2f6fed; color: #2f6fed; }
     button.action:disabled { opacity: 0.45; cursor: not-allowed; }
+    button.action.active {
+      border-color: #1f5eea;
+      background: linear-gradient(180deg, #2f6fed 0%, #1f5eea 100%);
+      color: #fff;
+    }
     button.danger {
       border-color: #dc3545;
       background: linear-gradient(180deg, #ef4052 0%, #dc3545 100%);
@@ -177,18 +205,40 @@
     }
     .viewer-row .viewer-kick:hover { background: #fde8ea; color: #dc3545; }
     .viewer-row .viewer-promote:hover { background: #e5f0ff; color: #2f6fed; }
+
+    /* Collapsed edge tab — TeamViewer-style slide-to-edge minimize. Swapped
+       in via body.collapsed; the actual window itself is shrunk to match
+       by main.ts (toggleMiniControllerCollapse), so this just has to fill
+       whatever tiny bounds it's given. */
+    .tab {
+      display: none;
+      width: 100%;
+      height: 100%;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px 0 0 12px;
+      background: linear-gradient(135deg, #1f5eea 0%, #2144c9 100%);
+      color: #fff;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.32);
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 900;
+    }
+    body.collapsed .panel { display: none; }
+    body.collapsed .tab { display: flex; }
   </style>
 </head>
 <body>
   <div class="shell">
     <section class="panel">
       <header class="head">
-        <div class="mark">BR</div>
+        <div class="mark">BR<span class="live-dot"></span></div>
         <div class="title">
           <strong id="mini-peer">BromeoRemote sessie</strong>
           <span id="mini-status">Verbonden</span>
         </div>
-        <button id="mini-open" class="open">Open</button>
+        <button id="mini-open" class="head-btn">Open</button>
+        <button id="mini-collapse" class="head-btn collapse-btn" title="Inklappen">«</button>
       </header>
       <div class="body">
         <div id="mini-viewer-list" class="viewer-list"></div>
@@ -199,11 +249,13 @@
           <button id="mini-clipboard" class="action">Klembord</button>
           <button id="mini-chat" class="action">Chat</button>
           <button id="mini-screen-toggle" class="action">Scherm uit</button>
+          <button id="mini-whiteboard" class="action">Whiteboard</button>
           <button id="mini-end" class="action danger wide">Alles beëindigen</button>
           <button id="mini-panic" class="action wide">Beëindigen + wachtwoord wijzigen</button>
         </div>
       </div>
     </section>
+    <div id="mini-tab" class="tab" title="Uitklappen">›</div>
   </div>
   <script type="module" src="./mini.js"></script>
 </body>

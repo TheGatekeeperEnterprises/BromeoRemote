@@ -8,9 +8,12 @@ const el = {
   viewerList: $<HTMLDivElement>("mini-viewer-list"),
   screen: $<HTMLElement>("mini-screen"),
   open: $<HTMLButtonElement>("mini-open"),
+  collapse: $<HTMLButtonElement>("mini-collapse"),
+  tab: $<HTMLDivElement>("mini-tab"),
   clipboard: $<HTMLButtonElement>("mini-clipboard"),
   chat: $<HTMLButtonElement>("mini-chat"),
   screenToggle: $<HTMLButtonElement>("mini-screen-toggle"),
+  whiteboard: $<HTMLButtonElement>("mini-whiteboard"),
   end: $<HTMLButtonElement>("mini-end"),
   panic: $<HTMLButtonElement>("mini-panic"),
 };
@@ -57,13 +60,22 @@ function update(state: MiniControllerState): void {
   el.screenToggle.textContent = state.screenOff ? "Scherm aan" : "Scherm uit";
   el.clipboard.disabled = !state.canClipboard;
   el.screenToggle.disabled = !state.canScreenPower;
+  el.whiteboard.classList.toggle("active", state.whiteboardActive);
+  el.whiteboard.textContent = state.whiteboardActive ? "Whiteboard aan" : "Whiteboard";
 }
 
 el.open.onclick = () => send("open");
+el.collapse.onclick = () => send("collapse");
+el.tab.onclick = () => send("collapse");
 el.clipboard.onclick = () => send("clipboard");
 el.chat.onclick = () => send("chat");
 el.screenToggle.onclick = () => send("screen-toggle");
+el.whiteboard.onclick = () => send("whiteboard");
 el.end.onclick = () => send("end"); // no peerId — ends the whole hosting session
 el.panic.onclick = () => send("panic");
 
 window.bromeo.onMiniControllerState(update);
+window.bromeo.onMiniControllerCollapsed((collapsed) => {
+  document.body.classList.toggle("collapsed", collapsed);
+  el.collapse.textContent = collapsed ? "»" : "«";
+});

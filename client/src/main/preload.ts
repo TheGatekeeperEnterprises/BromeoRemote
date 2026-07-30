@@ -13,6 +13,7 @@ interface MiniControllerState {
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
+  whiteboardActive: boolean;
 }
 
 contextBridge.exposeInMainWorld("bromeo", {
@@ -107,5 +108,31 @@ contextBridge.exposeInMainWorld("bromeo", {
     const listener = (_e: unknown, state: MiniControllerState) => cb(state);
     ipcRenderer.on("mini-controller-state", listener);
     return () => ipcRenderer.removeListener("mini-controller-state", listener);
+  },
+  onMiniControllerCollapsed: (cb: (collapsed: boolean) => void) => {
+    const listener = (_e: unknown, collapsed: boolean) => cb(collapsed);
+    ipcRenderer.on("mini-controller-collapsed", listener);
+    return () => ipcRenderer.removeListener("mini-controller-collapsed", listener);
+  },
+
+  toggleHostAnnotationOverlay: () => ipcRenderer.invoke("bromeo:toggle-host-annotation-overlay"),
+  closeHostAnnotationOverlay: () => ipcRenderer.invoke("bromeo:close-host-annotation-overlay"),
+  sendHostAnnotationStroke: (id: string, points: { x: number; y: number }[], color: string) =>
+    ipcRenderer.invoke("bromeo:host-annotation-stroke", id, points, color),
+  sendHostAnnotationClear: () => ipcRenderer.invoke("bromeo:host-annotation-clear"),
+  onHostAnnotationOverlayState: (cb: (active: boolean) => void) => {
+    const listener = (_e: unknown, active: boolean) => cb(active);
+    ipcRenderer.on("host-annotation-overlay-state", listener);
+    return () => ipcRenderer.removeListener("host-annotation-overlay-state", listener);
+  },
+  onHostAnnotationStroke: (cb: (id: string, points: { x: number; y: number }[], color: string) => void) => {
+    const listener = (_e: unknown, id: string, points: { x: number; y: number }[], color: string) => cb(id, points, color);
+    ipcRenderer.on("host-annotation-stroke", listener);
+    return () => ipcRenderer.removeListener("host-annotation-stroke", listener);
+  },
+  onHostAnnotationClear: (cb: () => void) => {
+    const listener = () => cb();
+    ipcRenderer.on("host-annotation-clear", listener);
+    return () => ipcRenderer.removeListener("host-annotation-clear", listener);
   },
 });

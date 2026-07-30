@@ -24,6 +24,7 @@ export interface MiniControllerState {
   canClipboard: boolean;
   canScreenPower: boolean;
   screenOff: boolean;
+  whiteboardActive: boolean;
 }
 
 export interface BromeoBridge {
@@ -113,6 +114,15 @@ export interface BromeoBridge {
   miniControllerAction(action: string, peerId?: string): Promise<boolean>;
   onMiniControllerAction(cb: (action: string, peerId?: string) => void): () => void;
   onMiniControllerState(cb: (state: MiniControllerState) => void): () => void;
+  onMiniControllerCollapsed(cb: (collapsed: boolean) => void): () => void;
+
+  toggleHostAnnotationOverlay(): Promise<boolean>;
+  closeHostAnnotationOverlay(): Promise<boolean>;
+  sendHostAnnotationStroke(id: string, points: { x: number; y: number }[], color: string): Promise<boolean>;
+  sendHostAnnotationClear(): Promise<boolean>;
+  onHostAnnotationOverlayState(cb: (active: boolean) => void): () => void;
+  onHostAnnotationStroke(cb: (id: string, points: { x: number; y: number }[], color: string) => void): () => void;
+  onHostAnnotationClear(cb: () => void): () => void;
 }
 
 declare global {

@@ -5,6 +5,7 @@ const root = join(__dirname, "..");
 const pairs = [
   ["src/renderer/index.html", "dist/renderer/index.html"],
   ["src/renderer/mini.html", "dist/renderer/mini.html"],
+  ["src/renderer/host-annotate.html", "dist/renderer/host-annotate.html"],
   ["src/renderer/styles.css", "dist/renderer/styles.css"],
 ];
 
