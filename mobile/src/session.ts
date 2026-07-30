@@ -559,8 +559,12 @@ export class MobileSession {
   private enforceLicenseSessionLimit(): void {
     getLicenseStatus()
       .then((info) => {
-        const sessionLimitMinutes = info.licenseStatus?.features?.sessionLimitMinutes ?? 15;
-        if (!sessionLimitMinutes || sessionLimitMinutes <= 0) return;
+        // features.sessionLimitMinutes is `null` (not absent) for a paid
+        // Pro/Unlimited plan — the server's explicit "no limit" signal (see
+        // website/src/database.js's verifyLicenseInDb). `?? 15` here would
+        // silently reapply the free-tier cap to every paying account.
+        const sessionLimitMinutes = info.licenseStatus?.features?.sessionLimitMinutes;
+        if (typeof sessionLimitMinutes !== "number" || sessionLimitMinutes <= 0) return;
         const ms = sessionLimitMinutes * 60 * 1000;
         console.log(`[License] Gratis sessielimiet geactiveerd: ${sessionLimitMinutes} minuten`);
 

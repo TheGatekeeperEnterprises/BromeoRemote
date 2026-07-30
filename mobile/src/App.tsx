@@ -26,10 +26,10 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { RTCView, MediaStream, mediaDevices } from "react-native-webrtc";
-import Svg, { Polyline } from "react-native-svg";
+import Svg, { Ellipse, Polyline, Rect, Text as SvgText } from "react-native-svg";
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "./shared/config";
 import { getLicenseStatus, verifyMobileLicense, type LicenseStatus } from "./license";
-import type { CursorShapeName, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, ServerMessage, WindowInfo } from "./shared/protocol";
+import type { AnnotationShape, CursorShapeName, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, ServerMessage, WindowInfo } from "./shared/protocol";
 import { sha256Hex } from "./crypto";
 import { Signaling } from "./signaling";
 import { MobileSession, type CodecPreferenceMode } from "./session";
@@ -106,7 +106,6 @@ const RENDER_QUALITY_MODE_KEY = "bromeoremote_render_quality_mode";
 const CODEC_PREFERENCE_KEY = "bromeoremote_codec_preference";
 const RESOLUTION_PREFERENCE_KEY = "bromeoremote_resolution_preference";
 const ANNOTATION_COLOR = "#ff3b3b";
-const ANNOTATION_STROKE_TTL_MS = 6000;
 const SHOW_CURSOR_KEY = "bromeoremote_show_remote_cursor";
 const THEME_KEY = "bromeoremote_theme";
 
@@ -622,22 +621,15 @@ export default function App(): React.JSX.Element {
   // phase deliberately doesn't take on — draw at the default (unzoomed)
   // view only. ---
   const [annotateModeActive, setAnnotateModeActive] = useState(false);
-  const [annotationStrokes, setAnnotationStrokes] = useState<
-    { id: string; points: { x: number; y: number }[]; color: string; createdAt: number }[]
-  >([]);
+  // Persistent — matches the desktop host's whiteboard (see
+  // client/src/renderer/app.ts): shapes stay until an explicit erase/clear,
+  // not on a fade timer. Mobile only ever *draws* "pen" shapes itself, but
+  // has to render whatever kind the desktop host's toolbox sends.
+  const [annotationShapes, setAnnotationShapes] = useState<AnnotationShape[]>([]);
   const currentStrokeRef = useRef<{ id: string; points: { x: number; y: number }[] } | null>(null);
-  // Forces a re-render on a timer so fading/expiring strokes actually
-  // disappear without needing a touch event to trigger it.
+  // Forces a re-render on every touch move so the in-progress local stroke
+  // draws live (annotationShapes itself already triggers a render on change).
   const [, setAnnotationTick] = useState(0);
-  useEffect(() => {
-    if (annotationStrokes.length === 0) return;
-    const timer = setInterval(() => {
-      const now = Date.now();
-      setAnnotationStrokes((prev) => prev.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS));
-      setAnnotationTick((n) => n + 1);
-    }, 150);
-    return () => clearInterval(timer);
-  }, [annotationStrokes.length]);
   function toggleAnnotateMode(): void {
     setAnnotateModeActive((active) => {
       if (!active) setZoom({ scale: 1, panX: 0, panY: 0 });
@@ -645,8 +637,11 @@ export default function App(): React.JSX.Element {
     });
   }
   function clearAnnotationsLocally(): void {
-    annotationStrokes.length && setAnnotationStrokes([]);
+    annotationShapes.length && setAnnotationShapes([]);
     currentStrokeRef.current = null;
+  }
+  function eraseAnnotationShapeLocally(id: string): void {
+    setAnnotationShapes((prev) => prev.filter((s) => s.id !== id));
   }
   // --- Voice intercom — talk to the person at the host machine, separate
   // from the host's one-way system audio (see voiceTransceiver in
@@ -1590,10 +1585,12 @@ export default function App(): React.JSX.Element {
           // permission today (the host enforces control server-side
           // regardless), so this is just a heads-up toast, not a UI change.
           showToast(cmd.permissions.control ? t("msg.nowControlling") : t("msg.nowReadOnly"));
-        } else if (cmd.kind === "annotation-stroke") {
-          setAnnotationStrokes((prev) => [...prev, { id: cmd.id, points: cmd.points, color: cmd.color, createdAt: Date.now() }]);
+        } else if (cmd.kind === "annotation-shape") {
+          setAnnotationShapes((prev) => [...prev, cmd.shape]);
+        } else if (cmd.kind === "annotation-erase") {
+          eraseAnnotationShapeLocally(cmd.id);
         } else if (cmd.kind === "annotation-clear") {
-          setAnnotationStrokes([]);
+          setAnnotationShapes([]);
           currentStrokeRef.current = null;
         }
       },
@@ -1655,7 +1652,7 @@ export default function App(): React.JSX.Element {
 
   function endSession(): void {
     setAnnotateModeActive(false);
-    setAnnotationStrokes([]);
+    setAnnotationShapes([]);
     currentStrokeRef.current = null;
     resetMicrophoneState();
     // Mirrors client/src/renderer/app.ts's showSessionSummary() (same
@@ -2473,12 +2470,71 @@ export default function App(): React.JSX.Element {
                 );
               })()}
           </View>
-          {(annotateModeActive || annotationStrokes.length > 0) &&
+          {(annotateModeActive || annotationShapes.length > 0) &&
             (() => {
               const rect = getContentRect();
-              const now = Date.now();
-              const fadeStart = ANNOTATION_STROKE_TTL_MS * 0.7;
               const current = currentStrokeRef.current;
+              const renderShape = (s: AnnotationShape) => {
+                if (s.kind === "pen" || s.kind === "highlighter") {
+                  const points = s.points ?? [];
+                  if (points.length < 2) return null;
+                  return (
+                    <Polyline
+                      key={s.id}
+                      points={points.map((p) => `${p.x * rect.width},${p.y * rect.height}`).join(" ")}
+                      fill="none"
+                      stroke={s.color}
+                      strokeOpacity={s.kind === "highlighter" ? 0.35 : 1}
+                      strokeWidth={s.kind === "highlighter" ? 14 : 3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  );
+                }
+                if (s.kind === "rect") {
+                  return (
+                    <Rect
+                      key={s.id}
+                      x={(s.x ?? 0) * rect.width}
+                      y={(s.y ?? 0) * rect.height}
+                      width={(s.w ?? 0) * rect.width}
+                      height={(s.h ?? 0) * rect.height}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={3}
+                    />
+                  );
+                }
+                if (s.kind === "ellipse") {
+                  return (
+                    <Ellipse
+                      key={s.id}
+                      cx={((s.x ?? 0) + (s.w ?? 0) / 2) * rect.width}
+                      cy={((s.y ?? 0) + (s.h ?? 0) / 2) * rect.height}
+                      rx={Math.abs((s.w ?? 0) * rect.width) / 2}
+                      ry={Math.abs((s.h ?? 0) * rect.height) / 2}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={3}
+                    />
+                  );
+                }
+                if (s.kind === "text" || s.kind === "comment") {
+                  return (
+                    <SvgText
+                      key={s.id}
+                      x={(s.x ?? 0) * rect.width}
+                      y={(s.y ?? 0) * rect.height + 16}
+                      fill={s.kind === "comment" ? "#fff" : s.color}
+                      fontSize={s.kind === "comment" ? 13 : 18}
+                      fontWeight="600"
+                    >
+                      {s.text}
+                    </SvgText>
+                  );
+                }
+                return null;
+              };
               return (
                 <View
                   pointerEvents={annotateModeActive ? "auto" : "none"}
@@ -2502,27 +2558,13 @@ export default function App(): React.JSX.Element {
                     const stroke = currentStrokeRef.current;
                     currentStrokeRef.current = null;
                     if (!stroke || stroke.points.length < 2) return;
-                    setAnnotationStrokes((prev) => [...prev, { ...stroke, color: ANNOTATION_COLOR, createdAt: Date.now() }]);
-                    sessionRef.current?.sendSystemCommand({ kind: "annotation-stroke", id: stroke.id, points: stroke.points, color: ANNOTATION_COLOR });
+                    const shape: AnnotationShape = { id: stroke.id, kind: "pen", color: ANNOTATION_COLOR, points: stroke.points };
+                    setAnnotationShapes((prev) => [...prev, shape]);
+                    sessionRef.current?.sendSystemCommand({ kind: "annotation-shape", shape });
                   }}
                 >
                   <Svg width="100%" height="100%">
-                    {annotationStrokes.map((s) => {
-                      const age = now - s.createdAt;
-                      const opacity = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / (ANNOTATION_STROKE_TTL_MS - fadeStart)) : 1;
-                      return (
-                        <Polyline
-                          key={s.id}
-                          points={s.points.map((p) => `${p.x * rect.width},${p.y * rect.height}`).join(" ")}
-                          fill="none"
-                          stroke={s.color}
-                          strokeOpacity={opacity}
-                          strokeWidth={3}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      );
-                    })}
+                    {annotationShapes.map(renderShape)}
                     {current && current.points.length >= 2 && (
                       <Polyline
                         points={current.points.map((p) => `${p.x * rect.width},${p.y * rect.height}`).join(" ")}

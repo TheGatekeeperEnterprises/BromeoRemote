@@ -810,9 +810,9 @@
       <div class="form-row">
         <div class="form-group"><label>Plan</label>
           <select id="el-plan">
-            <option value="Personal">Personal</option>
-            <option value="Professional">Professional</option>
-            <option value="Enterprise">Enterprise</option>
+            <option value="Pro">Pro</option>
+            <option value="Unlimited">Unlimited</option>
+            <!-- Business tier: add <option value="Business">Business</option> here once it's live in plan_pricing. -->
           </select>
         </div>
         <div class="form-group"><label>Status</label>
@@ -904,8 +904,9 @@
       <div class="form-row">
         <div class="form-group"><label>Plan</label>
           <select id="al-plan">
-            <option value="Personal">Personal</option>
-            <option value="Professional">Professional</option>
+            <option value="Pro">Pro</option>
+            <option value="Unlimited">Unlimited</option>
+            <!-- Business tier: add <option value="Business">Business</option> here once it's live in plan_pricing. -->
           </select>
         </div>
         <div class="form-group"><label>Status</label>
@@ -1917,7 +1918,7 @@ async function submitNewUser() {
   if (!data.ok) return alert(data.error);
   if (addLicense) {
     const expires = new Date(); expires.setDate(expires.getDate() + 14);
-    await fetch(`/admin/api/users/${data.user.id}/licenses`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'Personal', status: 'Trial', isTrial: true, trialDays: 14, expiresAt: expires.toISOString(), notes: 'Trial aangemaakt door admin' }) });
+    await fetch(`/admin/api/users/${data.user.id}/licenses`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plan: 'Pro', status: 'Trial', isTrial: true, trialDays: 14, expiresAt: expires.toISOString(), notes: 'Trial aangemaakt door admin' }) });
   }
   closeModal('newUser');
   navigate('user-detail', data.user.id);

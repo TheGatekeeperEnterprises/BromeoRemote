@@ -124,7 +124,7 @@ async function initDatabase() {
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       license_key uuid NOT NULL DEFAULT gen_random_uuid(),
-      plan text NOT NULL DEFAULT 'Personal',
+      plan text NOT NULL DEFAULT 'Pro',
       status text NOT NULL DEFAULT 'Active',
       is_trial boolean NOT NULL DEFAULT false,
       trial_days integer NOT NULL DEFAULT 14,
@@ -142,6 +142,13 @@ async function initDatabase() {
   // than reusing one constant).
   await query(`ALTER TABLE licenses ADD COLUMN IF NOT EXISTS license_key uuid NOT NULL DEFAULT gen_random_uuid();`);
   await query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_licenses_license_key ON licenses (license_key);`);
+  // Was 'Personal' — a legacy plan name from the admin panel's old manual
+  // license dropdown (Personal/Professional/Enterprise), now retired in
+  // favor of the real pricing tiers (Pro/Unlimited, see plan_pricing).
+  // Existing 'Personal'/'Professional'/'Enterprise' rows still verify
+  // correctly (verifyLicenseInDb's isPro/isUnlimited checks keep mapping
+  // them) — this only changes the default for *new* rows going forward.
+  await query(`ALTER TABLE licenses ALTER COLUMN plan SET DEFAULT 'Pro';`);
 
   // License transactions
   await query(`
@@ -620,7 +627,7 @@ async function adminCreateLicense({ userId, plan, status, isTrial, trialDays, ex
     `INSERT INTO licenses (user_id, plan, status, is_trial, trial_days, expires_at, notes)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING *`,
-    [userId, plan || "Personal", status || "Active", isTrial || false, trialDays || 14, expiresAt || null, notes || null]
+    [userId, plan || "Pro", status || "Active", isTrial || false, trialDays || 14, expiresAt || null, notes || null]
   );
   return result?.rows[0];
 }
@@ -1202,8 +1209,18 @@ async function verifyLicenseInDb({ licenseKey, email, hwidHash, platform = "wind
     appVersion,
   });
 
+  // Two plan-naming schemes exist side by side: the current pricing/checkout
+  // system's "Pro"/"Unlimited" (see plan_pricing table, licensing.js), and
+  // the admin panel's older manual-license dropdown, "Personal"/
+  // "Professional"/"Enterprise" (adminCreateLicense's default plan, and
+  // admin/index.html's #el-plan/#nu-plan selects) — both need to map onto
+  // the same paid/free gating here. "Personal" is that scheme's entry paid
+  // tier (equivalent to "Pro"/"Professional"), not the free tier — leaving
+  // it out silently gated every "Personal"-plan account (including admin-
+  // granted trials that were later marked Active) down to the free 15-
+  // minute session limit.
   const isUnlimited = license.plan === "Unlimited" || license.plan === "Enterprise";
-  const isPro = license.plan === "Pro" || license.plan === "Professional" || isUnlimited;
+  const isPro = license.plan === "Pro" || license.plan === "Professional" || license.plan === "Personal" || isUnlimited;
   const isFree = !isPro;
 
   const features = {

@@ -210,10 +210,27 @@ export type SystemCommand =
   | { kind: "permissions-update"; permissions: SessionPermissions }
   // Lightweight annotation/whiteboard overlay drawn on top of the shared
   // video — see client/src/shared/protocol.ts's copy of this type for the
-  // full explanation. Points are normalized [0,1] coordinates relative to
-  // the video frame.
-  | { kind: "annotation-stroke"; id: string; points: { x: number; y: number }[]; color: string }
+  // full explanation. Coordinates are normalized [0,1] relative to the video
+  // frame. Mobile only ever *originates* "pen" shapes (its own draw tool is
+  // pen-only), but must be able to render whatever the desktop host's richer
+  // whiteboard toolbox sends (rect/ellipse/text/comment too).
+  | { kind: "annotation-shape"; shape: AnnotationShape }
+  | { kind: "annotation-erase"; id: string }
   | { kind: "annotation-clear" };
+
+export type AnnotationShapeKind = "pen" | "highlighter" | "rect" | "ellipse" | "text" | "comment";
+
+export interface AnnotationShape {
+  id: string;
+  kind: AnnotationShapeKind;
+  color: string;
+  points?: { x: number; y: number }[];
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  text?: string;
+}
 
 export type FileMessage =
   | { kind: "file-offer"; id: string; name: string; size: number }

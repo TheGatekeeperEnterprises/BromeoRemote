@@ -207,8 +207,14 @@ export class PeerSession {
 
         if ((window as any).bromeo?.getLicenseStatus) {
           (window as any).bromeo.getLicenseStatus().then((status: any) => {
-            const sessionLimitMinutes = status?.licenseStatus?.features?.sessionLimitMinutes ?? 15;
-            if (sessionLimitMinutes && sessionLimitMinutes > 0) {
+            // features.sessionLimitMinutes is `null` (not absent) for a
+            // paid Pro/Unlimited plan — that's the server's explicit "no
+            // limit" signal (see website/src/database.js's verifyLicenseInDb),
+            // so `?? 15` here would silently reapply the free-tier cap to
+            // every paying account. Only a real number ever schedules a
+            // limit; missing/null both mean "don't enforce one".
+            const sessionLimitMinutes = status?.licenseStatus?.features?.sessionLimitMinutes;
+            if (typeof sessionLimitMinutes === "number" && sessionLimitMinutes > 0) {
               const ms = sessionLimitMinutes * 60 * 1000;
               console.log(`[License] Gratis sessielimiet geactiveerd: ${sessionLimitMinutes} minuten`);
 

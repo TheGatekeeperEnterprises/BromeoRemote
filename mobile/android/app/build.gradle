@@ -82,8 +82,8 @@ android {
         applicationId = "com.bromeoremotemobile"
         minSdk = rootProject.ext.minSdkVersion
         targetSdk = rootProject.ext.targetSdkVersion
-        versionCode = 11
-        versionName = "0.0.22"
+        versionCode = 12
+        versionName = "0.0.28"
     }
     signingConfigs {
         debug {
