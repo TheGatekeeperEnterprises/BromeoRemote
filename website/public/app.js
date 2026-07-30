@@ -27,6 +27,54 @@
     // Keep all download links active and pointing to /download/:platform
   }
 
+  function formatEuro(amount) {
+    const locale = BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB";
+    return "€" + Number(amount).toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Renders the live (admin-configurable) price for one plan into every
+  // matching element on the page — the marketing pricing card, its CTA
+  // button, and the logged-in dashboard's upgrade card, if present. Shows
+  // the original price struck through next to the discounted one while an
+  // admin-scheduled discount is currently active (see /api/pricing).
+  function renderPlanPrice(plan, info) {
+    const priceStr = formatEuro(info.price);
+    const effectiveStr = formatEuro(info.effectivePrice);
+    const discountActive = Boolean(info.discountActive);
+
+    const amountEl = document.getElementById(`price-amount-${plan}`);
+    const originalEl = document.getElementById(`price-original-${plan}`);
+    const ctaPriceEl = document.getElementById(`cta-price-${plan}`);
+    const dashAmountEl = document.getElementById(`dash-price-amount-${plan}`);
+    const dashOriginalEl = document.getElementById(`dash-price-original-${plan}`);
+    const dashCtaPriceEl = document.getElementById(`dash-cta-price-${plan}`);
+
+    if (amountEl) amountEl.textContent = discountActive ? effectiveStr : priceStr;
+    if (originalEl) {
+      originalEl.textContent = priceStr;
+      originalEl.hidden = !discountActive;
+    }
+    if (ctaPriceEl) ctaPriceEl.textContent = discountActive ? effectiveStr : priceStr;
+    if (dashAmountEl) dashAmountEl.textContent = discountActive ? effectiveStr : priceStr;
+    if (dashOriginalEl) {
+      dashOriginalEl.textContent = priceStr;
+      dashOriginalEl.hidden = !discountActive;
+    }
+    if (dashCtaPriceEl) dashCtaPriceEl.textContent = (discountActive ? effectiveStr : priceStr) + "/mo";
+  }
+
+  async function loadPricing() {
+    try {
+      const res = await fetch("/api/pricing");
+      const data = await res.json();
+      if (!data.ok) return;
+      renderPlanPrice("Pro", data.plans.Pro);
+      renderPlanPrice("Unlimited", data.plans.Unlimited);
+    } catch {
+      // Network hiccup — the static fallback prices already in the HTML stay put.
+    }
+  }
+
   const contactForm = document.querySelector("#contactForm");
   const contactStatus = document.querySelector("#contactStatus");
   if (contactForm) {
@@ -74,6 +122,7 @@
   }
 
   loadSiteConfig();
+  loadPricing();
 
   const btnMollieCheckout = document.querySelector("#btnMollieCheckout");
   if (btnMollieCheckout) {

@@ -229,6 +229,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
         Transacties
       </div>
+      <div class="nav-item" data-page="plans" onclick="navigate('plans')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        Prijzen
+      </div>
       <div class="nav-item" data-page="leads" onclick="navigate('leads')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><path d="M2 6h20v12H2z"/></svg>
         Leads
@@ -416,6 +420,22 @@
       </div>
     </div>
 
+    <!-- Plans / Pricing Page -->
+    <div id="page-plans" class="page-hidden">
+      <div class="topbar"><h1>Prijzen</h1></div>
+      <div class="content">
+        <div class="card">
+          <div class="card-header">
+            <h2>Abonnementsprijzen</h2>
+          </div>
+          <table>
+            <thead><tr><th>Plan</th><th>Normale prijs</th><th>Korting</th><th>Kortingsperiode</th><th></th></tr></thead>
+            <tbody id="plansTableBody"><tr><td colspan="5" class="loading">Laden...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- Leads Page -->
     <div id="page-leads" class="page-hidden">
       <div class="topbar"><h1>Leads</h1></div>
@@ -456,10 +476,10 @@
       </div>
     </div>
 
-    <!-- Commercial Usage Page (Fase 1 — alleen meten, geen enforcement) -->
+    <!-- Commercial Usage Page (Fase 2 — meten + handmatige admin-acties) -->
     <div id="page-commercial-usage" class="page-hidden">
       <div class="topbar">
-        <h1>Commercieel Gebruik — Fase 1 (meten)</h1>
+        <h1>Commercieel Gebruik</h1>
         <select class="search-input" id="commercialDaysFilter" style="width:160px;" onchange="loadCommercialUsage();">
           <option value="7">Laatste 7 dagen</option>
           <option value="30" selected>Laatste 30 dagen</option>
@@ -467,12 +487,12 @@
         </select>
       </div>
       <div class="content">
-        <p class="muted small" style="margin-bottom:1rem;">Alleen meting — er wordt niets beperkt. Scores zijn gebaseerd op device-gedrag, niet op een account (de meeste gratis gebruikers hebben geen geregistreerd account).</p>
+        <p class="muted small" style="margin-bottom:1rem;">Er wordt niets automatisch beperkt of gemaild. Scores zijn gebaseerd op device-gedrag, niet op een account (de meeste gratis gebruikers hebben geen geregistreerd account). Gebruik Status om devices bij te houden en Actie om een account handmatig richting Pro/Unlimited te sturen.</p>
         <div class="card">
           <div class="card-header"><h2>Devices gesorteerd op score</h2></div>
           <table>
-            <thead><tr><th>Device</th><th>Account</th><th>Score</th><th>Targets (7d/30d)</th><th>Sessies (24u/7d)</th><th>Minuten (24u/7d)</th><th>Gem. duur</th><th>Actieve dagen (30d)</th><th>Max gelijktijdig</th><th>Redenen</th></tr></thead>
-            <tbody id="commercialUsageBody"><tr><td colspan="10" class="loading">Laden...</td></tr></tbody>
+            <thead><tr><th>Device</th><th>Account</th><th>Score</th><th>Targets (7d/30d)</th><th>Sessies (24u/7d)</th><th>Minuten (24u/7d)</th><th>Gem. duur</th><th>Actieve dagen (30d)</th><th>Max gelijktijdig</th><th>Redenen</th><th>Status</th><th>Actie</th></tr></thead>
+            <tbody id="commercialUsageBody"><tr><td colspan="12" class="loading">Laden...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -823,6 +843,28 @@
     </div>
   </div>
 
+  <!-- Modal: Prijs bewerken -->
+  <div class="modal-overlay hidden" id="modal-editPlan">
+    <div class="modal">
+      <h2>Prijs bewerken — <span id="pp-planLabel"></span></h2>
+      <input type="hidden" id="pp-plan">
+      <div class="form-group"><label>Normale prijs (€/maand)</label><input type="number" step="0.01" min="0.01" id="pp-price"></div>
+      <div class="form-group"><label>Kortingsprijs (€/maand, optioneel)</label><input type="number" step="0.01" min="0.01" id="pp-discountPrice" placeholder="Leeg = geen korting"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Korting start</label><input type="datetime-local" id="pp-discountStart"></div>
+        <div class="form-group"><label>Korting eindigt</label><input type="datetime-local" id="pp-discountEnd"></div>
+      </div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:-.5rem;">
+        Een klant die zich aanmeldt tijdens een actieve korting behoudt die prijs zolang het abonnement loopt — dit wijzigt niets aan al bestaande abonnementen.
+      </p>
+      <div class="modal-footer">
+        <button class="btn btn-danger btn-sm" onclick="clearPlanDiscount()">Korting verwijderen</button>
+        <button class="btn btn-outline" onclick="closeModal('editPlan')">Annuleren</button>
+        <button class="btn btn-primary" onclick="submitEditPlan()">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal: Nieuwe beheerder -->
   <div class="modal-overlay hidden" id="modal-newAdmin">
     <div class="modal">
@@ -919,6 +961,7 @@ let currentPage = 'dashboard';
 let usersPage = 1;
 let searchTimer;
 let currentUserId = null;
+let commercialWarningUserId = null;
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function navigate(page, id, push = true) {
@@ -942,6 +985,7 @@ function navigate(page, id, push = true) {
   if (page === 'user-detail' && id) loadUserDetail(id);
   if (page === 'sessions') loadSessions();
   if (page === 'transactions') loadTransactions();
+  if (page === 'plans') loadPlans();
   if (page === 'leads') { loadContactRequests(); loadNewsletterSignups(); }
   if (page === 'admins') loadAdmins();
   if (page === 'analytics') loadAnalytics();
@@ -959,6 +1003,8 @@ function handleRoute() {
     navigate('sessions', null, false);
   } else if (path === '/admin/transactions') {
     navigate('transactions', null, false);
+  } else if (path === '/admin/plans') {
+    navigate('plans', null, false);
   } else if (path === '/admin/leads') {
     navigate('leads', null, false);
   } else if (path === '/admin/admins') {
@@ -1215,6 +1261,14 @@ async function regenerateLicenseKeyForUser() {
 }
 
 function openWarningModal() {
+  commercialWarningUserId = null;
+  document.getElementById('warning-message').value = '';
+  openModal('warning');
+}
+
+function openCommercialWarningModal(userId) {
+  if (!userId) return;
+  commercialWarningUserId = userId;
   document.getElementById('warning-message').value = '';
   openModal('warning');
 }
@@ -1222,8 +1276,9 @@ function openWarningModal() {
 async function submitWarning() {
   const message = document.getElementById('warning-message').value.trim();
   if (!message) return alert('Vul een bericht in.');
-  if (!currentUserId) return;
-  const res = await fetch(`/admin/api/users/${currentUserId}/send-warning`, {
+  const targetUserId = commercialWarningUserId || currentUserId;
+  if (!targetUserId) return;
+  const res = await fetch(`/admin/api/users/${targetUserId}/send-warning`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message }),
   });
   const data = await res.json();
@@ -1232,7 +1287,12 @@ async function submitWarning() {
   if (data.warning && data.warning.emailSent === false) {
     alert('Waarschuwing opgeslagen, maar e-mail kon niet worden verstuurd (SMTP niet ingesteld).');
   }
-  loadUserDetail(currentUserId);
+  if (commercialWarningUserId) {
+    commercialWarningUserId = null;
+    loadCommercialUsage();
+  } else {
+    loadUserDetail(currentUserId);
+  }
 }
 
 async function blacklistIp(ip, userId) {
@@ -1303,6 +1363,77 @@ async function loadTransactions() {
     <span>Pagina ${transactionsPage} van ${totalPages} (${data.total} totaal)</span>
     <button onclick="transactionsPage++;loadTransactions()" ${transactionsPage >= totalPages ? 'disabled' : ''}>Volgende →</button>
   `;
+}
+
+// ── Plan pricing ─────────────────────────────────────────────────────────────
+async function loadPlans() {
+  document.getElementById('plansTableBody').innerHTML = '<tr><td colspan="5" class="loading">Laden...</td></tr>';
+  const res = await fetch('/admin/api/plans');
+  const data = await res.json();
+  const tbody = document.getElementById('plansTableBody');
+  if (!data.ok || !data.plans.length) { tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Geen plannen gevonden.</td></tr>'; return; }
+  tbody.innerHTML = data.plans.map(p => `<tr>
+    <td>${p.plan}</td>
+    <td>€${parseFloat(p.price).toFixed(2)}</td>
+    <td>${p.discount_price != null ? '€' + parseFloat(p.discount_price).toFixed(2) : '–'}</td>
+    <td>${discountPeriodLabel(p)}</td>
+    <td>${currentAdminRole === 'superadmin' ? `<button class="btn btn-outline btn-sm" onclick="openEditPlan(${JSON.stringify(p).replace(/"/g, '&quot;')})">Bewerken</button>` : ''}</td>
+  </tr>`).join('');
+}
+
+function discountPeriodLabel(p) {
+  if (!p.discount_price || !p.discount_starts_at || !p.discount_ends_at) return '–';
+  const start = new Date(p.discount_starts_at).toLocaleString('nl-NL');
+  const end = new Date(p.discount_ends_at).toLocaleString('nl-NL');
+  const badge = p.discountActive
+    ? '<span class="badge badge-green">Actief</span>'
+    : new Date(p.discount_starts_at) > new Date()
+      ? '<span class="badge badge-warn">Gepland</span>'
+      : '<span class="badge badge-gray">Verlopen</span>';
+  return `${badge} ${start} – ${end}`;
+}
+
+function toDatetimeLocal(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function openEditPlan(plan) {
+  document.getElementById('pp-plan').value = plan.plan;
+  document.getElementById('pp-planLabel').textContent = plan.plan;
+  document.getElementById('pp-price').value = plan.price;
+  document.getElementById('pp-discountPrice').value = plan.discount_price ?? '';
+  document.getElementById('pp-discountStart').value = toDatetimeLocal(plan.discount_starts_at);
+  document.getElementById('pp-discountEnd').value = toDatetimeLocal(plan.discount_ends_at);
+  openModal('editPlan');
+}
+
+function clearPlanDiscount() {
+  document.getElementById('pp-discountPrice').value = '';
+  document.getElementById('pp-discountStart').value = '';
+  document.getElementById('pp-discountEnd').value = '';
+}
+
+async function submitEditPlan() {
+  const plan = document.getElementById('pp-plan').value;
+  const price = document.getElementById('pp-price').value;
+  const discountPriceRaw = document.getElementById('pp-discountPrice').value;
+  const discountStartRaw = document.getElementById('pp-discountStart').value;
+  const discountEndRaw = document.getElementById('pp-discountEnd').value;
+  const discountPrice = discountPriceRaw || null;
+  const discountStartsAt = discountStartRaw ? new Date(discountStartRaw).toISOString() : null;
+  const discountEndsAt = discountEndRaw ? new Date(discountEndRaw).toISOString() : null;
+  const res = await fetch(`/admin/api/plans/${plan}`, {
+    method: 'PATCH',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ price, discountPrice, discountStartsAt, discountEndsAt }),
+  });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  closeModal('editPlan');
+  loadPlans();
 }
 
 // ── Leads ─────────────────────────────────────────────────────────────────────
@@ -1719,7 +1850,7 @@ function renderCountryOverview(countries) {
   }
 }
 
-// ── Commercial usage (Fase 1) ────────────────────────────────────────────────────
+// ── Commercial usage (Fase 2) ────────────────────────────────────────────────────
 function scoreBadge(score) {
   const cls = score >= 80 ? 'badge-red' : score >= 60 ? 'badge-warn' : score >= 40 ? 'badge-blue' : 'badge-gray';
   return `<span class="badge ${cls}">${score}</span>`;
@@ -1728,11 +1859,11 @@ function scoreBadge(score) {
 async function loadCommercialUsage() {
   const days = document.getElementById('commercialDaysFilter')?.value || 30;
   const tbody = document.getElementById('commercialUsageBody');
-  tbody.innerHTML = '<tr><td colspan="10" class="loading">Laden...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" class="loading">Laden...</td></tr>';
   const res = await fetch(`/admin/api/commercial-usage?days=${days}`);
   const data = await res.json();
-  if (!data.ok) { tbody.innerHTML = `<tr><td colspan="10" class="empty-state">${data.error}</td></tr>`; return; }
-  if (!data.devices.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Nog geen sessiedata.</td></tr>'; return; }
+  if (!data.ok) { tbody.innerHTML = `<tr><td colspan="12" class="empty-state">${data.error}</td></tr>`; return; }
+  if (!data.devices.length) { tbody.innerHTML = '<tr><td colspan="12" class="empty-state">Nog geen sessiedata.</td></tr>'; return; }
   tbody.innerHTML = data.devices.map(d => `<tr>
     <td><span class="value-mono" title="${d.deviceId}">${d.deviceId.slice(0, 12)}...</span></td>
     <td>${d.email || '<span style="color:var(--muted)">Geen account</span>'}</td>
@@ -1744,7 +1875,31 @@ async function loadCommercialUsage() {
     <td>${d.metrics.activeDays30d}</td>
     <td>${d.metrics.maxConcurrent}</td>
     <td>${d.reasonCodes.map(c => `<span class="badge badge-gray" style="margin:1px;">${c}</span>`).join('')}</td>
+    <td>
+      <select class="search-input badge-select ${reviewStatusClass(d.reviewStatus)}" style="width:130px;" onchange="setCommercialUsageStatus('${d.deviceId}', this)">
+        <option value="new" ${d.reviewStatus === 'new' ? 'selected' : ''}>new</option>
+        <option value="contacted" ${d.reviewStatus === 'contacted' ? 'selected' : ''}>contacted</option>
+        <option value="dismissed" ${d.reviewStatus === 'dismissed' ? 'selected' : ''}>dismissed</option>
+      </select>
+    </td>
+    <td>
+      <button class="btn btn-outline btn-sm" ${d.userId ? '' : 'disabled title="Geen gekoppeld account"'} onclick="openCommercialWarningModal('${d.userId || ''}')">Waarschuwing sturen</button>
+    </td>
   </tr>`).join('');
+}
+
+function reviewStatusClass(status) {
+  return status === 'contacted' ? 'badge-blue' : status === 'dismissed' ? 'badge-gray' : 'badge-warn';
+}
+
+async function setCommercialUsageStatus(deviceId, selectEl) {
+  const status = selectEl.value;
+  const res = await fetch(`/admin/api/commercial-usage/${encodeURIComponent(deviceId)}/status`, {
+    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ status }),
+  });
+  const data = await res.json();
+  if (!data.ok) return alert(data.error);
+  selectEl.className = `search-input badge-select ${reviewStatusClass(status)}`;
 }
 
 // ── Modals ────────────────────────────────────────────────────────────────────

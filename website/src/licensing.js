@@ -39,15 +39,18 @@ function protectForStorage(normalizedDeviceId) {
   return 'fp1:' + hash;
 }
 
-const PLAN_PRICES = {
-  Pro: '7.95',
-  Unlimited: '50.00',
+// Plan display names only — the actual price is looked up live via
+// getEffectivePlanPrice() (website/src/database.js), which resolves any
+// admin-configured temporary discount, so it's never baked in here.
+const PLAN_NAMES = {
+  Pro: 'Pro',
+  Unlimited: 'Unlimited',
 };
 
-const PLAN_NAMES = {
-  Pro: 'Pro (€7,95/mnd)',
-  Unlimited: 'Unlimited (€50,00/mnd)',
-};
+function formatPaymentDescription(plan, priceValue) {
+  const planName = PLAN_NAMES[plan] || PLAN_NAMES.Pro;
+  return `BromeoRemote ${planName} (€${priceValue.replace('.', ',')}/mnd)`;
+}
 
 function baseUrl() {
   return process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -66,10 +69,10 @@ async function createSubscriptionCheckout(email, userId, plan = 'Pro') {
     throw new Error('Mollie is niet geconfigureerd op de server. MOLLIE_API_KEY ontbreekt.');
   }
 
-  const { getUserMollieCustomerId, setUserMollieCustomerId, createLicenseTransaction } = require('./database');
+  const { getUserMollieCustomerId, setUserMollieCustomerId, createLicenseTransaction, getEffectivePlanPrice } = require('./database');
 
-  const amountValue = PLAN_PRICES[plan] || PLAN_PRICES.Pro;
-  const planName = PLAN_NAMES[plan] || PLAN_NAMES.Pro;
+  const { effectivePrice } = await getEffectivePlanPrice(plan);
+  const amountValue = effectivePrice.toFixed(2);
 
   let customerId = await getUserMollieCustomerId(userId);
   if (!customerId) {
@@ -86,7 +89,7 @@ async function createSubscriptionCheckout(email, userId, plan = 'Pro') {
     amount: { value: amountValue, currency: 'EUR' },
     customerId,
     sequenceType: 'first',
-    description: `BromeoRemote ${planName}`,
+    description: formatPaymentDescription(plan, amountValue),
     redirectUrl: baseUrl() + '/?payment=success',
     webhookUrl: baseUrl() + '/api/webhooks/mollie',
     metadata: { userId, plan },
@@ -129,14 +132,17 @@ async function handleMollieWebhook(paymentId) {
   if (!userId || !plan) return; // not one of our checkout payments (shouldn't happen, but don't crash on it)
 
   if (!alreadyProcessed && payment.sequenceType === 'first' && payment.mandateId && payment.customerId) {
-    const amountValue = PLAN_PRICES[plan] || PLAN_PRICES.Pro;
-    const planName = PLAN_NAMES[plan] || PLAN_NAMES.Pro;
+    // Locks the recurring amount to whatever Mollie says this first payment
+    // actually charged (not a fresh price lookup here) — that's the price
+    // the customer saw and agreed to at checkout, discounted or not, and
+    // it's what every future renewal should keep charging them.
+    const amountValue = payment.amount.value;
     const subscription = await mollieClient.customerSubscriptions.create({
       customerId: payment.customerId,
       mandateId: payment.mandateId,
       amount: { value: amountValue, currency: 'EUR' },
       interval: '1 month',
-      description: `BromeoRemote ${planName}`,
+      description: formatPaymentDescription(plan, amountValue),
       webhookUrl: baseUrl() + '/api/webhooks/mollie',
       metadata: { userId, plan },
     });

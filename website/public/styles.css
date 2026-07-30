@@ -1278,6 +1278,18 @@ button:focus-visible {
   font-size: 1rem;
   color: var(--text-muted);
 }
+/* Shown when an admin-scheduled discount is currently active — the original
+   price struck through, right before the discounted amount. Shared by both
+   the marketing pricing cards and the logged-in dashboard's upgrade cards. */
+.price-original {
+  text-decoration: line-through;
+  opacity: 0.6;
+  font-size: 0.55em !important;
+  font-weight: 400 !important;
+  color: var(--text-muted) !important;
+  margin-right: 0.4em;
+  display: inline-block;
+}
 .pricing-card ul {
   list-style: none;
   padding: 0;

@@ -19,6 +19,7 @@ const {
   userRegister,
   userLogin,
   userGetPortalData,
+  getEffectivePlanPrice,
 } = require("./database");
 const { sendContactNotification } = require("./mailer");
 const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
@@ -205,6 +206,18 @@ app.get("/api/site-config", apiLimiter, (_req, res) => {
     },
     links: config.links,
   });
+});
+
+// Public, unauthenticated — powers the marketing pricing cards and the
+// logged-in dashboard's upgrade cards, so a discount an admin schedules in
+// /admin shows up live on the site without a deploy.
+app.get("/api/pricing", apiLimiter, async (_req, res, next) => {
+  try {
+    const [pro, unlimited] = await Promise.all([getEffectivePlanPrice("Pro"), getEffectivePlanPrice("Unlimited")]);
+    res.json({ ok: true, plans: { Pro: pro, Unlimited: unlimited } });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.post("/api/contact", contactLimiter, async (req, res, next) => {

@@ -203,7 +203,7 @@
             <article class="pricing-card premium-card">
               <div class="popular-badge" data-i18n="pricing.pro.badge">Popular</div>
               <h3 data-i18n="pricing.pro.title">Pro</h3>
-              <div class="price">€7.95<span data-i18n="common.perMonth">/mo</span></div>
+              <div class="price"><span class="price-original" id="price-original-Pro" hidden></span><span class="price-amount" id="price-amount-Pro">€7.95</span><span data-i18n="common.perMonth">/mo</span></div>
               <p data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
               <ul>
                 <li><strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
@@ -211,12 +211,12 @@
                 <li><strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
                 <li data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</li>
               </ul>
-              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro" data-i18n="pricing.pro.cta">Subscribe (€7.95)</button>
+              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro"><span data-i18n="pricing.pro.cta">Subscribe</span> (<span id="cta-price-Pro">€7.95</span>)</button>
             </article>
 
             <article class="pricing-card">
               <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
-              <div class="price">€50<span data-i18n="common.perMonth">/mo</span></div>
+              <div class="price"><span class="price-original" id="price-original-Unlimited" hidden></span><span class="price-amount" id="price-amount-Unlimited">€50</span><span data-i18n="common.perMonth">/mo</span></div>
               <p data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
               <ul>
                 <li><strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
@@ -224,7 +224,7 @@
                 <li data-i18n="pricing.unlimited.f3">Unattended access with 2FA</li>
                 <li data-i18n="pricing.unlimited.f4">Priority support</li>
               </ul>
-              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited" data-i18n="pricing.unlimited.cta">Subscribe (€50.00)</button>
+              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited"><span data-i18n="pricing.unlimited.cta">Subscribe</span> (<span id="cta-price-Unlimited">€50.00</span>)</button>
             </article>
           </div>
         </div>
@@ -532,27 +532,27 @@
             <div class="plan-card" id="planCardPro">
               <span class="badge badge-green" data-i18n="dashboard.plan.popularBadge">Most Chosen</span>
               <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.proName">Pro</h4>
-              <div class="plan-price">€7.95 <span data-i18n="common.perMonth">/mo</span></div>
+              <div class="plan-price"><span class="price-original" id="dash-price-original-Pro" hidden></span><span class="price-amount" id="dash-price-amount-Pro">€7.95</span> <span data-i18n="common.perMonth">/mo</span></div>
               <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
                 <li><strong data-i18n="dashboard.plan.proF1">Unlimited session duration</strong></li>
                 <li data-i18n="dashboard.plan.proF2">File transfer &amp; Chat</li>
                 <li data-i18n="dashboard.plan.proF3">HWID Hardware security</li>
                 <li data-i18n="dashboard.plan.proF4">Multi-monitor &amp; curtain mode</li>
               </ul>
-              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro" data-i18n="dashboard.plan.proCta">Upgrade to Pro (€7.95/mo)</button>
+              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro"><span data-i18n="dashboard.plan.proCta">Upgrade to Pro</span> (<span id="dash-cta-price-Pro">€7.95/mo</span>)</button>
             </div>
 
             <div class="plan-card" id="planCardUnlimited">
               <span class="badge badge-cyan" data-i18n="dashboard.plan.unlimitedBadge">Unlimited</span>
               <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.unlimitedName">Unlimited</h4>
-              <div class="plan-price">€50 <span data-i18n="common.perMonth">/mo</span></div>
+              <div class="plan-price"><span class="price-original" id="dash-price-original-Unlimited" hidden></span><span class="price-amount" id="dash-price-amount-Unlimited">€50</span> <span data-i18n="common.perMonth">/mo</span></div>
               <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
                 <li><strong data-i18n="dashboard.plan.unlimitedF1">Unlimited devices &amp; sessions</strong></li>
                 <li><strong data-i18n="dashboard.plan.unlimitedF2">AI Buddy assistant built in</strong></li>
                 <li data-i18n="dashboard.plan.unlimitedF3">Unattended access with 2FA</li>
                 <li data-i18n="dashboard.plan.unlimitedF4">Priority support</li>
               </ul>
-              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited" data-i18n="dashboard.plan.unlimitedCta">Upgrade to Unlimited (€50.00/mo)</button>
+              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited"><span data-i18n="dashboard.plan.unlimitedCta">Upgrade to Unlimited</span> (<span id="dash-cta-price-Unlimited">€50.00/mo</span>)</button>
             </div>
           </div>
 

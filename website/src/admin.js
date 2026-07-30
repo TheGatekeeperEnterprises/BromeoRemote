@@ -26,11 +26,14 @@ const {
   adminDeleteAdmin,
   adminGetFullStatistics,
   adminGetCommercialUsageStats,
+  adminSetCommercialUsageStatus,
   adminSendUserWarning,
   adminRegenerateLicenseKeyForUser,
   adminRevokeLicense,
   adminBlacklistIp,
   adminUnblacklistIp,
+  getAllPlanPricing,
+  adminUpdatePlanPricing,
   databaseEnabled,
   getPool,
 } = require("./database");
@@ -121,7 +124,7 @@ router.get("/login", (req, res) => {
 // Serve static assets in admin directory (e.g. world.svg)
 router.use(express.static(adminDir, { index: false }));
 
-router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/leads", "/admins", "/analytics", "/commercial-usage"], requireAuth, (req, res) => {
+router.get(["/", "/users", "/users/:id", "/sessions", "/transactions", "/plans", "/leads", "/admins", "/analytics", "/commercial-usage"], requireAuth, (req, res) => {
   res.sendFile(path.join(adminDir, "index.html"));
 });
 
@@ -228,6 +231,48 @@ router.post("/api/licenses/:id/reset-hwid", requireAuth, async (req, res) => {
   try {
     const license = await adminResetHwid(req.params.id);
     res.json({ ok: true, license });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Plan pricing API ──────────────────────────────────────────────────────────
+// Read is plain requireAuth (every admin can see current prices), the write
+// is requireSuperAdmin-gated — unlike most business-data routes here, this
+// one directly controls real revenue, same restriction as /api/admins.
+router.get("/api/plans", requireAuth, async (req, res) => {
+  try {
+    const plans = await getAllPlanPricing();
+    res.json({ ok: true, plans });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.patch("/api/plans/:plan", requireAuth, requireSuperAdmin, async (req, res) => {
+  try {
+    const { price, discountPrice, discountStartsAt, discountEndsAt } = req.body;
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum <= 0) {
+      return res.status(400).json({ ok: false, error: "Ongeldige prijs." });
+    }
+    let discountPriceNum = null;
+    if (discountPrice !== null && discountPrice !== undefined && discountPrice !== "") {
+      discountPriceNum = Number(discountPrice);
+      if (!Number.isFinite(discountPriceNum) || discountPriceNum <= 0) {
+        return res.status(400).json({ ok: false, error: "Ongeldige kortingsprijs." });
+      }
+      if (discountPriceNum >= priceNum) {
+        return res.status(400).json({ ok: false, error: "Kortingsprijs moet lager zijn dan de normale prijs." });
+      }
+    }
+    const plan = await adminUpdatePlanPricing(req.params.plan, {
+      price: priceNum,
+      discountPrice: discountPriceNum,
+      discountStartsAt: discountStartsAt || null,
+      discountEndsAt: discountEndsAt || null,
+    });
+    res.json({ ok: true, plan });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -397,12 +442,22 @@ router.delete("/api/admins/:id", requireAuth, requireSuperAdmin, async (req, res
   }
 });
 
-// ── Commercial usage (Fase 1: alleen meten) ─────────────────────────────────────
+// ── Commercial usage (Fase 2: meten + handmatige admin-acties) ──────────────────
 router.get("/api/commercial-usage", requireAuth, async (req, res) => {
   try {
     const days = parseInt(req.query.days) || 30;
     const devices = await adminGetCommercialUsageStats({ days });
     res.json({ ok: true, devices });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+router.post("/api/commercial-usage/:deviceId/status", requireAuth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const review = await adminSetCommercialUsageStatus(req.params.deviceId, status, req.session.adminEmail);
+    res.json({ ok: true, review });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

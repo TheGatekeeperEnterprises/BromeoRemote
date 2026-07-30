@@ -258,6 +258,42 @@ async function initDatabase() {
   // the one call site that represents a genuine Mollie-driven purchase.
   await query(`ALTER TABLE licenses ADD COLUMN IF NOT EXISTS source text NOT NULL DEFAULT 'AdminCreated';`);
 
+  // Admin-editable plan pricing, with an optional temporary discount window.
+  // A subscriber who checks out while a discount is active keeps that price
+  // for as long as they stay subscribed — Mollie subscriptions charge a
+  // fixed amount set at creation time, so this table only ever affects *new*
+  // checkouts, never an existing subscriber's next recurring charge.
+  await query(`
+    CREATE TABLE IF NOT EXISTS plan_pricing (
+      plan text PRIMARY KEY,
+      price numeric(10,2) NOT NULL,
+      discount_price numeric(10,2),
+      discount_starts_at timestamptz,
+      discount_ends_at timestamptz,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+  // Seeds today's live prices so nothing changes on first deploy — a no-op
+  // once the admin has edited a row (ON CONFLICT DO NOTHING, not DO UPDATE).
+  await query(`
+    INSERT INTO plan_pricing (plan, price) VALUES ('Pro', 7.95), ('Unlimited', 50.00)
+    ON CONFLICT (plan) DO NOTHING;
+  `);
+
+  // Commercial-use Phase 2: lets an admin mark a flagged device as reviewed
+  // (so the Commercial Usage page isn't a cold start on every visit) — the
+  // score itself stays computed on-demand in adminGetCommercialUsageStats,
+  // this table only ever stores the admin's own review state, never a signal
+  // that affects the score.
+  await query(`
+    CREATE TABLE IF NOT EXISTS commercial_usage_reviews (
+      source_device_id text PRIMARY KEY,
+      status text NOT NULL DEFAULT 'new',
+      reviewed_by text,
+      updated_at timestamptz NOT NULL DEFAULT now()
+    );
+  `);
+
   await query("CREATE INDEX IF NOT EXISTS idx_contact_requests_created_at ON contact_requests (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_download_events_created_at ON download_events (created_at DESC);");
   await query("CREATE INDEX IF NOT EXISTS idx_licenses_user_id ON licenses (user_id);");
@@ -947,8 +983,30 @@ async function adminGetFullStatistics({ days = 30, filterInternal = false, filte
 // Computed on-demand (not a background job / stored score) — this is for manual
 // admin review of the signal quality, not automated flagging yet.
 
+async function adminGetCommercialUsageReviewStatuses() {
+  if (!databaseEnabled()) return new Map();
+  const result = await query("SELECT source_device_id, status FROM commercial_usage_reviews");
+  return new Map((result?.rows || []).map((r) => [r.source_device_id, r.status]));
+}
+
+const COMMERCIAL_USAGE_STATUSES = ["new", "contacted", "dismissed"];
+
+async function adminSetCommercialUsageStatus(deviceId, status, adminEmail) {
+  if (!COMMERCIAL_USAGE_STATUSES.includes(status)) {
+    throw new Error("Ongeldige status.");
+  }
+  const result = await query(
+    `INSERT INTO commercial_usage_reviews (source_device_id, status, reviewed_by, updated_at)
+     VALUES ($1, $2, $3, now())
+     ON CONFLICT (source_device_id) DO UPDATE SET status = EXCLUDED.status, reviewed_by = EXCLUDED.reviewed_by, updated_at = now()
+     RETURNING *`,
+    [deviceId, status, adminEmail || null]
+  );
+  return result?.rows[0] || null;
+}
+
 async function adminGetCommercialUsageStats({ days = 30 } = {}) {
-  const [perDevice, sharedTargets, concurrency] = await Promise.all([
+  const [perDevice, sharedTargets, concurrency, reviewStatuses] = await Promise.all([
     query(
       `SELECT
          rs.source_device_id,
@@ -998,6 +1056,7 @@ async function adminGetCommercialUsageStats({ days = 30 } = {}) {
        GROUP BY source_device_id`,
       [days]
     ),
+    adminGetCommercialUsageReviewStatuses(),
   ]);
 
   const sharedTargetDevices = new Set((sharedTargets?.rows || []).map((r) => r.source_device_id));
@@ -1040,6 +1099,7 @@ async function adminGetCommercialUsageStats({ days = 30 } = {}) {
       metrics,
       score,
       reasonCodes,
+      reviewStatus: reviewStatuses.get(r.source_device_id) || "new",
     };
   });
 
@@ -1296,6 +1356,71 @@ async function downgradeUserLicenseToFree(userId) {
   return result?.rows[0] || null;
 }
 
+// ── Plan pricing / discounts ────────────────────────────────────────────────
+
+const FALLBACK_PLAN_PRICES = { Pro: 7.95, Unlimited: 50.00 };
+
+function withDiscountActive(row) {
+  const now = new Date();
+  const discountActive = Boolean(
+    row.discount_price != null &&
+    row.discount_starts_at &&
+    row.discount_ends_at &&
+    new Date(row.discount_starts_at) <= now &&
+    now <= new Date(row.discount_ends_at)
+  );
+  return { ...row, discountActive };
+}
+
+async function getAllPlanPricing() {
+  if (!databaseEnabled()) {
+    return Object.entries(FALLBACK_PLAN_PRICES).map(([plan, price]) =>
+      withDiscountActive({ plan, price, discount_price: null, discount_starts_at: null, discount_ends_at: null })
+    );
+  }
+  const result = await query("SELECT * FROM plan_pricing ORDER BY plan");
+  return (result?.rows || []).map(withDiscountActive);
+}
+
+async function getEffectivePlanPrice(plan) {
+  if (!databaseEnabled()) {
+    const price = FALLBACK_PLAN_PRICES[plan] ?? FALLBACK_PLAN_PRICES.Pro;
+    return { plan, price, discountPrice: null, discountActive: false, effectivePrice: price };
+  }
+  const result = await query("SELECT * FROM plan_pricing WHERE plan = $1", [plan]);
+  const row = result?.rows[0];
+  if (!row) {
+    const price = FALLBACK_PLAN_PRICES[plan] ?? FALLBACK_PLAN_PRICES.Pro;
+    return { plan, price, discountPrice: null, discountActive: false, effectivePrice: price };
+  }
+  const { discountActive } = withDiscountActive(row);
+  const price = Number(row.price);
+  const discountPrice = row.discount_price != null ? Number(row.discount_price) : null;
+  return {
+    plan: row.plan,
+    price,
+    discountPrice,
+    discountActive,
+    effectivePrice: discountActive ? discountPrice : price,
+  };
+}
+
+async function adminUpdatePlanPricing(plan, { price, discountPrice, discountStartsAt, discountEndsAt }) {
+  const result = await query(
+    `INSERT INTO plan_pricing (plan, price, discount_price, discount_starts_at, discount_ends_at, updated_at)
+     VALUES ($1, $2, $3, $4, $5, now())
+     ON CONFLICT (plan) DO UPDATE SET
+       price = EXCLUDED.price,
+       discount_price = EXCLUDED.discount_price,
+       discount_starts_at = EXCLUDED.discount_starts_at,
+       discount_ends_at = EXCLUDED.discount_ends_at,
+       updated_at = now()
+     RETURNING *`,
+    [plan, price, discountPrice ?? null, discountStartsAt ?? null, discountEndsAt ?? null]
+  );
+  return withDiscountActive(result.rows[0]);
+}
+
 async function getMostRecentLicense(userId) {
   const result = await query("SELECT * FROM licenses WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1", [userId]);
   return result?.rows[0] || null;
@@ -1348,6 +1473,7 @@ module.exports = {
   recordRemoteSession,
   resolveUserIdByLicenseOrEmail,
   adminGetCommercialUsageStats,
+  adminSetCommercialUsageStatus,
   // User Portal Auth
   userRegister,
   userLogin,
@@ -1362,6 +1488,10 @@ module.exports = {
   downgradeUserLicenseToFree,
   getMostRecentLicense,
   regenerateLicenseKey,
+  // Plan pricing / discounts
+  getAllPlanPricing,
+  getEffectivePlanPrice,
+  adminUpdatePlanPricing,
   // Password reset
   setPasswordResetToken,
   getUserByResetToken,
