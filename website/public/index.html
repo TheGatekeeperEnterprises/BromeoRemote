@@ -177,54 +177,77 @@
 
       <!-- PRIJZEN: Licenties en Mollie -->
       <section class="section pricing-section" id="licenties" aria-labelledby="pricing-title">
-        <div class="section-heading">
+        <div class="section-heading" style="text-align: center; margin: 0 auto;">
           <p class="eyebrow" data-i18n="pricing.eyebrow">Licenses &amp; Pricing</p>
           <h2 id="pricing-title" data-i18n="pricing.title">Choose the plan that fits you.</h2>
           <p data-i18n="pricing.subtitle">Pay securely via Mollie (iDEAL, Bancontact, Credit card). Your license is active immediately after payment.</p>
         </div>
 
-        <div class="pricing-layout">
-          <div class="pricing-illustration">
-            <img src="/assets/secure_license.png" data-i18n-alt="pricing.illustrationAlt" alt="Secure License Key">
-          </div>
-          <div class="pricing-grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); width: 100%;">
+        <div class="pricing-grid-container">
+          <div class="pricing-grid">
+            <!-- FREE CARD -->
             <article class="pricing-card">
-              <h3 data-i18n="pricing.free.title">Free</h3>
-              <div class="price">€0<span data-i18n="common.perMonth">/mo</span></div>
-              <p data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
-              <ul>
-                <li data-i18n="pricing.free.f1">Remote control &amp; viewing</li>
-                <li data-i18n="pricing.free.f2">Max. 15 min per session</li>
-                <li data-i18n="pricing.free.f3">Standard picture quality</li>
+              <div class="card-header-plan">
+                <h3 data-i18n="pricing.free.title">Free</h3>
+                <p class="plan-subtitle" data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
+              </div>
+              <div class="price-box">
+                <span class="price-val">€0</span>
+                <span class="price-period" data-i18n="common.perMonth">/mo</span>
+              </div>
+              <ul class="features-list">
+                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f1">Remote control &amp; viewing</span></li>
+                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f2">Max. 15 min per session</span></li>
+                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f3">Standard picture quality</span></li>
               </ul>
-              <a href="#downloads" class="download-action secondary" data-i18n="pricing.free.cta">Download Free</a>
+              <a href="#downloads" class="plan-btn btn-secondary" data-i18n="pricing.free.cta">Download Free</a>
             </article>
 
+            <!-- PRO CARD -->
             <article class="pricing-card premium-card">
               <div class="popular-badge" data-i18n="pricing.pro.badge">Popular</div>
-              <h3 data-i18n="pricing.pro.title">Pro</h3>
-              <div class="price"><span class="price-original" id="price-original-Pro" hidden></span><span class="price-amount" id="price-amount-Pro">€7.95</span><span data-i18n="common.perMonth">/mo</span></div>
-              <p data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
-              <ul>
-                <li><strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
-                <li data-i18n="pricing.pro.f2">File transfer &amp; chat</li>
-                <li><strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
-                <li data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</li>
+              <div class="card-header-plan">
+                <h3 data-i18n="pricing.pro.title">Pro</h3>
+                <p class="plan-subtitle" data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
+              </div>
+              <div class="price-box">
+                <span class="price-original" id="price-original-Pro" hidden></span>
+                <span class="price-val" id="price-amount-Pro">€7.95</span>
+                <span class="price-period" data-i18n="common.perMonth">/mo</span>
+              </div>
+              <ul class="features-list">
+                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
+                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.pro.f2">File transfer &amp; chat</span></li>
+                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
+                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</span></li>
               </ul>
-              <button type="button" class="download-action primary" data-open-account-modal data-plan="Pro"><span data-i18n="pricing.pro.cta">Subscribe</span> (<span id="cta-price-Pro">€7.95</span>)</button>
+              <button type="button" class="plan-btn btn-primary" data-open-account-modal data-plan="Pro">
+                <span data-i18n="pricing.pro.cta">Subscribe</span>
+                <span class="btn-price-tag">(<span id="cta-price-Pro">€7.95</span>)</span>
+              </button>
             </article>
 
+            <!-- UNLIMITED CARD -->
             <article class="pricing-card">
-              <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
-              <div class="price"><span class="price-original" id="price-original-Unlimited" hidden></span><span class="price-amount" id="price-amount-Unlimited">€50</span><span data-i18n="common.perMonth">/mo</span></div>
-              <p data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
-              <ul>
-                <li><strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
-                <li><strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
-                <li data-i18n="pricing.unlimited.f3">Unattended access with 2FA</li>
-                <li data-i18n="pricing.unlimited.f4">Priority support</li>
+              <div class="card-header-plan">
+                <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
+                <p class="plan-subtitle" data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
+              </div>
+              <div class="price-box">
+                <span class="price-original" id="price-original-Unlimited" hidden></span>
+                <span class="price-val" id="price-amount-Unlimited">€50</span>
+                <span class="price-period" data-i18n="common.perMonth">/mo</span>
+              </div>
+              <ul class="features-list">
+                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
+                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
+                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.unlimited.f3">Unattended access with 2FA</span></li>
+                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.unlimited.f4">Priority support</span></li>
               </ul>
-              <button type="button" class="download-action primary" style="background: var(--cyan); color: #fff;" data-open-account-modal data-plan="Unlimited"><span data-i18n="pricing.unlimited.cta">Subscribe</span> (<span id="cta-price-Unlimited">€50.00</span>)</button>
+              <button type="button" class="plan-btn btn-cyan" data-open-account-modal data-plan="Unlimited">
+                <span data-i18n="pricing.unlimited.cta">Subscribe</span>
+                <span class="btn-price-tag">(<span id="cta-price-Unlimited">€50.00</span>)</span>
+              </button>
             </article>
           </div>
         </div>

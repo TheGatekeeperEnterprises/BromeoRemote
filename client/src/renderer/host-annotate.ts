@@ -3,34 +3,34 @@
 // the main window, which broadcasts them to every connected viewer via the
 // same "annotation-shape" system command a viewer's own draw tool uses (see
 // wireAnnotationCapture/broadcastSystemCommand in app.ts) — so the rendering
-// here mirrors that one's shape model and fade behavior, it just never
-// receives shapes back, only originates them.
+// here mirrors that one's shape model. Shapes are persistent: nothing fades
+// on its own, only an explicit erase or clear removes anything.
 
 export {};
 
 import type { AnnotationShape, AnnotationShapeKind } from "../shared/protocol.js";
 
-const ANNOTATION_STROKE_TTL_MS = 6000;
 const ERASE_RADIUS = 0.02; // normalized (~2% of screen width) hit-test radius
 
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const clearBtn = document.getElementById("clear-btn") as HTMLButtonElement;
 const closeBtn = document.getElementById("close-btn") as HTMLButtonElement;
 const saveBtn = document.getElementById("save-btn") as HTMLButtonElement;
+const colorPicker = document.getElementById("color-picker") as HTMLInputElement;
 const ctx = canvas.getContext("2d")!;
 
 let tool: AnnotationShapeKind | "select" | "eraser" = "pen";
-let color = "#ff3b3b";
-let shapes: (AnnotationShape & { createdAt: number })[] = [];
+let color = colorPicker.value;
+let shapes: AnnotationShape[] = [];
 let currentPoints: { x: number; y: number }[] = [];
 let dragging = false;
 let dragStart: { x: number; y: number } | null = null;
-let redrawTimer: ReturnType<typeof setInterval> | null = null;
 let activeTextInput: HTMLInputElement | null = null;
 
 function resizeCanvas(): void {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
+  redraw();
 }
 
 function toNorm(e: MouseEvent): { x: number; y: number } {
@@ -46,15 +46,16 @@ function newId(): string {
 
 // --- Rendering — mirrors app.ts's drawAnnotationShape for a consistent
 // look on both sides of the session. ---
-function drawShape(shape: AnnotationShape, opacity: number): void {
+function drawShape(shape: AnnotationShape): void {
   const px = (v: number) => v * canvas.width;
   const py = (v: number) => v * canvas.height;
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = shape.color;
   ctx.fillStyle = shape.color;
   if (shape.kind === "pen" || shape.kind === "highlighter") {
     const points = shape.points ?? [];
     if (points.length < 2) return;
-    ctx.globalAlpha = (shape.kind === "highlighter" ? 0.35 : 1) * opacity;
+    ctx.globalAlpha = shape.kind === "highlighter" ? 0.35 : 1;
     ctx.lineWidth = shape.kind === "highlighter" ? 14 : 3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -65,11 +66,9 @@ function drawShape(shape: AnnotationShape, opacity: number): void {
     });
     ctx.stroke();
   } else if (shape.kind === "rect") {
-    ctx.globalAlpha = opacity;
     ctx.lineWidth = 3;
     ctx.strokeRect(px(shape.x ?? 0), py(shape.y ?? 0), px(shape.w ?? 0), py(shape.h ?? 0));
   } else if (shape.kind === "ellipse") {
-    ctx.globalAlpha = opacity;
     ctx.lineWidth = 3;
     const cx = px((shape.x ?? 0) + (shape.w ?? 0) / 2);
     const cy = py((shape.y ?? 0) + (shape.h ?? 0) / 2);
@@ -77,7 +76,6 @@ function drawShape(shape: AnnotationShape, opacity: number): void {
     ctx.ellipse(cx, cy, Math.abs(px(shape.w ?? 0) / 2), Math.abs(py(shape.h ?? 0) / 2), 0, 0, Math.PI * 2);
     ctx.stroke();
   } else if (shape.kind === "text") {
-    ctx.globalAlpha = opacity;
     ctx.font = "600 20px 'Segoe UI', Arial, sans-serif";
     ctx.textBaseline = "top";
     ctx.fillText(shape.text ?? "", px(shape.x ?? 0), py(shape.y ?? 0));
@@ -89,7 +87,7 @@ function drawShape(shape: AnnotationShape, opacity: number): void {
     const padding = 9;
     const boxWidth = ctx.measureText(text).width + padding * 2;
     const boxHeight = 30;
-    ctx.globalAlpha = 0.92 * opacity;
+    ctx.globalAlpha = 0.92;
     const r = 7;
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -99,7 +97,7 @@ function drawShape(shape: AnnotationShape, opacity: number): void {
     ctx.arcTo(x, y, x + boxWidth, y, r);
     ctx.closePath();
     ctx.fill();
-    ctx.globalAlpha = opacity;
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "#fff";
     ctx.textBaseline = "middle";
     ctx.fillText(text, x + padding, y + boxHeight / 2 + 1);
@@ -107,31 +105,15 @@ function drawShape(shape: AnnotationShape, opacity: number): void {
 }
 
 function redraw(): void {
-  const now = Date.now();
-  shapes = shapes.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const fadeStart = ANNOTATION_STROKE_TTL_MS * 0.7;
-  for (const shape of shapes) {
-    const age = now - shape.createdAt;
-    const opacity = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / (ANNOTATION_STROKE_TTL_MS - fadeStart)) : 1;
-    drawShape(shape, opacity);
-  }
+  for (const shape of shapes) drawShape(shape);
   if ((tool === "pen" || tool === "highlighter") && currentPoints.length >= 2) {
-    drawShape({ id: "", kind: tool, color, points: currentPoints }, 1);
+    drawShape({ id: "", kind: tool, color, points: currentPoints });
   } else if ((tool === "rect" || tool === "ellipse") && dragStart && currentPoints.length > 0) {
     const end = currentPoints[currentPoints.length - 1];
-    drawShape(rectBounds(dragStart, end, tool), 1);
+    drawShape(rectBounds(dragStart, end, tool));
   }
   ctx.globalAlpha = 1;
-  if (shapes.length === 0 && currentPoints.length === 0 && redrawTimer) {
-    clearInterval(redrawTimer);
-    redrawTimer = null;
-  }
-}
-
-function ensureRedrawLoop(): void {
-  if (redrawTimer) return;
-  redrawTimer = setInterval(redraw, 100);
 }
 
 function rectBounds(a: { x: number; y: number }, b: { x: number; y: number }, kind: "rect" | "ellipse"): AnnotationShape {
@@ -148,14 +130,13 @@ function rectBounds(a: { x: number; y: number }, b: { x: number; y: number }, ki
 
 function commitShape(shape: AnnotationShape): void {
   const finished: AnnotationShape = { ...shape, id: newId() };
-  shapes.push({ ...finished, createdAt: Date.now() });
-  ensureRedrawLoop();
+  shapes.push(finished);
   redraw();
   void window.bromeo.sendHostAnnotationShape(finished);
 }
 
 // --- Eraser: removes any shape whose path/bounds pass within ERASE_RADIUS
-// of the dragged point, immediately (not just via the fade timer). ---
+// of the dragged point, immediately. ---
 function shapeNearPoint(shape: AnnotationShape, p: { x: number; y: number }): boolean {
   const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
   if (shape.kind === "pen" || shape.kind === "highlighter") {
@@ -181,7 +162,10 @@ function eraseAt(p: { x: number; y: number }): void {
 
 // --- Inline text/comment placement ---
 function placeTextInput(clientX: number, clientY: number, kind: "text" | "comment"): void {
-  if (activeTextInput) activeTextInput.blur();
+  if (activeTextInput) {
+    // Finalize whatever was being typed before starting a new one.
+    activeTextInput.blur();
+  }
   const norm = { x: clientX / window.innerWidth, y: clientY / window.innerHeight };
   const input = document.createElement("input");
   input.type = "text";
@@ -191,7 +175,10 @@ function placeTextInput(clientX: number, clientY: number, kind: "text" | "commen
   input.style.color = color;
   document.body.appendChild(input);
   activeTextInput = input;
-  input.focus();
+  // Deferred to the next tick — focusing synchronously inside the same
+  // mousedown that created the element can lose to Chromium's own
+  // post-mousedown focus handling in a frameless always-on-top window.
+  setTimeout(() => input.focus(), 0);
 
   const commit = () => {
     if (activeTextInput !== input) return;
@@ -223,13 +210,9 @@ document.querySelectorAll<HTMLButtonElement>(".tool-btn").forEach((btn) => {
     document.body.className = `tool-${tool}`;
   };
 });
-document.querySelectorAll<HTMLButtonElement>(".color-btn").forEach((btn) => {
-  btn.onclick = () => {
-    document.querySelectorAll<HTMLButtonElement>(".color-btn").forEach((b) => b.classList.remove("active"));
-    btn.classList.add("active");
-    color = btn.dataset.color ?? color;
-  };
-});
+colorPicker.oninput = () => {
+  color = colorPicker.value;
+};
 
 // --- Canvas interaction ---
 canvas.addEventListener("mousedown", (e) => {
@@ -247,7 +230,6 @@ canvas.addEventListener("mousedown", (e) => {
   dragging = true;
   dragStart = p;
   currentPoints = [p];
-  ensureRedrawLoop();
 });
 window.addEventListener("mousemove", (e) => {
   if (!dragging) return;
@@ -257,6 +239,7 @@ window.addEventListener("mousemove", (e) => {
     return;
   }
   currentPoints.push(p);
+  redraw();
 });
 window.addEventListener("mouseup", () => {
   if (!dragging) return;
@@ -268,10 +251,12 @@ window.addEventListener("mouseup", () => {
   }
   if (tool === "pen" || tool === "highlighter") {
     if (currentPoints.length >= 2) commitShape({ id: "", kind: tool, color, points: currentPoints });
+    else redraw();
   } else if ((tool === "rect" || tool === "ellipse") && dragStart) {
     const end = currentPoints[currentPoints.length - 1] ?? dragStart;
     const bounds = rectBounds(dragStart, end, tool);
     if ((bounds.w ?? 0) > 0.005 || (bounds.h ?? 0) > 0.005) commitShape(bounds);
+    else redraw();
   }
   dragStart = null;
   currentPoints = [];

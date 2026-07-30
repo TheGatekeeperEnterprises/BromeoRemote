@@ -516,6 +516,7 @@ function setHostAnnotationOverlayActive(active: boolean): void {
     hostAnnotationWindow.setBounds(primaryDisplayBounds());
     hostAnnotationWindow.setAlwaysOnTop(true, "screen-saver");
     hostAnnotationWindow.show();
+    hostAnnotationWindow.focus();
   } else {
     hostAnnotationWindow?.hide();
   }

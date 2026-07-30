@@ -33,7 +33,7 @@
       gap: 6px;
       padding: 8px;
       border-radius: 12px;
-      background: rgba(15, 23, 42, 0.9);
+      background: rgba(15, 23, 42, 0.92);
       border: 1px solid rgba(255, 255, 255, 0.14);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
       cursor: default;
@@ -46,28 +46,41 @@
     .tool-btn {
       display: grid;
       place-items: center;
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       padding: 0;
       border: 1px solid transparent;
-      border-radius: 7px;
+      border-radius: 8px;
       background: transparent;
       color: rgba(255, 255, 255, 0.85);
       cursor: pointer;
     }
-    .tool-btn svg { width: 17px; height: 17px; }
+    .tool-btn svg {
+      width: 19px;
+      height: 19px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .tool-btn.text-glyph { font-weight: 800; font-size: 15px; font-family: "Segoe UI", Arial, sans-serif; }
     .tool-btn:hover { background: rgba(255, 255, 255, 0.1); }
     .tool-btn.active { background: rgba(47, 111, 237, 0.35); border-color: #2f6fed; color: #fff; }
     .sep { width: 1px; align-self: stretch; margin: 4px 2px; background: rgba(255, 255, 255, 0.16); }
-    .color-btn {
-      width: 20px;
-      height: 20px;
+    #color-picker {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
       padding: 0;
+      border: none;
       border-radius: 50%;
-      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: transparent;
       cursor: pointer;
     }
-    .color-btn.active { border-color: #fff; }
+    #color-picker::-webkit-color-swatch-wrapper { padding: 0; border-radius: 50%; }
+    #color-picker::-webkit-color-swatch { border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 50%; }
     .actions-row .hint {
       color: rgba(255, 255, 255, 0.62);
       font-size: 11.5px;
@@ -101,7 +114,7 @@
       border-radius: 4px;
       background: rgba(15, 23, 42, 0.55);
       color: #fff;
-      font: 600 15px "Segoe UI", Arial, sans-serif;
+      font: 600 16px "Segoe UI", Arial, sans-serif;
       outline: none;
     }
   </style>
@@ -111,33 +124,29 @@
   <div class="toolbar">
     <div class="tools-row">
       <button class="tool-btn" data-tool="select" title="Selecteren">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 8-6 2-2 6z" /></svg>
+        <svg viewBox="0 0 24 24"><path d="M4 3l7.5 18 2.2-7.3L21 11.5z" /></svg>
       </button>
       <button class="tool-btn active" data-tool="pen" title="Pen">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20l1-4L16 5l3 3L8 19l-4 1z" /></svg>
+        <svg viewBox="0 0 24 24"><path d="M15.5 4.5l4 4L8 20H4v-4z" /><path d="M13.5 6.5l4 4" /></svg>
       </button>
       <button class="tool-btn" data-tool="highlighter" title="Markeerstift">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l4 4-6 5-3-3 5-6z" /><path d="M9 11l7-8 5 5-8 7" /></svg>
+        <svg viewBox="0 0 24 24"><path d="M6.5 20.5l1.5-4.5 8-8 3 3-8 8-4.5 1.5z" /><path d="M14 9.5l-2-2 4.5-4.5a1.4 1.4 0 0 1 2 0l0 0a1.4 1.4 0 0 1 0 2z" /></svg>
       </button>
       <button class="tool-btn" data-tool="eraser" title="Gum">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="10" width="14" height="8" rx="1.5" transform="rotate(-20 12 14)" /></svg>
+        <svg viewBox="0 0 24 24"><path d="M18.5 12.5L11 20H6l-3-3a1.5 1.5 0 0 1 0-2l9.5-9.5a2 2 0 0 1 2.8 0l3.2 3.2a2 2 0 0 1 0 2.8z" /><path d="M9 20h11" /></svg>
       </button>
       <button class="tool-btn" data-tool="rect" title="Rechthoek">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="6" width="16" height="12" rx="1.5" /></svg>
+        <svg viewBox="0 0 24 24"><rect x="4.5" y="5.5" width="15" height="13" rx="2.5" /></svg>
       </button>
       <button class="tool-btn" data-tool="ellipse" title="Ellips">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="8" ry="6" /></svg>
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="8" ry="6.2" /></svg>
       </button>
-      <button class="tool-btn" data-tool="text" title="Tekst">Aa</button>
+      <button class="tool-btn text-glyph" data-tool="text" title="Tekst">Aa</button>
       <button class="tool-btn" data-tool="comment" title="Notitie">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5h16v10H9l-4 4V5z" /></svg>
+        <svg viewBox="0 0 24 24"><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-8l-4.5 3.5v-3.5H6a2 2 0 0 1-2-2z" /></svg>
       </button>
       <span class="sep"></span>
-      <button class="color-btn active" data-color="#ff3b3b" style="background:#ff3b3b" title="Rood"></button>
-      <button class="color-btn" data-color="#ffd60a" style="background:#ffd60a" title="Geel"></button>
-      <button class="color-btn" data-color="#2f6fed" style="background:#2f6fed" title="Blauw"></button>
-      <button class="color-btn" data-color="#22c55e" style="background:#22c55e" title="Groen"></button>
-      <button class="color-btn" data-color="#0f172a" style="background:#0f172a" title="Zwart"></button>
+      <input type="color" id="color-picker" value="#ff3b3b" title="Kleur kiezen" />
     </div>
     <div class="actions-row">
       <span class="hint">Whiteboard — sleep om te tekenen</span>

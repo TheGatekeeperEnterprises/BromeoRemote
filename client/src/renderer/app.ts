@@ -479,10 +479,8 @@ let filesTransferredCount = 0;
 let chatLog: { text: string; timestamp: number; mine: boolean }[] = [];
 // --- Annotation/whiteboard overlay (viewer role — see wireAnnotationCapture) ---
 const ANNOTATION_COLOR = "#ff3b3b";
-const ANNOTATION_STROKE_TTL_MS = 6000;
 let annotateModeActive = false;
-let annotationShapes: (AnnotationShape & { createdAt: number })[] = [];
-let annotationDrawTimer: ReturnType<typeof setInterval> | null = null;
+let annotationShapes: AnnotationShape[] = [];
 let currentStrokeId: string | null = null;
 let currentStrokePoints: { x: number; y: number }[] = [];
 let aiBuddyLog: { role: "user" | "assistant"; text: string; imageBase64?: string; timestamp: number }[] = [];
@@ -3533,9 +3531,9 @@ function wireRemoteControlCapture(): void {
 // A transparent canvas layered over the remote video. While draw mode is
 // active the canvas gets pointer-events, so mouse drags land on it instead
 // of bubbling down to wireRemoteControlCapture's listeners on .video-wrap
-// beneath — no changes needed there. Strokes are ephemeral: each client
-// independently fades its own copy after ANNOTATION_STROKE_TTL_MS, so no
-// "remove" message ever needs to round-trip.
+// beneath — no changes needed there. Shapes are persistent: they stay until
+// an explicit erase (single shape) or clear (everything) message arrives,
+// not on a timer — rendering is purely event-driven, no redraw loop.
 
 function resizeAnnotationCanvas(): void {
   const rect = el.remoteVideo.getBoundingClientRect();
@@ -3553,8 +3551,8 @@ function resizeAnnotationCanvas(): void {
 // (pen/highlighter/rect/ellipse/text/comment) — this viewer-side canvas only
 // ever *originates* "pen" shapes itself (see wireAnnotationCapture below),
 // but has to be able to display whatever the host draws.
-function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, shape: AnnotationShape, opacity: number): void {
-  ctx.globalAlpha = opacity;
+function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, shape: AnnotationShape): void {
+  ctx.globalAlpha = 1;
   ctx.strokeStyle = shape.color;
   ctx.fillStyle = shape.color;
   const px = (v: number) => v * canvas.width;
@@ -3563,7 +3561,7 @@ function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEl
     const points = shape.points ?? [];
     if (points.length < 2) return;
     ctx.lineWidth = shape.kind === "highlighter" ? 14 : 3;
-    ctx.globalAlpha = (shape.kind === "highlighter" ? 0.35 : 1) * opacity;
+    ctx.globalAlpha = shape.kind === "highlighter" ? 0.35 : 1;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
     ctx.beginPath();
@@ -3595,7 +3593,7 @@ function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEl
     const textWidth = ctx.measureText(text).width;
     const boxWidth = textWidth + padding * 2;
     const boxHeight = 28;
-    ctx.globalAlpha = 0.92 * opacity;
+    ctx.globalAlpha = 0.92;
     ctx.beginPath();
     const r = 6;
     ctx.moveTo(x + r, y);
@@ -3605,7 +3603,7 @@ function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasEl
     ctx.arcTo(x, y, x + boxWidth, y, r);
     ctx.closePath();
     ctx.fill();
-    ctx.globalAlpha = opacity;
+    ctx.globalAlpha = 1;
     ctx.fillStyle = "#fff";
     ctx.textBaseline = "middle";
     ctx.fillText(text, x + padding, y + boxHeight / 2 + 1);
@@ -3616,33 +3614,15 @@ function redrawAnnotations(): void {
   const canvas = el.annotationCanvas;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const now = Date.now();
-  annotationShapes = annotationShapes.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const fadeStart = ANNOTATION_STROKE_TTL_MS * 0.7;
   for (const shape of annotationShapes) {
-    const age = now - shape.createdAt;
-    const opacity = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / (ANNOTATION_STROKE_TTL_MS - fadeStart)) : 1;
-    drawAnnotationShape(ctx, canvas, shape, opacity);
+    drawAnnotationShape(ctx, canvas, shape);
   }
   // The in-progress local stroke, drawn live even before it's finalized/sent.
   if (currentStrokePoints.length >= 2) {
-    drawAnnotationShape(ctx, canvas, { id: "", kind: "pen", color: ANNOTATION_COLOR, points: currentStrokePoints }, 1);
+    drawAnnotationShape(ctx, canvas, { id: "", kind: "pen", color: ANNOTATION_COLOR, points: currentStrokePoints });
   }
   ctx.globalAlpha = 1;
-  if (annotationShapes.length === 0 && currentStrokePoints.length === 0 && !annotateModeActive) {
-    stopAnnotationRedrawLoop();
-  }
-}
-
-function startAnnotationRedrawLoop(): void {
-  if (annotationDrawTimer) return;
-  annotationDrawTimer = setInterval(redrawAnnotations, 100);
-}
-
-function stopAnnotationRedrawLoop(): void {
-  if (annotationDrawTimer) clearInterval(annotationDrawTimer);
-  annotationDrawTimer = null;
 }
 
 function toggleAnnotateMode(): void {
@@ -3654,17 +3634,17 @@ function toggleAnnotateMode(): void {
   if (annotateModeActive) {
     el.annotationCanvas.classList.remove("hidden");
     resizeAnnotationCanvas();
-    startAnnotationRedrawLoop();
+    redrawAnnotations();
   } else if (annotationShapes.length === 0) {
     el.annotationCanvas.classList.add("hidden");
   }
 }
 
 function receiveAnnotationShape(shape: AnnotationShape): void {
-  annotationShapes.push({ ...shape, createdAt: Date.now() });
+  annotationShapes.push(shape);
   el.annotationCanvas.classList.remove("hidden");
   resizeAnnotationCanvas();
-  startAnnotationRedrawLoop();
+  redrawAnnotations();
 }
 
 function eraseAnnotationShapeLocally(id: string): void {
@@ -3683,7 +3663,6 @@ function clearAnnotationsLocally(): void {
 function resetAnnotationState(): void {
   annotateModeActive = false;
   clearAnnotationsLocally();
-  stopAnnotationRedrawLoop();
   el.annotateToggleBtn.classList.remove("btn-primary");
   el.annotateToggleBtn.classList.add("btn-outline");
   el.annotateToolbar.classList.add("hidden");
@@ -3708,6 +3687,7 @@ function wireAnnotationCapture(): void {
   canvas.addEventListener("mousemove", (e) => {
     if (!annotateModeActive || !currentStrokeId) return;
     currentStrokePoints.push(toNorm(e));
+    redrawAnnotations();
   });
   // Bound to window, not just the canvas, so a drag that ends after the
   // cursor leaves the canvas bounds still finalizes the stroke.
@@ -3720,10 +3700,11 @@ function wireAnnotationCapture(): void {
     const id = currentStrokeId;
     const points = currentStrokePoints;
     const shape: AnnotationShape = { id, kind: "pen", color: ANNOTATION_COLOR, points };
-    annotationShapes.push({ ...shape, createdAt: Date.now() });
+    annotationShapes.push(shape);
     currentSession?.sendSystemCommand({ kind: "annotation-shape", shape });
     currentStrokeId = null;
     currentStrokePoints = [];
+    redrawAnnotations();
   });
 
   el.annotateToggleBtn.onclick = () => toggleAnnotateMode();
