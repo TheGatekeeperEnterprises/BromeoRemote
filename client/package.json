@@ -1,7 +1,7 @@
 {
   "name": "bromeoremote",
   "productName": "BromeoRemote",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "BromeoRemote — Access Anywhere. Cross-platform remote desktop access & support.",
   "private": true,
   "main": "dist/main/main.js",
@@ -48,7 +48,11 @@
     "nsis": {
       "artifactName": "BromeoRemote-Installer.exe",
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "displayLanguageSelector": true,
+      "installerLanguages": ["en_US", "nl_NL"],
+      "language": "1033",
+      "multiLanguageInstaller": true
     },
     "publish": {
       "provider": "github",
