@@ -21,7 +21,7 @@ const {
   userGetPortalData,
   getEffectivePlanPrice,
 } = require("./database");
-const { sendContactNotification } = require("./mailer");
+const { sendContactNotification, sendContactConfirmation } = require("./mailer");
 const { hasErrors, validateContact, validateNewsletter, validatePlatform } = require("./validation");
 const { router: adminRouter, createAdminSession } = require("./admin");
 const { createUserSession } = require("./userSession");
@@ -230,6 +230,7 @@ app.post("/api/contact", contactLimiter, async (req, res, next) => {
 
     const id = await saveContactRequest(value, requestMeta(req));
     const mailed = await sendContactNotification(value);
+    void sendContactConfirmation(value);
     res.status(202).json({ ok: true, id, mailed });
   } catch (error) {
     next(error);
