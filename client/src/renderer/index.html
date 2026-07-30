@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
   <meta charset="utf-8" />
-  <!-- connect-src must explicitly allow stun:/turn: â€” Chromium enforces CSP
+  <!-- connect-src must explicitly allow stun:/turn: — Chromium enforces CSP
        against RTCPeerConnection's ICE server URLs too, not just fetch/WS.
        Without these, every STUN/TURN request is silently blocked before it
        ever leaves the process, with no candidates gathered at all. -->
@@ -94,50 +94,54 @@
   </svg>
   <div id="sharing-bar" class="sharing-bar hidden">
     <span class="dot"></span>
-    <span id="sharing-text">Iemand bekijkt en bestuurt dit apparaat</span>
-    <button id="host-clipboard-sync-btn" class="btn btn-outline btn-sm">Klembord</button>
-    <button id="host-voice-toggle-btn" class="btn btn-outline btn-sm" title="Microfoon delen (intercom)">Microfoon</button>
-    <button id="host-camera-toggle-btn" class="btn btn-outline btn-sm" title="Camera-overlay (webinar-modus)">Camera</button>
+    <span id="sharing-text" data-i18n="sharingBar.text">Someone is viewing and controlling this device</span>
+    <button id="host-clipboard-sync-btn" class="btn btn-outline btn-sm" data-i18n="sharingBar.clipboard">Clipboard</button>
+    <button id="host-voice-toggle-btn" class="btn btn-outline btn-sm" data-i18n-title="sharingBar.micTitle" title="Share microphone (intercom)" data-i18n="sharingBar.mic">Microphone</button>
+    <button id="host-camera-toggle-btn" class="btn btn-outline btn-sm" data-i18n-title="sharingBar.cameraTitle" title="Camera overlay (webinar mode)" data-i18n="sharingBar.camera">Camera</button>
     <div class="chat-wrap">
-      <button id="host-chat-toggle-btn" class="btn btn-outline btn-sm">Chat</button>
+      <button id="host-chat-toggle-btn" class="btn btn-outline btn-sm" data-i18n="sharingBar.chat">Chat</button>
       <div id="host-chat-panel" class="chat-panel hidden">
-        <div class="notify-panel-header"><h4>Chat</h4></div>
-        <div id="host-chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
+        <div class="notify-panel-header"><h4 data-i18n="sharingBar.chat">Chat</h4></div>
+        <div id="host-chat-messages" class="chat-messages"><p class="muted small" data-i18n="sharingBar.noMessages">No messages yet.</p></div>
         <div class="chat-input-row">
-          <input id="host-chat-input" class="input" placeholder="Typ een bericht…" />
-          <button id="host-chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+          <input id="host-chat-input" class="input" data-i18n-placeholder="sharingBar.chatPlaceholder" placeholder="Type a message…" />
+          <button id="host-chat-send-btn" class="btn btn-primary btn-sm" data-i18n="sharingBar.chatSend">Send</button>
         </div>
       </div>
     </div>
-    <button id="curtain-manual-toggle" class="btn btn-outline btn-sm hidden">Scherm uit</button>
-    <button id="sharing-end" class="btn btn-danger btn-sm">Sessie beëindigen</button>
-    <button id="sharing-panic" class="btn btn-outline btn-sm">Beëindigen + wachtwoord wijzigen</button>
+    <button id="curtain-manual-toggle" class="btn btn-outline btn-sm hidden" data-i18n="sharingBar.curtainOff">Screen off</button>
+    <button id="sharing-end" class="btn btn-danger btn-sm" data-i18n="sharingBar.end">End session</button>
+    <button id="sharing-panic" class="btn btn-outline btn-sm" data-i18n="sharingBar.panic">End + change password</button>
   </div>
 
   <header class="topbar">
     <div class="brand">
-      <img src="../../assets/logo2.png" alt="BromeoRemote â€” Access Anywhere" class="brand-logo" />
+      <img src="../../assets/logo2.png" alt="BromeoRemote — Access Anywhere" class="brand-logo" />
     </div>
-    <nav class="topbar-tabs" role="tablist" aria-label="Paginanavigatie">
-      <button class="topbar-tab topbar-tab--active" role="tab" aria-selected="true"  data-tab="home"    aria-controls="tab-home">Home</button>
-      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="tools"   aria-controls="tab-tools">Tools</button>
-      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="sessies" aria-controls="tab-sessies">Sessies</button>
-      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="licentie" aria-controls="tab-licentie">Licentie</button>
+    <nav class="topbar-tabs" role="tablist" data-i18n-aria-label="topbar.nav" aria-label="Page navigation">
+      <button class="topbar-tab topbar-tab--active" role="tab" aria-selected="true"  data-tab="home"    aria-controls="tab-home" data-i18n="topbar.tabHome">Home</button>
+      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="tools"   aria-controls="tab-tools" data-i18n="topbar.tabTools">Tools</button>
+      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="sessies" aria-controls="tab-sessies" data-i18n="topbar.tabSessions">Sessions</button>
+      <button class="topbar-tab" role="tab" aria-selected="false" data-tab="licentie" aria-controls="tab-licentie" data-i18n="topbar.tabLicense">License</button>
     </nav>
     <div class="topbar-right">
-      <span id="server-status" class="status-pill status-pill--pending"><span class="status-dot"></span><span id="server-status-text">Verbinden…</span></span>
+      <span id="server-status" class="status-pill status-pill--pending"><span class="status-dot"></span><span id="server-status-text" data-i18n="topbar.connecting">Connecting…</span></span>
+      <div class="lang-switch" role="group" data-i18n-aria-label="lang.switch" aria-label="Language">
+        <button type="button" data-lang-switch="en">EN</button>
+        <button type="button" data-lang-switch="nl">NL</button>
+      </div>
       <div class="notify-wrap">
-        <button id="notify-bell-btn" class="btn btn-icon" title="Meldingen" aria-label="Meldingen">!</button>
+        <button id="notify-bell-btn" class="btn btn-icon" data-i18n-title="topbar.notifications" title="Notifications" data-i18n-aria-label="topbar.notifications" aria-label="Notifications">!</button>
         <div id="notify-panel" class="notify-panel hidden">
           <div class="notify-panel-header">
-            <h4>Meldingen</h4>
-            <button id="notify-clear-btn" class="btn btn-ghost btn-sm">Wissen</button>
+            <h4 data-i18n="topbar.notifications">Notifications</h4>
+            <button id="notify-clear-btn" class="btn btn-ghost btn-sm" data-i18n="topbar.notificationsClear">Clear</button>
           </div>
-          <div id="notify-list" class="notify-list"><p class="muted small">Nog geen meldingen.</p></div>
+          <div id="notify-list" class="notify-list"><p class="muted small" data-i18n="topbar.notificationsEmpty">No notifications yet.</p></div>
         </div>
         <span id="notify-badge" class="badge hidden">0</span>
       </div>
-      <button id="theme-toggle" class="btn btn-icon" title="Thema wisselen" aria-label="Thema wisselen">M</button>
+      <button id="theme-toggle" class="btn btn-icon" data-i18n-title="topbar.themeToggle" title="Switch theme" data-i18n-aria-label="topbar.themeToggle" aria-label="Switch theme">M</button>
     </div>
   </header>
 
@@ -145,22 +149,22 @@
   <main id="home" class="home home--compact">
     <section class="overview-panel">
       <div>
-        <p class="eyebrow">BromeoRemote desktop</p>
-        <h1>Remote support console</h1>
-        <p class="muted">Snel verbinden, veilig meekijken en dit apparaat klaarzetten voor hulp op afstand.</p>
+        <p class="eyebrow" data-i18n="home.eyebrow">BromeoRemote desktop</p>
+        <h1 data-i18n="home.title">Remote support console</h1>
+        <p class="muted" data-i18n="home.subtitle">Connect fast, safely view along, and get this device ready for remote help.</p>
       </div>
       <div class="overview-actions">
         <span class="status-card">
-          <span class="status-card-label">Apparaatnaam</span>
-          <span id="overview-label" class="status-card-value status-card-value--text">â€”</span>
+          <span class="status-card-label" data-i18n="home.deviceName">Device name</span>
+          <span id="overview-label" class="status-card-value status-card-value--text">—</span>
         </span>
         <span class="status-card">
-          <span class="status-card-label">Dit apparaat</span>
-          <span id="overview-id" class="status-card-value">â€”</span>
+          <span class="status-card-label" data-i18n="home.thisDevice">This device</span>
+          <span id="overview-id" class="status-card-value">—</span>
         </span>
         <span class="status-card">
-          <span class="status-card-label">Sessiecode</span>
-          <span id="overview-password" class="status-card-value">â€”</span>
+          <span class="status-card-label" data-i18n="home.sessionCode">Session code</span>
+          <span id="overview-password" class="status-card-value">—</span>
         </span>
       </div>
     </section>
@@ -170,65 +174,65 @@
 
       <section class="card device-card">
         <div class="card-title-row">
-          <h2><span class="card-icon">PC</span>Dit apparaat</h2>
-          <span class="info-tip" tabindex="0" aria-label="Uitleg over dit apparaat">i<span class="info-tooltip">Deel je ID en sessiecode met iemand die je mag helpen. De sessiecode wijzigt bij elke herstart.</span></span>
+          <h2><span class="card-icon">PC</span><span data-i18n="deviceCard.title">This device</span></h2>
+          <span class="info-tip" tabindex="0" aria-label="Uitleg over dit apparaat">i<span class="info-tooltip" data-i18n="deviceCard.tooltip">Share your ID and session code with someone allowed to help you. The session code changes on every restart.</span></span>
         </div>
 
         <div class="field compact-field">
           <label>
-            Apparaatnaam
-            <span class="info-tip" tabindex="0" aria-label="Uitleg apparaatnaam">i<span class="info-tooltip">Deze naam ziet de andere kant bij verbindingsaanvragen en opgeslagen apparaten.</span></span>
+            <span data-i18n="deviceCard.deviceNameLabel">Device name</span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg apparaatnaam">i<span class="info-tooltip" data-i18n="deviceCard.deviceNameTooltip">The other side sees this name in connection requests and saved devices.</span></span>
           </label>
           <div class="value-row">
-            <input id="device-label" class="input" placeholder="Bijv. Kantoor-pc" maxlength="60" />
-            <button id="device-label-save" class="btn btn-outline btn-sm">Opslaan</button>
+            <input id="device-label" class="input" data-i18n-placeholder="deviceCard.deviceNamePlaceholder" placeholder="E.g. Office PC" maxlength="60" />
+            <button id="device-label-save" class="btn btn-outline btn-sm" data-i18n="deviceCard.save">Save</button>
           </div>
         </div>
 
         <div class="identity-grid">
           <div class="field compact-field">
-            <label>Jouw BromeoRemote-ID</label>
+            <label data-i18n="deviceCard.myId">Your BromeoRemote ID</label>
             <div class="value-row">
-              <span id="my-id" class="value-mono">â€”</span>
-              <button id="copy-id" class="btn btn-outline btn-sm">Kopiëren</button>
+              <span id="my-id" class="value-mono">—</span>
+              <button id="copy-id" class="btn btn-outline btn-sm" data-i18n="deviceCard.copy">Copy</button>
             </div>
           </div>
           <div class="field compact-field">
             <label>
-              Sessiewachtwoord
-              <span class="info-tip" tabindex="0" aria-label="Uitleg sessiewachtwoord">i<span class="info-tooltip">Tijdelijke code voor snelle hulp. Gebruik onbeheerde toegang voor vaste werkplekken.</span></span>
+              <span data-i18n="deviceCard.sessionPassword">Session password</span>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg sessiewachtwoord">i<span class="info-tooltip" data-i18n="deviceCard.sessionPasswordTooltip">Temporary code for quick help. Use unattended access for fixed workstations.</span></span>
             </label>
             <div class="value-row">
-              <span id="my-password" class="value-mono">â€”</span>
-              <button id="copy-password" class="btn btn-outline btn-sm">Kopiëren</button>
+              <span id="my-password" class="value-mono">—</span>
+              <button id="copy-password" class="btn btn-outline btn-sm" data-i18n="deviceCard.copy">Copy</button>
             </div>
           </div>
         </div>
 
         <div class="quick-actions">
-          <button id="copy-invite" class="btn btn-primary btn-sm">Uitnodiging Kopiëren</button>
-          <button id="regenerate-password" class="btn btn-outline btn-sm">Nieuw sessiewachtwoord</button>
+          <button id="copy-invite" class="btn btn-primary btn-sm" data-i18n="deviceCard.copyInvite">Copy Invite</button>
+          <button id="regenerate-password" class="btn btn-outline btn-sm" data-i18n="deviceCard.newPassword">New session password</button>
         </div>
 
         <div class="field">
           <label class="checkbox-row">
             <input id="webinar-mode-toggle" type="checkbox" />
-            Webinar-modus (tot 12 kijkers, camera-overlay)
-            <span class="info-tip" tabindex="0" aria-label="Uitleg webinar-modus">i<span class="info-tooltip">Verhoogt het aantal gelijktijdige kijkers van 3 naar 12 voor presentaties/webinars. De meeste extra streams draaien in software in plaats van hardware-encodering — meer belasting voor deze pc, geen harde limiet. Extra kijkers blijven alleen-lezen, zoals gebruikelijk.</span></span>
+            <span data-i18n="deviceCard.webinarMode">Webinar mode (up to 12 viewers, camera overlay)</span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg webinar-modus">i<span class="info-tooltip" data-i18n="deviceCard.webinarModeTooltip">Raises the number of simultaneous viewers from 3 to 12 for presentations/webinars. Most extra streams run in software instead of hardware encoding — more load on this PC, no hard limit. Extra viewers stay view-only, as usual.</span></span>
           </label>
         </div>
 
         <details class="settings-accordion">
           <summary>
-            <span>Toegang en beveiliging</span>
-            <span class="summary-hint">Onbeheerd, privacy, 2FA en Ctrl+Alt+Del</span>
+            <span data-i18n="deviceCard.accordionTitle">Access and security</span>
+            <span class="summary-hint" data-i18n="deviceCard.accordionHint">Unattended, privacy, 2FA and Ctrl+Alt+Del</span>
           </summary>
 
           <div class="setting-row">
             <div class="setting-copy">
               <label>
-                Onbeheerde toegang
-                <span class="info-tip" tabindex="0" aria-label="Uitleg onbeheerde toegang">i<span class="info-tooltip">Laat vertrouwde personen verbinden met een vast wachtwoord, zonder dat jij elke sessie hoeft te bevestigen.</span></span>
+                <span data-i18n="deviceCard.unattended">Unattended access</span>
+                <span class="info-tip" tabindex="0" aria-label="Uitleg onbeheerde toegang">i<span class="info-tooltip" data-i18n="deviceCard.unattendedTooltip">Let trusted people connect with a fixed password, without you having to confirm every session.</span></span>
               </label>
             </div>
             <label class="switch">
@@ -237,22 +241,22 @@
             </label>
           </div>
           <div id="unattended-form" class="field compact-field hidden">
-            <label>Vast wachtwoord</label>
+            <label data-i18n="deviceCard.fixedPassword">Fixed password</label>
             <div class="value-row">
-              <input id="unattended-password" type="password" class="input" placeholder="Kies een sterk wachtwoord" />
-              <button id="unattended-save" class="btn btn-primary btn-sm">Opslaan</button>
+              <input id="unattended-password" type="password" class="input" data-i18n-placeholder="deviceCard.fixedPasswordPlaceholder" placeholder="Choose a strong password" />
+              <button id="unattended-save" class="btn btn-primary btn-sm" data-i18n="deviceCard.save">Save</button>
             </div>
             <div id="unattended-strength" class="password-strength hidden">
               <span class="password-strength-track"><span></span></span>
-              <strong>Voer een wachtwoord in</strong>
+              <strong data-i18n="deviceCard.enterPassword">Enter a password</strong>
             </div>
           </div>
 
           <div class="setting-row">
             <div class="setting-copy">
               <label>
-                Privacyscherm
-                <span class="info-tip" tabindex="0" aria-label="Uitleg privacyscherm">i<span class="info-tooltip">Schakelt het fysieke scherm uit bij bediening op afstand. Schermdeling blijft werken; lokale invoer kan het scherm weer wekken.</span></span>
+                <span data-i18n="deviceCard.privacyScreen">Privacy screen</span>
+                <span class="info-tip" tabindex="0" aria-label="Uitleg privacyscherm">i<span class="info-tooltip" data-i18n="deviceCard.privacyScreenTooltip">Turns off the physical screen during remote control. Screen sharing keeps working; local input can wake the screen again.</span></span>
               </label>
             </div>
             <label class="switch">
@@ -264,8 +268,8 @@
           <div class="setting-row">
             <div class="setting-copy">
               <label>
-                Alleen vertrouwde apparaten
-                <span class="info-tip" tabindex="0" aria-label="Uitleg vertrouwde apparaten">i<span class="info-tooltip">Weiger inkomende verbindingen van onbekende BromeoRemote-ID's. Handig voor vaste supportplekken.</span></span>
+                <span data-i18n="deviceCard.trustedOnly">Trusted devices only</span>
+                <span class="info-tip" tabindex="0" aria-label="Uitleg vertrouwde apparaten">i<span class="info-tooltip" data-i18n="deviceCard.trustedOnlyTooltip">Refuse incoming connections from unknown BromeoRemote IDs. Handy for fixed support desks.</span></span>
               </label>
             </div>
             <label class="switch">
@@ -276,48 +280,48 @@
 
           <div class="setting-block">
             <label>
-              Twee-factor-authenticatie (2FA)
-              <span class="info-tip" tabindex="0" aria-label="Uitleg 2FA">i<span class="info-tooltip">Extra beveiliging voor onbeheerde toegang met een 6-cijferige code uit je authenticator-app.</span></span>
+              <span data-i18n="deviceCard.twofa">Two-factor authentication (2FA)</span>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg 2FA">i<span class="info-tooltip" data-i18n="deviceCard.twofaTooltip">Extra security for unattended access with a 6-digit code from your authenticator app.</span></span>
             </label>
             <div id="totp-disabled-state">
-              <button id="totp-start-setup" class="btn btn-outline btn-sm">2FA inschakelen</button>
+              <button id="totp-start-setup" class="btn btn-outline btn-sm" data-i18n="deviceCard.twofaEnable">Enable 2FA</button>
             </div>
             <div id="totp-setup" class="hidden">
-              <p class="muted small">Scan deze code met je authenticator-app (Google Authenticator, Authy, ...).</p>
+              <p class="muted small" data-i18n="deviceCard.twofaScan">Scan this code with your authenticator app (Google Authenticator, Authy, ...).</p>
               <div id="totp-qr-wrap" class="totp-qr-wrap hidden">
-                <img id="totp-qr" class="totp-qr" alt="QR-code voor 2FA-koppeling" />
+                <img id="totp-qr" class="totp-qr" data-i18n-alt="deviceCard.twofaQrAlt" alt="QR code for 2FA linking" />
               </div>
-              <p class="muted small">Lukt scannen niet? Voeg deze sleutel dan handmatig toe als "BromeoRemote".</p>
+              <p class="muted small" data-i18n="deviceCard.twofaManual">Can't scan? Add this key manually as "BromeoRemote".</p>
               <div class="value-row">
                 <span id="totp-secret" class="value-mono totp-secret"></span>
-                <button id="totp-copy" class="btn btn-outline btn-sm">Kopiëren</button>
+                <button id="totp-copy" class="btn btn-outline btn-sm" data-i18n="deviceCard.copy">Copy</button>
               </div>
               <div class="value-row totp-verify-row">
-                <input id="totp-verify-code" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
-                <button id="totp-confirm" class="btn btn-primary btn-sm">Bevestigen</button>
+                <input id="totp-verify-code" class="input" data-i18n-placeholder="totpRequired.placeholder" placeholder="6-digit code" inputmode="numeric" maxlength="6" />
+                <button id="totp-confirm" class="btn btn-primary btn-sm" data-i18n="deviceCard.twofaConfirm">Confirm</button>
               </div>
             </div>
             <div id="totp-enabled-state" class="row-between hidden">
-              <p class="muted small totp-enabled-text">2FA is ingeschakeld.</p>
-              <button id="totp-disable" class="btn btn-outline btn-sm">Uitschakelen</button>
+              <p class="muted small totp-enabled-text" data-i18n="deviceCard.twofaEnabled">2FA is enabled.</p>
+              <button id="totp-disable" class="btn btn-outline btn-sm" data-i18n="deviceCard.disable">Disable</button>
             </div>
             <div id="trusted-devices-block" class="hidden">
-              <p class="muted small" style="margin-top: 10px;">Vertrouwde apparaten (slaan de 2FA-code over):</p>
+              <p class="muted small" style="margin-top: 10px;" data-i18n="deviceCard.trustedDevicesLabel">Trusted devices (skip the 2FA code):</p>
               <div id="trusted-devices-list"></div>
             </div>
           </div>
 
           <div class="setting-block">
             <label>
-              Ctrl+Alt+Del op afstand
-              <span class="info-tip" tabindex="0" aria-label="Uitleg Ctrl Alt Del">i<span class="info-tooltip">Experimenteel. Registreert een Windows SYSTEM-taak na UAC-bevestiging, zodat een helper Ctrl+Alt+Del kan aanvragen.</span></span>
+              <span data-i18n="deviceCard.cadTitle">Remote Ctrl+Alt+Del</span>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg Ctrl Alt Del">i<span class="info-tooltip" data-i18n="deviceCard.cadTooltip">Experimental. Registers a Windows SYSTEM task after UAC confirmation, so a helper can request Ctrl+Alt+Del.</span></span>
             </label>
             <div id="sas-disabled-state">
-              <button id="sas-install-btn" class="btn btn-outline btn-sm">Inschakelen…</button>
+              <button id="sas-install-btn" class="btn btn-outline btn-sm" data-i18n="deviceCard.cadEnable">Enable…</button>
             </div>
             <div id="sas-enabled-state" class="row-between hidden">
-              <p class="muted small">Ingeschakeld.</p>
-              <button id="sas-uninstall-btn" class="btn btn-outline btn-sm">Uitschakelen</button>
+              <p class="muted small" data-i18n="deviceCard.cadEnabled">Enabled.</p>
+              <button id="sas-uninstall-btn" class="btn btn-outline btn-sm" data-i18n="deviceCard.disable">Disable</button>
             </div>
           </div>
         </details>
@@ -325,48 +329,48 @@
 
       <section class="card connect-card">
         <div class="card-title-row">
-          <h2><span class="card-icon">ID</span>Verbinden met een ander apparaat</h2>
-          <span class="info-tip" tabindex="0" aria-label="Uitleg verbinden">i<span class="info-tooltip">Gebruik het BromeoRemote-ID en wachtwoord van de andere kant. Sessierechten kun je onder opties beperken.</span></span>
+          <h2><span class="card-icon">ID</span><span data-i18n="connectCard.title">Connect to another device</span></h2>
+          <span class="info-tip" tabindex="0" aria-label="Uitleg verbinden">i<span class="info-tooltip" data-i18n="connectCard.tooltip">Use the BromeoRemote ID and password from the other side. Session permissions can be limited under options.</span></span>
         </div>
 
 
 
         <div class="connect-field-grid">
           <div class="field compact-field">
-            <label>Partner-ID</label>
-            <input id="target-id" class="input" placeholder="bv. 482913650" inputmode="numeric" />
+            <label data-i18n="connectCard.partnerId">Partner ID</label>
+            <input id="target-id" class="input" placeholder="e.g. 482913650" inputmode="numeric" />
           </div>
           <div class="field compact-field">
-            <label>Wachtwoord</label>
-            <input id="target-password" class="input" type="password" placeholder="Wachtwoord van de partner" />
+            <label data-i18n="connectCard.password">Password</label>
+            <input id="target-password" class="input" type="password" data-i18n-placeholder="connectCard.passwordPlaceholder" placeholder="Partner's password" />
           </div>
         </div>
 
         <details class="settings-accordion connection-options">
           <summary>
-            <span>Sessieopties</span>
-            <span class="summary-hint">Alleen kijken, rechten en onthouden</span>
+            <span data-i18n="connectCard.optionsTitle">Session options</span>
+            <span class="summary-hint" data-i18n="connectCard.optionsHint">View-only, permissions and remembering</span>
           </summary>
           <div class="field compact-field">
             <label class="checkbox-row">
               <input type="checkbox" id="view-only-toggle" />
-              <span>Alleen bekijken</span>
+              <span data-i18n="connectCard.viewOnly">View only</span>
             </label>
           </div>
           <div class="field permissions-box compact-field">
-            <label>Sessierechten</label>
+            <label data-i18n="connectCard.permissions">Session permissions</label>
             <div class="permissions-grid">
               <label class="checkbox-row">
                 <input type="checkbox" id="permission-control" checked />
-                <span>Muis en toetsenbord</span>
+                <span data-i18n="connectCard.permControl">Mouse and keyboard</span>
               </label>
               <label class="checkbox-row">
                 <input type="checkbox" id="permission-clipboard" checked />
-                <span>Klembord delen</span>
+                <span data-i18n="connectCard.permClipboard">Share clipboard</span>
               </label>
               <label class="checkbox-row">
                 <input type="checkbox" id="permission-files" checked />
-                <span>Bestanden overzetten</span>
+                <span data-i18n="connectCard.permFiles">Transfer files</span>
               </label>
             </div>
           </div>
@@ -374,26 +378,26 @@
             <label class="checkbox-row">
               <input type="checkbox" id="remember-device" />
               <span>
-                Dit apparaat onthouden
-                <span class="info-tip" tabindex="0" aria-label="Uitleg apparaat onthouden">i<span class="info-tooltip">Werkt het best als de andere kant onbeheerde toegang met een vast wachtwoord gebruikt.</span></span>
+                <span data-i18n="connectCard.rememberDevice">Remember this device</span>
+                <span class="info-tip" tabindex="0" aria-label="Uitleg apparaat onthouden">i<span class="info-tooltip" data-i18n="connectCard.rememberTooltip">Works best if the other side uses unattended access with a fixed password.</span></span>
               </span>
             </label>
-            <input id="remember-label" class="input hidden" placeholder="Naam (bv. Kantoor-pc)" />
-            <input id="remember-group" class="input hidden" placeholder="Groep (optioneel, bv. Werk, Klanten, Thuis)" />
-            <input id="remember-mac" class="input hidden" placeholder="MAC-adres (optioneel, voor Wake-on-LAN)" />
+            <input id="remember-label" class="input hidden" data-i18n-placeholder="connectCard.rememberLabelPlaceholder" placeholder="Name (e.g. Office PC)" />
+            <input id="remember-group" class="input hidden" data-i18n-placeholder="connectCard.rememberGroupPlaceholder" placeholder="Group (optional, e.g. Work, Clients, Home)" />
+            <input id="remember-mac" class="input hidden" data-i18n-placeholder="connectCard.rememberMacPlaceholder" placeholder="MAC address (optional, for Wake-on-LAN)" />
           </div>
         </details>
-        <button id="connect-btn" class="btn btn-primary">Verbinden</button>
+        <button id="connect-btn" class="btn btn-primary" data-i18n="connectCard.connect">Connect</button>
         <p id="connect-status" class="muted small"></p>
       </section>
 
       <!-- Kolom 3: Mijn apparaten -->
       <section class="card devices-card">
         <div class="card-title-row">
-          <h2><span class="card-icon">★</span>Mijn apparaten</h2>
-          <span class="info-tip" tabindex="0" aria-label="Uitleg opgeslagen apparaten">i<span class="info-tooltip">Opgeslagen apparaten waarmee je eerder verbonden hebt. Klik om direct te verbinden.</span></span>
+          <h2><span class="card-icon">★</span><span data-i18n="devicesCard.title">My devices</span></h2>
+          <span class="info-tip" tabindex="0" aria-label="Uitleg opgeslagen apparaten">i<span class="info-tooltip" data-i18n="devicesCard.tooltip">Saved devices you've connected to before. Click to connect instantly.</span></span>
         </div>
-        <input id="saved-devices-filter" class="input saved-filter" placeholder="Zoek apparaat of groep…" />
+        <input id="saved-devices-filter" class="input saved-filter" data-i18n-placeholder="devicesCard.filterPlaceholder" placeholder="Search device or group…" />
         <div id="saved-devices-list" class="saved-devices saved-devices--full"></div>
       </section>
 
@@ -406,20 +410,20 @@
         <div class="tool-panel-grid">
           <article class="tool-panel">
             <div class="tool-panel-header">
-              <h3>Agent-meldingen</h3>
-              <span class="info-tip" tabindex="0" aria-label="Uitleg agent-meldingen">i<span class="info-tooltip">Laat lokale tools zoals Google Antigravity meldingen of bevestigingsvragen naar BromeoRemote sturen.</span></span>
+              <h3 data-i18n="tools.agentTitle">Agent notifications</h3>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg agent-meldingen">i<span class="info-tooltip" data-i18n="tools.agentTooltip">Let local tools like Google Antigravity send notifications or confirmation requests to BromeoRemote.</span></span>
             </div>
             <div class="field compact-field">
-              <label>Doorsturen naar BromeoRemote-ID</label>
+              <label data-i18n="tools.forwardLabel">Forward to BromeoRemote ID</label>
               <div class="value-row">
-                <input id="notify-forward-id" class="input" placeholder="Optioneel ID" inputmode="numeric" />
-                <button id="notify-forward-save" class="btn btn-primary btn-sm">Opslaan</button>
+                <input id="notify-forward-id" class="input" data-i18n-placeholder="tools.forwardPlaceholder" placeholder="Optional ID" inputmode="numeric" />
+                <button id="notify-forward-save" class="btn btn-primary btn-sm" data-i18n="tools.save">Save</button>
               </div>
             </div>
             <div class="field compact-field">
               <label>
-                Lokaal koppeladres
-                <span class="info-tip" tabindex="0" aria-label="Uitleg lokaal koppeladres">i<span class="info-tooltip">Alleen bereikbaar vanaf dit apparaat. Zie docs/ANTIGRAVITY.md voor een voorbeeld.</span></span>
+                <span data-i18n="tools.bridgeLabel">Local bridge address</span>
+                <span class="info-tip" tabindex="0" aria-label="Uitleg lokaal koppeladres">i<span class="info-tooltip" data-i18n="tools.bridgeTooltip">Only reachable from this device. See docs/ANTIGRAVITY.md for an example.</span></span>
               </label>
               <span class="value-mono bridge-url">http://localhost:8973/notify · /confirm</span>
             </div>
@@ -427,16 +431,16 @@
 
           <article class="tool-panel">
             <div class="tool-panel-header">
-              <h3>AI Buddy</h3>
-              <span class="info-tip" tabindex="0" aria-label="Uitleg AI Buddy">i<span class="info-tooltip">Gebruik je eigen OpenAI API-sleutel voor hulp tijdens sessies. De sleutel wordt lokaal versleuteld opgeslagen.</span></span>
+              <h3 data-i18n="tools.aiBuddyTitle">AI Buddy</h3>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg AI Buddy">i<span class="info-tooltip" data-i18n="tools.aiBuddyTooltip">Use your own OpenAI API key for help during sessions. The key is stored locally, encrypted.</span></span>
             </div>
             <div class="field compact-field">
-              <label>OpenAI API-sleutel</label>
+              <label data-i18n="tools.aiBuddyKeyLabel">OpenAI API key</label>
               <div class="value-row">
                 <input id="openai-key-input" class="input" type="password" placeholder="sk-…" autocomplete="off" />
-                <button id="openai-key-save" class="btn btn-primary btn-sm">Opslaan</button>
+                <button id="openai-key-save" class="btn btn-primary btn-sm" data-i18n="tools.save">Save</button>
               </div>
-              <p id="openai-key-status" class="muted small">Nog geen sleutel ingesteld.</p>
+              <p id="openai-key-status" class="muted small" data-i18n="tools.aiBuddyKeyNotSet">No key set yet.</p>
             </div>
           </article>
 
@@ -449,16 +453,16 @@
       <section class="card card-wide compact-section">
         <div class="section-heading-row">
           <div>
-            <h2><span class="card-icon">LOG</span>Recente sessies</h2>
-            <p id="session-history-summary" class="muted small section-subtitle">Nog geen sessies opgeslagen.</p>
+            <h2><span class="card-icon">LOG</span><span data-i18n="sessions.title">Recent sessions</span></h2>
+            <p id="session-history-summary" class="muted small section-subtitle" data-i18n="sessions.empty">No sessions saved yet.</p>
           </div>
           <div class="section-actions">
-            <button id="toggle-session-history" class="btn btn-outline btn-sm">Tonen</button>
-            <button id="clear-session-history" class="btn btn-ghost btn-sm">Wissen</button>
+            <button id="toggle-session-history" class="btn btn-outline btn-sm" data-i18n="sessions.show">Show</button>
+            <button id="clear-session-history" class="btn btn-ghost btn-sm" data-i18n="sessions.clear">Clear</button>
           </div>
         </div>
         <div id="session-history-list" class="session-history-list hidden">
-          <p class="muted small">Nog geen sessies.</p>
+          <p class="muted small" data-i18n="sessions.emptyList">No sessions yet.</p>
         </div>
       </section>
     </div>
@@ -469,24 +473,24 @@
         <div class="tool-panel-grid">
           <article class="tool-panel" style="grid-column: 1 / -1;">
             <div class="tool-panel-header">
-              <h3>Licentie & Account Activeer</h3>
-              <span class="info-tip" tabindex="0" aria-label="Uitleg licentie">i<span class="info-tooltip">Vul het e-mailadres en de licentiesleutel in van jouw BromeoRemote account voor directe activatie en onbeperkte sessies.</span></span>
+              <h3 data-i18n="license.title">License & Account Activation</h3>
+              <span class="info-tip" tabindex="0" aria-label="Uitleg licentie">i<span class="info-tooltip" data-i18n="license.tooltip">Enter the email address and license key from your BromeoRemote account for instant activation and unlimited sessions.</span></span>
             </div>
             <div class="field-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
               <div class="field compact-field">
-                <label>E-mailadres</label>
-                <input id="license-email-input" class="input" type="email" placeholder="jouw@email.nl" />
+                <label data-i18n="license.email">Email address</label>
+                <input id="license-email-input" class="input" type="email" placeholder="you@email.com" />
               </div>
               <div class="field compact-field">
-                <label>Licentiesleutel (UUID)</label>
+                <label data-i18n="license.key">License key (UUID)</label>
                 <input id="license-key-input" class="input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
               </div>
             </div>
             <div class="value-row" style="margin-top:0.75rem;">
-              <button id="license-verify-btn" class="btn btn-primary btn-sm">Licentie Controleren &amp; Activeren</button>
-              <button id="license-upgrade-btn" class="btn btn-outline btn-sm">Licentie Upgraden</button>
+              <button id="license-verify-btn" class="btn btn-primary btn-sm" data-i18n="license.verifyBtn">Check &amp; Activate License</button>
+              <button id="license-upgrade-btn" class="btn btn-outline btn-sm" data-i18n="license.upgradeBtn">Upgrade License</button>
             </div>
-            <p id="license-status-text" class="muted small" style="margin-top:0.5rem; font-weight:600;">Licentiestatus: Wordt gecontroleerd...</p>
+            <p id="license-status-text" class="muted small" style="margin-top:0.5rem; font-weight:600;" data-i18n="license.checking">License status: Checking...</p>
             <p id="license-expiry-text" class="muted small" style="margin-top:0.25rem;"></p>
           </article>
         </div>
@@ -495,83 +499,83 @@
   </main>
 
   <footer class="app-footer">
-    <span>BromeoRemote v<span id="app-version">â€”</span></span>
+    <span>BromeoRemote v<span id="app-version">—</span></span>
     <span id="footer-license-info" class="muted small"></span>
-    <button id="check-updates-btn" class="btn btn-ghost btn-sm">Controleer op updates</button>
+    <button id="check-updates-btn" class="btn btn-ghost btn-sm" data-i18n="footer.updates">Check for updates</button>
     <span id="update-status-text" class="muted small"></span>
     <div class="spacer"></div>
-    <button id="install-update-btn" class="btn btn-primary btn-sm hidden">Herstart &amp; installeer update</button>
+    <button id="install-update-btn" class="btn btn-primary btn-sm hidden" data-i18n="footer.installUpdate">Restart &amp; install update</button>
   </footer>
 
   <div id="free-upsell-modal" class="modal-backdrop hidden">
     <div class="modal" style="max-width: 480px; text-align: left;">
-      <h3>Upgrade naar BromeoRemote Pro</h3>
-      <p style="margin-top: 4px;">Je gebruikt momenteel de gratis versie.</p>
+      <h3 data-i18n="upsell.title">Upgrade to BromeoRemote Pro</h3>
+      <p style="margin-top: 4px;" data-i18n="upsell.subtitle">You're currently using the free version.</p>
 
       <ul style="font-size: 13.5px; line-height: 1.65; margin: 16px 0; padding-left: 20px; color: var(--text);">
-        <li><strong>Onbeperkte sessieduur</strong> — geen 15-minuten limiet meer per verbinding.</li>
-        <li><strong>Bestandsoverdracht &amp; multi-monitor</strong> — snel bestanden overzetten en wisselen tussen schermen.</li>
-        <li><strong>AI Buddy-assistent</strong> — ingebouwde AI-ondersteuning tijdens sessies.</li>
-        <li><strong>HWID-beveiliging</strong> — hardwarebinding gekoppeld aan je beheer-pc.</li>
+        <li><strong data-i18n="upsell.f1">Unlimited session duration</strong><span data-i18n="upsell.f1Desc"> — no more 15-minute limit per connection.</span></li>
+        <li><strong data-i18n="upsell.f2">File transfer &amp; multi-monitor</strong><span data-i18n="upsell.f2Desc"> — quickly transfer files and switch between screens.</span></li>
+        <li><strong data-i18n="upsell.f3">AI Buddy assistant</strong><span data-i18n="upsell.f3Desc"> — built-in AI support during sessions.</span></li>
+        <li><strong data-i18n="upsell.f4">HWID security</strong><span data-i18n="upsell.f4Desc"> — hardware binding tied to your admin PC.</span></li>
       </ul>
 
       <div style="background: var(--surface-strong); border: 1px solid var(--border-soft); border-radius: var(--radius-sm); padding: 12px 14px; font-size: 13.5px; color: var(--text-muted);">
-        Vanaf <strong style="color: var(--text);">€7,95 per maand</strong> voor Pro, of €50,00 voor Unlimited — maandelijks opzegbaar.
+        <span data-i18n="upsell.priceLine1">From </span><strong style="color: var(--text);" data-i18n="upsell.priceBold">€7.95 per month</strong><span data-i18n="upsell.priceLine2"> for Pro, or €50.00 for Unlimited — cancel monthly.</span>
       </div>
 
       <div class="modal-actions">
-        <button id="free-upsell-dismiss" class="btn btn-outline">Doorgaan met gratis (15 min limiet)</button>
-        <button id="free-upsell-buy" class="btn btn-primary">Licentie bekijken (€7,95)</button>
+        <button id="free-upsell-dismiss" class="btn btn-outline" data-i18n="upsell.dismiss">Continue with free (15 min limit)</button>
+        <button id="free-upsell-buy" class="btn btn-primary" data-i18n="upsell.buy">View license (€7.95)</button>
       </div>
     </div>
   </div>
 
   <div id="totp-required-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <h3>Verificatiecode vereist</h3>
-      <p id="totp-required-message">Dit apparaat gebruikt twee-factor-authenticatie. Voer de 6-cijferige code uit de authenticator-app in.</p>
+      <h3 data-i18n="totpRequired.title">Verification code required</h3>
+      <p id="totp-required-message" data-i18n="totpRequired.message">This device uses two-factor authentication. Enter the 6-digit code from the authenticator app.</p>
       <div class="field">
-        <input id="totp-required-input" class="input" placeholder="6-cijferige code" inputmode="numeric" maxlength="6" />
+        <input id="totp-required-input" class="input" data-i18n-placeholder="totpRequired.placeholder" placeholder="6-digit code" inputmode="numeric" maxlength="6" />
       </div>
       <div class="field">
         <label class="checkbox-row">
           <input id="totp-trust-device" type="checkbox" />
-          Dit apparaat 30 dagen onthouden (geen code meer nodig)
+          <span data-i18n="totpRequired.remember">Remember this device for 30 days (no code needed again)</span>
         </label>
       </div>
       <div class="modal-actions">
-        <button id="totp-required-cancel" class="btn btn-outline">Annuleren</button>
-        <button id="totp-required-submit" class="btn btn-primary">Verbinden</button>
+        <button id="totp-required-cancel" class="btn btn-outline" data-i18n="totpRequired.cancel">Cancel</button>
+        <button id="totp-required-submit" class="btn btn-primary" data-i18n="totpRequired.submit">Connect</button>
       </div>
     </div>
   </div>
 
   <div id="restart-confirm-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <h3>Apparaat herstarten?</h3>
-      <p><strong id="restart-target">â€”</strong> wordt over enkele seconden opnieuw opgestart. Niet-opgeslagen werk op dat apparaat kan verloren gaan. BromeoRemote probeert daarna automatisch opnieuw te verbinden.</p>
+      <h3 data-i18n="restartModal.title">Restart device?</h3>
+      <p><strong id="restart-target">—</strong><span data-i18n="restartModal.body"> will restart in a few seconds. Unsaved work on that device may be lost. BromeoRemote will then try to reconnect automatically.</span></p>
       <div class="modal-actions">
-        <button id="restart-cancel" class="btn btn-outline">Annuleren</button>
-        <button id="restart-confirm" class="btn btn-danger">Herstarten</button>
+        <button id="restart-cancel" class="btn btn-outline" data-i18n="restartModal.cancel">Cancel</button>
+        <button id="restart-confirm" class="btn btn-danger" data-i18n="restartModal.confirm">Restart</button>
       </div>
     </div>
   </div>
 
   <div id="incoming-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <h3>Inkomende verbindingsaanvraag</h3>
-      <p><strong id="incoming-from">â€”</strong> wil verbinden met dit apparaat <span id="incoming-action">en het besturen</span>.</p>
-      <p id="incoming-timeout" class="muted small modal-note">Aanvraag verloopt over 60 seconden.</p>
+      <h3 data-i18n="incomingModal.title">Incoming connection request</h3>
+      <p><strong id="incoming-from">—</strong><span data-i18n="incomingModal.wantsToConnect"> wants to connect to this device </span><span id="incoming-action" data-i18n="incomingModal.andControl">and control it</span>.</p>
+      <p id="incoming-timeout" class="muted small modal-note" data-i18n="incomingModal.timeout">Request expires in 60 seconds.</p>
       <div class="modal-actions">
-        <button id="incoming-decline" class="btn btn-outline">Weigeren</button>
-        <button id="incoming-accept" class="btn btn-primary">Toestaan</button>
+        <button id="incoming-decline" class="btn btn-outline" data-i18n="incomingModal.decline">Decline</button>
+        <button id="incoming-accept" class="btn btn-primary" data-i18n="incomingModal.accept">Allow</button>
       </div>
     </div>
   </div>
 
   <div id="bridge-confirm-modal" class="modal-backdrop hidden">
     <div class="modal">
-      <h3 id="bridge-confirm-title">Bevestiging nodig</h3>
+      <h3 id="bridge-confirm-title" data-i18n="bridgeConfirm.title">Confirmation needed</h3>
       <div class="value-row">
         <p id="bridge-confirm-source" class="muted small" style="margin:0;"></p>
         <span id="bridge-confirm-risk" class="risk-badge hidden"></span>
@@ -579,9 +583,9 @@
       <p id="bridge-confirm-message"></p>
       <pre id="bridge-confirm-command" class="notify-command hidden"></pre>
       <div class="modal-actions">
-        <button id="bridge-confirm-view" class="btn btn-outline hidden">Bekijk live</button>
-        <button id="bridge-confirm-deny" class="btn btn-outline">Weigeren</button>
-        <button id="bridge-confirm-allow" class="btn btn-primary">Bevestigen</button>
+        <button id="bridge-confirm-view" class="btn btn-outline hidden" data-i18n="bridgeConfirm.viewLive">View live</button>
+        <button id="bridge-confirm-deny" class="btn btn-outline" data-i18n="bridgeConfirm.deny">Deny</button>
+        <button id="bridge-confirm-allow" class="btn btn-primary" data-i18n="bridgeConfirm.allow">Confirm</button>
       </div>
     </div>
   </div>
@@ -589,157 +593,159 @@
   <div id="session-view" class="session-view hidden">
     <div class="session-toolbar">
       <div class="session-identity">
-        <span class="session-label">Partner</span>
+        <span class="session-label" data-i18n="session.partner">Partner</span>
         <span id="session-peer" class="session-peer"></span>
       </div>
-      <span id="viewonly-badge" class="badge-tag hidden">Alleen kijken</span>
+      <span id="viewonly-badge" class="badge-tag hidden" data-i18n="session.viewOnlyBadge">View only</span>
       <span id="session-duration" class="session-chip">00:00</span>
-      <span id="session-state" class="session-chip session-chip--pending">Verbinden</span>
-      <span id="session-stats" class="session-chip">Beeld wordt geladen</span>
+      <span id="session-state" class="session-chip session-chip--pending" data-i18n="session.connecting">Connecting</span>
+      <span id="session-stats" class="session-chip" data-i18n="session.imageLoading">Loading picture</span>
       <span id="recording-indicator" class="recording-indicator hidden"><span class="rec-dot"></span><span id="recording-time">00:00</span></span>
       <div class="spacer"></div>
       <div class="toolbar-group">
-        <button id="annotate-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Tekenen op het beeld" aria-label="Tekenen op het beeld"><svg class="toolbar-icon"><use href="#icon-pencil"></use></svg><span class="sr-only">Tekenen</span></button>
-        <button id="voice-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Microfoon delen (intercom)" aria-label="Microfoon delen"><svg class="toolbar-icon"><use href="#icon-mic"></use></svg><span class="sr-only">Microfoon</span></button>
-        <button id="chat-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Chat" aria-label="Chat"><svg class="toolbar-icon"><use href="#icon-chat"></use></svg><span class="sr-only">Chat</span></button>
-        <button id="ai-buddy-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="AI Buddy" aria-label="AI Buddy"><svg class="toolbar-icon"><use href="#icon-ai-buddy"></use></svg><span class="sr-only">AI Buddy</span></button>
-        <button id="files-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Bestanden" aria-label="Bestanden"><svg class="toolbar-icon"><use href="#icon-folder"></use></svg><span class="sr-only">Bestanden</span></button>
-        <button id="fullscreen-btn" class="btn btn-outline btn-icon-sm session-action-btn" title="Volledig scherm" aria-label="Volledig scherm"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span class="sr-only">Volledig scherm</span></button>
+        <button id="annotate-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.annotateTitle" title="Draw on the picture" data-i18n-aria-label="session.annotateTitle" aria-label="Draw on the picture"><svg class="toolbar-icon"><use href="#icon-pencil"></use></svg><span class="sr-only" data-i18n="session.annotate">Draw</span></button>
+        <button id="voice-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.micTitle" title="Share microphone (intercom)" data-i18n-aria-label="session.mic" aria-label="Microphone"><svg class="toolbar-icon"><use href="#icon-mic"></use></svg><span class="sr-only" data-i18n="session.mic">Microphone</span></button>
+        <button id="chat-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.chat" title="Chat" data-i18n-aria-label="session.chat" aria-label="Chat"><svg class="toolbar-icon"><use href="#icon-chat"></use></svg><span class="sr-only" data-i18n="session.chat">Chat</span></button>
+        <button id="ai-buddy-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.aiBuddy" title="AI Buddy" data-i18n-aria-label="session.aiBuddy" aria-label="AI Buddy"><svg class="toolbar-icon"><use href="#icon-ai-buddy"></use></svg><span class="sr-only" data-i18n="session.aiBuddy">AI Buddy</span></button>
+        <button id="files-toggle-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.files" title="Files" data-i18n-aria-label="session.files" aria-label="Files"><svg class="toolbar-icon"><use href="#icon-folder"></use></svg><span class="sr-only" data-i18n="session.files">Files</span></button>
+        <button id="fullscreen-btn" class="btn btn-outline btn-icon-sm session-action-btn" data-i18n-title="session.fullscreen" title="Full screen" data-i18n-aria-label="session.fullscreen" aria-label="Full screen"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span class="sr-only" data-i18n="session.fullscreen">Full screen</span></button>
       </div>
       <div class="toolbar-menu">
-        <button class="toolbar-menu-trigger" data-menu-target="view-menu" title="Beeldinstellingen"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span>Beeld</span></button>
+        <button class="toolbar-menu-trigger" data-menu-target="view-menu" data-i18n-title="session.viewMenu" title="Picture settings"><svg class="toolbar-icon"><use href="#icon-fullscreen"></use></svg><span data-i18n="session.viewMenuLabel">View</span></button>
         <div id="view-menu" class="toolbar-menu-panel hidden">
-          <label>Scherm</label>
-          <select id="monitor-select" class="monitor-select hidden" title="Scherm wisselen"></select>
-          <label>Weergave</label>
-          <select id="fit-mode-select" class="monitor-select" title="Beeldweergave">
-            <option value="fit">Passend</option>
-            <option value="actual">100%</option>
-            <option value="stretch">Vullen</option>
+          <label data-i18n="session.screen">Screen</label>
+          <select id="monitor-select" class="monitor-select hidden" data-i18n-title="session.screenSwitch" title="Switch screen"></select>
+          <label data-i18n="session.display">Display</label>
+          <select id="fit-mode-select" class="monitor-select" data-i18n-title="session.displayTitle" title="Picture display">
+            <option value="fit" data-i18n="session.fitOption">Fit</option>
+            <option value="actual" data-i18n="session.actualOption">100%</option>
+            <option value="stretch" data-i18n="session.stretchOption">Fill</option>
           </select>
-          <label>Kwaliteit</label>
-          <select id="quality-select" class="monitor-select" title="Kwaliteit">
-            <option value="auto">Automatisch</option>
-            <option value="high">Hoog</option>
-            <option value="low">Laag (trage verbinding)</option>
+          <label data-i18n="session.quality">Quality</label>
+          <select id="quality-select" class="monitor-select" data-i18n-title="session.qualityTitle" title="Quality">
+            <option value="auto" data-i18n="session.qualityAuto">Automatic</option>
+            <option value="high" data-i18n="session.qualityHigh">High</option>
+            <option value="low" data-i18n="session.qualityLow">Low (slow connection)</option>
           </select>
-          <label>Video-codec (volgende verbinding)
-            <span class="info-tip" tabindex="0" aria-label="Uitleg video-codec">i<span class="info-tooltip">"Scherp" geeft prioriteit aan een codec die tekst het scherpst weergeeft, maar draait meestal in software en kan de cursor in beeld iets trager laten aanvoelen. "Snel" geeft prioriteit aan een codec die op de meeste pc's hardwareversnelling gebruikt — merkbaar sneller, iets minder scherpe tekst bij inzoomen. Geldt pas vanaf de eerstvolgende keer verbinden, niet voor de huidige sessie.</span></span>
+          <label>
+            <span data-i18n="session.codecLabel">Video codec (next connection)</span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg video-codec">i<span class="info-tooltip" data-i18n="session.codecTooltip">"Sharp" prioritizes a codec that renders text most crisply, but usually runs in software and can make the on-screen cursor feel slightly slower. "Fast" prioritizes a codec that uses hardware acceleration on most PCs — noticeably faster, slightly less crisp text when zoomed in. Applies from the next time you connect, not the current session.</span></span>
           </label>
-          <select id="codec-preference-select" class="monitor-select" title="Video-codec">
-            <option value="sharp">Scherp</option>
-            <option value="fast">Snel</option>
+          <select id="codec-preference-select" class="monitor-select" data-i18n-title="session.codecTitle" title="Video codec">
+            <option value="sharp" data-i18n="session.codecSharp">Sharp</option>
+            <option value="fast" data-i18n="session.codecFast">Fast</option>
           </select>
-          <label>Resolutie
-            <span class="info-tip" tabindex="0" aria-label="Uitleg resolutie">i<span class="info-tooltip">"Scherp" neemt het scherm op in de volledige, originele resolutie — het scherpst bij inzoomen, maar kan op tragere pc's de opgevraagde framerate niet bijhouden (merkbaar als vertraging van de cursor in beeld). "Snel" beperkt de opname tot maximaal 1080p, zodat de encoder de framerate makkelijker bijhoudt. Geldt direct, ook tijdens een lopende sessie.</span></span>
+          <label>
+            <span data-i18n="session.resolution">Resolution</span>
+            <span class="info-tip" tabindex="0" aria-label="Uitleg resolutie">i<span class="info-tooltip" data-i18n="session.resolutionTooltip">"Sharp" captures the screen at full, original resolution — sharpest when zoomed in, but slower PCs may not keep up with the requested framerate (noticeable as cursor lag on screen). "Fast" caps capture at 1080p, so the encoder keeps up with the framerate more easily. Applies immediately, even during an active session.</span></span>
           </label>
-          <select id="resolution-preference-select" class="monitor-select" title="Resolutie">
-            <option value="sharp">Scherp</option>
-            <option value="fast">Snel</option>
+          <select id="resolution-preference-select" class="monitor-select" data-i18n-title="session.resolutionTitle" title="Resolution">
+            <option value="sharp" data-i18n="session.resolutionSharp">Sharp</option>
+            <option value="fast" data-i18n="session.resolutionFast">Fast</option>
           </select>
         </div>
       </div>
       <div class="toolbar-menu">
-        <button class="toolbar-menu-trigger" data-menu-target="session-menu" title="Sessie-instellingen"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span>Sessie</span></button>
+        <button class="toolbar-menu-trigger" data-menu-target="session-menu" data-i18n-title="session.sessionMenu" title="Session settings"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span data-i18n="session.sessionMenuLabel">Session</span></button>
         <div id="session-menu" class="toolbar-menu-panel hidden">
-          <button id="record-toggle-btn" class="toolbar-menu-item" title="Opnemen" aria-label="Opnemen"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span class="sr-only">Opnemen</span><span class="toolbar-visible-label">Opnemen</span></button>
-          <label>Automatische opname</label>
-          <select id="recording-mode-select" class="monitor-select" title="Sessie-opname">
-            <option value="manual">Handmatig</option>
-            <option value="auto">Automatisch</option>
+          <button id="record-toggle-btn" class="toolbar-menu-item" data-i18n-title="session.recordTitle" title="Record" data-i18n-aria-label="session.recordTitle" aria-label="Record"><svg class="toolbar-icon"><use href="#icon-record"></use></svg><span class="sr-only" data-i18n="session.record">Record</span><span class="toolbar-visible-label" data-i18n="session.record">Record</span></button>
+          <label data-i18n="session.autoRecord">Automatic recording</label>
+          <select id="recording-mode-select" class="monitor-select" data-i18n-title="session.recordingModeTitle" title="Session recording">
+            <option value="manual" data-i18n="session.recordManual">Manual</option>
+            <option value="auto" data-i18n="session.recordAuto">Automatic</option>
           </select>
-          <label>Inactiviteit</label>
-          <select id="idle-timeout-select" class="monitor-select" title="Automatisch verbreken bij inactiviteit">
-            <option value="0">Uit</option>
-            <option value="5">5 minuten</option>
-            <option value="15">15 minuten</option>
-            <option value="30">30 minuten</option>
-            <option value="60">60 minuten</option>
+          <label data-i18n="session.idleTimeout">Idle timeout</label>
+          <select id="idle-timeout-select" class="monitor-select" data-i18n-title="session.idleTimeoutTitle" title="Auto-disconnect on inactivity">
+            <option value="0" data-i18n="session.idleOff">Off</option>
+            <option value="5" data-i18n="session.idle5">5 minutes</option>
+            <option value="15" data-i18n="session.idle15">15 minutes</option>
+            <option value="30" data-i18n="session.idle30">30 minutes</option>
+            <option value="60" data-i18n="session.idle60">60 minutes</option>
           </select>
-          <button id="notes-toggle-btn" class="toolbar-menu-item" title="Sessienotitie" aria-label="Sessienotitie"><svg class="toolbar-icon"><use href="#icon-note"></use></svg><span class="sr-only">Sessienotitie</span><span>Notitie</span></button>
+          <button id="notes-toggle-btn" class="toolbar-menu-item" data-i18n-title="session.noteTitle" title="Session note" data-i18n-aria-label="session.noteTitle" aria-label="Session note"><svg class="toolbar-icon"><use href="#icon-note"></use></svg><span class="sr-only" data-i18n="session.noteTitle">Session note</span><span data-i18n="session.note">Note</span></button>
         </div>
       </div>
       <div class="toolbar-menu">
-        <button class="toolbar-menu-trigger" data-menu-target="tools-menu" title="Tools"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span>Tools</span></button>
+        <button class="toolbar-menu-trigger" data-menu-target="tools-menu" data-i18n-title="session.toolsMenu" title="Tools"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span data-i18n="session.toolsMenuLabel">Tools</span></button>
         <div id="tools-menu" class="toolbar-menu-panel hidden">
-          <button id="audio-toggle-btn" class="toolbar-menu-item" title="Geluid uit" aria-label="Geluid uit"><svg class="toolbar-icon"><use href="#icon-volume-x"></use></svg><span class="sr-only">Geluid uit</span><span class="toolbar-visible-label">Geluid uit</span></button>
-          <button id="clipboard-sync-btn" class="toolbar-menu-item" title="Klembord verzenden" aria-label="Klembord verzenden"><svg class="toolbar-icon"><use href="#icon-clipboard"></use></svg><span class="sr-only">Klembord verzenden</span><span>Klembord</span></button>
-          <button id="text-toggle-btn" class="toolbar-menu-item" title="Tekst plakken" aria-label="Tekst plakken"><svg class="toolbar-icon"><use href="#icon-text"></use></svg><span class="sr-only">Tekst plakken</span><span>Tekst plakken</span></button>
-          <button id="shortcuts-toggle-btn" class="toolbar-menu-item" title="Sneltoetsen" aria-label="Sneltoetsen"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span class="sr-only">Sneltoetsen</span><span>Sneltoetsen</span></button>
+          <button id="audio-toggle-btn" class="toolbar-menu-item" data-i18n-title="session.soundOff" title="Sound off" data-i18n-aria-label="session.soundOff" aria-label="Sound off"><svg class="toolbar-icon"><use href="#icon-volume-x"></use></svg><span class="sr-only" data-i18n="session.soundOff">Sound off</span><span class="toolbar-visible-label" data-i18n="session.soundOff">Sound off</span></button>
+          <button id="clipboard-sync-btn" class="toolbar-menu-item" data-i18n-title="session.clipboardSend" title="Send clipboard" data-i18n-aria-label="session.clipboardSend" aria-label="Send clipboard"><svg class="toolbar-icon"><use href="#icon-clipboard"></use></svg><span class="sr-only" data-i18n="session.clipboardSend">Send clipboard</span><span data-i18n="session.clipboard">Clipboard</span></button>
+          <button id="text-toggle-btn" class="toolbar-menu-item" data-i18n-title="session.textPaste" title="Paste text" data-i18n-aria-label="session.textPaste" aria-label="Paste text"><svg class="toolbar-icon"><use href="#icon-text"></use></svg><span class="sr-only" data-i18n="session.textPaste">Paste text</span><span data-i18n="session.textPaste">Paste text</span></button>
+          <button id="shortcuts-toggle-btn" class="toolbar-menu-item" data-i18n-title="session.shortcuts" title="Shortcuts" data-i18n-aria-label="session.shortcuts" aria-label="Shortcuts"><svg class="toolbar-icon"><use href="#icon-keyboard"></use></svg><span class="sr-only" data-i18n="session.shortcuts">Shortcuts</span><span data-i18n="session.shortcuts">Shortcuts</span></button>
         </div>
       </div>
       <div class="toolbar-menu">
-        <button class="toolbar-menu-trigger" data-menu-target="admin-menu" title="Beheer"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span>Beheer</span></button>
+        <button class="toolbar-menu-trigger" data-menu-target="admin-menu" data-i18n-title="session.adminMenu" title="Admin"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span data-i18n="session.adminMenuLabel">Admin</span></button>
         <div id="admin-menu" class="toolbar-menu-panel toolbar-menu-panel--right hidden">
-          <button id="restart-btn" class="toolbar-menu-item" title="Herstarten" aria-label="Herstarten"><svg class="toolbar-icon"><use href="#icon-restart"></use></svg><span class="sr-only">Herstarten</span><span>Herstarten</span></button>
-          <button id="lock-btn" class="toolbar-menu-item" title="Vergrendelen" aria-label="Vergrendelen"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span class="sr-only">Vergrendelen</span><span>Vergrendelen</span></button>
-          <button id="lock-on-end-btn" class="toolbar-menu-item" title="Vergrendel bij einde" aria-label="Vergrendel bij einde"><svg class="toolbar-icon"><use href="#icon-lock-end"></use></svg><span class="sr-only">Vergrendel bij einde</span><span class="toolbar-visible-label">Vergrendel bij einde</span></button>
-          <button id="block-input-btn" class="toolbar-menu-item" title="Externe invoer blokkeren" aria-label="Externe invoer blokkeren"><svg class="toolbar-icon"><use href="#icon-block-input"></use></svg><span class="sr-only">Externe invoer blokkeren</span><span class="toolbar-visible-label">Externe invoer blokkeren</span></button>
+          <button id="restart-btn" class="toolbar-menu-item" data-i18n-title="session.restart" title="Restart" data-i18n-aria-label="session.restart" aria-label="Restart"><svg class="toolbar-icon"><use href="#icon-restart"></use></svg><span class="sr-only" data-i18n="session.restart">Restart</span><span data-i18n="session.restart">Restart</span></button>
+          <button id="lock-btn" class="toolbar-menu-item" data-i18n-title="session.lock" title="Lock" data-i18n-aria-label="session.lock" aria-label="Lock"><svg class="toolbar-icon"><use href="#icon-lock"></use></svg><span class="sr-only" data-i18n="session.lock">Lock</span><span data-i18n="session.lock">Lock</span></button>
+          <button id="lock-on-end-btn" class="toolbar-menu-item" data-i18n-title="session.lockOnEnd" title="Lock on end" data-i18n-aria-label="session.lockOnEnd" aria-label="Lock on end"><svg class="toolbar-icon"><use href="#icon-lock-end"></use></svg><span class="sr-only" data-i18n="session.lockOnEnd">Lock on end</span><span class="toolbar-visible-label" data-i18n="session.lockOnEnd">Lock on end</span></button>
+          <button id="block-input-btn" class="toolbar-menu-item" data-i18n-title="session.blockInput" title="Block remote input" data-i18n-aria-label="session.blockInput" aria-label="Block remote input"><svg class="toolbar-icon"><use href="#icon-block-input"></use></svg><span class="sr-only" data-i18n="session.blockInput">Block remote input</span><span class="toolbar-visible-label" data-i18n="session.blockInput">Block remote input</span></button>
           <button id="ctrl-alt-del-btn" class="toolbar-menu-item" title="Ctrl+Alt+Del" aria-label="Ctrl+Alt+Del"><span class="toolbar-keycap" aria-hidden="true">CAD</span><span class="sr-only">Ctrl+Alt+Del</span><span>Ctrl+Alt+Del</span></button>
         </div>
       </div>
       <div class="toolbar-group toolbar-group--end">
-        <button id="session-disconnect-btn" class="btn btn-danger btn-icon-sm session-action-btn session-action-btn--danger" title="Verbinding verbreken" aria-label="Verbinding verbreken"><svg class="toolbar-icon"><use href="#icon-power"></use></svg><span class="sr-only">Verbinding verbreken</span></button>
+        <button id="session-disconnect-btn" class="btn btn-danger btn-icon-sm session-action-btn session-action-btn--danger" data-i18n-title="session.disconnectTitle" title="Disconnect" data-i18n-aria-label="session.disconnectTitle" aria-label="Disconnect"><svg class="toolbar-icon"><use href="#icon-power"></use></svg><span class="sr-only" data-i18n="session.disconnectTitle">Disconnect</span></button>
       </div>
     </div>
     <div class="video-wrap" data-fit="fit">
-      <div id="session-hint" class="session-hint">Beeld wordt geladen…</div>
+      <div id="session-hint" class="session-hint" data-i18n="session.imageLoadingWrap">Loading picture…</div>
       <video id="remote-video" autoplay playsinline></video>
       <audio id="voice-audio" autoplay></audio>
       <canvas id="annotation-canvas" class="annotation-canvas hidden"></canvas>
       <div id="annotate-toolbar" class="annotate-toolbar hidden">
-        <span class="muted small">Tekenmodus — sleep om te tekenen, verdwijnt vanzelf</span>
-        <button id="annotate-clear-btn" class="btn btn-outline btn-sm">Wis alles</button>
+        <span class="muted small" data-i18n="session.annotateHint">Drawing mode — drag to draw, fades automatically</span>
+        <button id="annotate-clear-btn" class="btn btn-outline btn-sm" data-i18n="session.clearAll">Clear all</button>
       </div>
     </div>
     <canvas id="ai-buddy-capture-canvas" class="hidden"></canvas>
     <div id="files-panel" class="files-panel hidden">
-      <h4>Bestandsoverdracht</h4>
-      <button id="send-file-btn" class="btn btn-primary btn-sm">Bestand versturen…</button>
+      <h4 data-i18n="session.filesTransfer">File transfer</h4>
+      <button id="send-file-btn" class="btn btn-primary btn-sm" data-i18n="session.sendFile">Send file…</button>
       <div id="files-list" class="files-list"></div>
     </div>
     <div id="chat-panel" class="chat-panel chat-panel--session hidden">
-      <div class="notify-panel-header"><h4>Chat</h4></div>
-      <div id="chat-messages" class="chat-messages"><p class="muted small">Nog geen berichten.</p></div>
+      <div class="notify-panel-header"><h4 data-i18n="session.chat">Chat</h4></div>
+      <div id="chat-messages" class="chat-messages"><p class="muted small" data-i18n="session.noMessages">No messages yet.</p></div>
       <div class="chat-input-row">
-        <input id="chat-input" class="input" placeholder="Typ een bericht…" />
-        <button id="chat-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+        <input id="chat-input" class="input" data-i18n-placeholder="session.chatPlaceholder" placeholder="Type a message…" />
+        <button id="chat-send-btn" class="btn btn-primary btn-sm" data-i18n="session.chatSend">Send</button>
       </div>
     </div>
     <div id="ai-buddy-panel" class="ai-buddy-panel hidden">
       <div class="notify-panel-header">
-        <h4>AI Buddy</h4>
+        <h4 data-i18n="session.aiBuddy">AI Buddy</h4>
         <span id="ai-buddy-status" class="muted small"></span>
       </div>
       <div id="ai-buddy-messages" class="chat-messages ai-buddy-messages">
-        <p class="muted small">
-          Maak een screenshot van het scherm op afstand en stel een vraag â€” AI Buddy helpt je stap voor stap.
+        <p class="muted small" data-i18n="session.aiBuddyScreenshotHint">
+          Take a screenshot of the remote screen and ask a question — AI Buddy helps you step by step.
         </p>
       </div>
       <div id="ai-buddy-screenshot-preview" class="ai-buddy-screenshot-preview hidden">
-        <img id="ai-buddy-screenshot-img" alt="Screenshot van het scherm op afstand" />
-        <button id="ai-buddy-screenshot-remove" class="btn btn-outline btn-sm" title="Screenshot verwijderen">âœ•</button>
+        <img id="ai-buddy-screenshot-img" data-i18n-alt="session.aiBuddyScreenshotAlt" alt="Screenshot of the remote screen" />
+        <button id="ai-buddy-screenshot-remove" class="btn btn-outline btn-sm" data-i18n-title="session.aiBuddyScreenshotRemove" title="Remove screenshot">âœ•</button>
       </div>
       <div class="chat-input-row">
-        <button id="ai-buddy-screenshot-btn" class="btn btn-outline btn-icon-sm" title="Screenshot van scherm op afstand" aria-label="Screenshot maken">
+        <button id="ai-buddy-screenshot-btn" class="btn btn-outline btn-icon-sm" data-i18n-title="session.aiBuddyScreenshotBtn" title="Screenshot of remote screen" data-i18n-aria-label="session.aiBuddyScreenshotAria" aria-label="Take screenshot">
           <svg class="toolbar-icon"><use href="#icon-window"></use></svg>
         </button>
-        <input id="ai-buddy-input" class="input" placeholder="Stel een vraag over dit probleem…" />
-        <button id="ai-buddy-send-btn" class="btn btn-primary btn-sm">Versturen</button>
+        <input id="ai-buddy-input" class="input" data-i18n-placeholder="session.aiBuddyPlaceholder" placeholder="Ask a question about this problem…" />
+        <button id="ai-buddy-send-btn" class="btn btn-primary btn-sm" data-i18n="session.chatSend">Send</button>
       </div>
     </div>
     <div id="text-panel" class="text-panel hidden">
-      <div class="notify-panel-header"><h4>Tekst plakken</h4></div>
-      <textarea id="remote-text-input" class="input remote-textarea" placeholder="Tekst voor het externe apparaat"></textarea>
+      <div class="notify-panel-header"><h4 data-i18n="session.textPastePanel">Paste text</h4></div>
+      <textarea id="remote-text-input" class="input remote-textarea" data-i18n-placeholder="session.textAreaPlaceholder" placeholder="Text for the remote device"></textarea>
       <div class="panel-actions">
-        <button id="remote-text-clear-btn" class="btn btn-outline btn-sm">Wissen</button>
-        <button id="remote-text-send-btn" class="btn btn-primary btn-sm">Invoegen</button>
+        <button id="remote-text-clear-btn" class="btn btn-outline btn-sm" data-i18n="session.clear">Clear</button>
+        <button id="remote-text-send-btn" class="btn btn-primary btn-sm" data-i18n="session.insert">Insert</button>
       </div>
     </div>
     <div id="shortcuts-panel" class="shortcuts-panel hidden">
-      <div class="notify-panel-header"><h4>Sneltoetsen</h4></div>
+      <div class="notify-panel-header"><h4 data-i18n="session.shortcuts">Shortcuts</h4></div>
       <div class="shortcut-grid">
-        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="task-manager">Taakbeheer</button>
+        <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="task-manager" data-i18n="session.shortcutTaskManager">Task Manager</button>
         <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="alt-tab">Alt+Tab</button>
         <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="win-r">Win+R</button>
         <button class="btn btn-outline btn-sm shortcut-btn" data-shortcut="ctrl-c">Ctrl+C</button>
@@ -748,8 +754,8 @@
       </div>
     </div>
     <div id="notes-panel" class="notes-panel hidden">
-      <div class="notify-panel-header"><h4>Sessienotitie</h4></div>
-      <textarea id="session-notes-input" class="input remote-textarea" placeholder="Wat is er gedaan, opgelost of nog nodig?"></textarea>
+      <div class="notify-panel-header"><h4 data-i18n="session.notePanel">Session note</h4></div>
+      <textarea id="session-notes-input" class="input remote-textarea" data-i18n-placeholder="session.notePlaceholder" placeholder="What was done, resolved, or still needed?"></textarea>
     </div>
   </div>
 

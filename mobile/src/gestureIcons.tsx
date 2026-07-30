@@ -77,8 +77,11 @@ function CursorBadgeIcon({
   size?: number;
   color?: string;
 }) {
+  // width/height/borderColor below depend on this component's own size/color props, so they can't
+  // live in a static StyleSheet.create.
   return (
     <View
+      // eslint-disable-next-line react-native/no-inline-styles
       style={{
         width: size,
         height: size,

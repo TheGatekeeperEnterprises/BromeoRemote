@@ -203,6 +203,7 @@ import type { MiniControllerState } from "./global";
 import { sha256Hex } from "./crypto.js";
 import { Signaling } from "./signaling.js";
 import { PeerSession, type Role, type CodecPreferenceMode, type SessionCallbacks } from "./session.js";
+import { BromeoI18n } from "./i18n.js";
 
 interface NotifyHistoryEntry extends NotificationPayload {
   origin: "local" | "remote";
@@ -573,9 +574,14 @@ function setIconButtonState(button: HTMLButtonElement, label: string, iconId?: s
 }
 
 async function init(): Promise<void> {
+  BromeoI18n.applyTranslations();
+  document.querySelectorAll<HTMLButtonElement>("[data-lang-switch]").forEach((btn) => {
+    btn.onclick = () => BromeoI18n.setLang(btn.getAttribute("data-lang-switch") === "nl" ? "nl" : "en");
+  });
+
   const cfg = await window.bromeo.getConfig();
   myId = cfg.deviceId;
-  deviceLabel = cfg.deviceLabel || "Dit apparaat";
+  deviceLabel = cfg.deviceLabel || BromeoI18n.t("msg.defaultDeviceLabel");
   el.deviceLabel.value = deviceLabel;
   el.overviewLabel.textContent = deviceLabel;
   el.myId.textContent = formatId(cfg.deviceId);
@@ -598,7 +604,7 @@ async function init(): Promise<void> {
   trustedOnlyConnections = localStorage.getItem(TRUSTED_ONLY_KEY) === "1";
   el.trustedOnlyToggle.checked = trustedOnlyConnections;
   window.bromeo.getOpenAiKeyStatus().then((hasKey) => {
-    el.openaiKeyStatus.textContent = hasKey ? "Sleutel ingesteld en versleuteld opgeslagen." : "Nog geen sleutel ingesteld.";
+    el.openaiKeyStatus.textContent = hasKey ? BromeoI18n.t("tools.aiBuddyKeySetStatus") : BromeoI18n.t("tools.aiBuddyKeyNotSet");
   });
 
   savedDevices = await window.bromeo.getSavedDevices();
@@ -624,7 +630,7 @@ async function init(): Promise<void> {
     await signaling.connect();
   } catch {
     setServerStatus("disconnected");
-    toast("Kan geen verbinding maken met de BromeoRemote-server. Controleer je netwerk of serverinstellingen.");
+    toast(BromeoI18n.t("msg.serverConnectFailed"));
   }
 
   window.bromeo.onBridgeNotification(handleBridgeNotification);
@@ -638,12 +644,12 @@ async function init(): Promise<void> {
 
 function handleUpdateStatus(status: UpdateStatus): void {
   const messages: Record<UpdateStatus["status"], string> = {
-    checking: "Controleren op updates…",
-    available: `Update gevonden (v${status.version}) — wordt gedownload…`,
-    "not-available": "Je gebruikt de nieuwste versie.",
-    downloading: `Downloaden… ${status.percent ?? 0}%`,
-    downloaded: `Update v${status.version} gedownload — klaar om te installeren.`,
-    error: `Kon niet controleren op updates: ${status.error ?? "onbekende fout"}`,
+    checking: BromeoI18n.t("update.checking"),
+    available: BromeoI18n.t("update.available", { version: status.version ?? "" }),
+    "not-available": BromeoI18n.t("update.notAvailable"),
+    downloading: BromeoI18n.t("update.downloading", { percent: status.percent ?? 0 }),
+    downloaded: BromeoI18n.t("update.downloaded", { version: status.version ?? "" }),
+    error: BromeoI18n.t("update.error", { error: status.error ?? BromeoI18n.t("msg.unknownError") }),
   };
   el.updateStatusText.textContent = messages[status.status];
   el.installUpdateBtn.classList.toggle("hidden", status.status !== "downloaded");
@@ -651,14 +657,14 @@ function handleUpdateStatus(status: UpdateStatus): void {
 
 function updateThemeIcon(theme: "dark" | "light"): void {
   el.themeToggle.textContent = theme === "light" ? "☾" : "☀";
-  el.themeToggle.title = theme === "light" ? "Donkere modus" : "Lichte modus";
+  el.themeToggle.title = theme === "light" ? BromeoI18n.t("theme.dark") : BromeoI18n.t("theme.light");
 }
 
 function setServerStatus(status: "connected" | "disconnected"): void {
   el.serverStatus.classList.toggle("status-pill--online", status === "connected");
   el.serverStatus.classList.toggle("status-pill--offline", status === "disconnected");
   el.serverStatus.classList.remove("status-pill--pending");
-  el.serverStatusText.textContent = status === "connected" ? "Verbonden met server" : "Niet verbonden";
+  el.serverStatusText.textContent = status === "connected" ? BromeoI18n.t("server.connected") : BromeoI18n.t("server.disconnected");
 }
 
 function formatId(id: string): string {
@@ -705,24 +711,24 @@ function syncPermissionControlUi(): void {
 }
 
 function permissionsSummary(permissions: SessionPermissions): string {
-  const parts = [permissions.control ? "besturing" : "alleen kijken"];
-  if (permissions.clipboard) parts.push("klembord");
-  if (permissions.files) parts.push("bestanden");
+  const parts = [permissions.control ? BromeoI18n.t("perm.control") : BromeoI18n.t("perm.viewOnly")];
+  if (permissions.clipboard) parts.push(BromeoI18n.t("perm.clipboard"));
+  if (permissions.files) parts.push(BromeoI18n.t("perm.files"));
   return parts.join(", ");
 }
 
 function permissionBadges(permissions: SessionPermissions): string {
   return [
-    !permissions.control ? '<span class="badge-tag">Alleen kijken</span>' : "",
-    !permissions.clipboard ? '<span class="badge-tag">Geen klembord</span>' : "",
-    !permissions.files ? '<span class="badge-tag">Geen bestanden</span>' : "",
+    !permissions.control ? `<span class="badge-tag">${BromeoI18n.t("session.viewOnlyBadge")}</span>` : "",
+    !permissions.clipboard ? `<span class="badge-tag">${BromeoI18n.t("badge.noClipboard")}</span>` : "",
+    !permissions.files ? `<span class="badge-tag">${BromeoI18n.t("badge.noFiles")}</span>` : "",
   ].join("");
 }
 
 async function copyWithFeedback(text: string, button: HTMLButtonElement, message: string): Promise<void> {
   await navigator.clipboard.writeText(text);
   const label = button.textContent ?? "";
-  button.textContent = "Gekopieerd";
+  button.textContent = BromeoI18n.t("msg.copied");
   button.disabled = true;
   toast(message);
   setTimeout(() => {
@@ -739,38 +745,38 @@ function updateSessionPassword(password: string): void {
 function buildInviteText(): string {
   const password = el.myPassword.textContent ?? "";
   return [
-    "BromeoRemote - verbinding op afstand",
-    `Apparaatnaam: ${deviceLabel}`,
-    `BromeoRemote-ID: ${formatId(myId)}`,
-    `Sessiewachtwoord: ${password}`,
+    BromeoI18n.t("invite.line1"),
+    BromeoI18n.t("invite.deviceName", { label: deviceLabel }),
+    BromeoI18n.t("invite.id", { id: formatId(myId) }),
+    BromeoI18n.t("invite.password", { password }),
     "",
-    "Open BromeoRemote, vul dit ID en wachtwoord in bij 'Verbinden met een ander apparaat' en klik op Verbinden.",
+    BromeoI18n.t("invite.instructions"),
   ].join("\n");
 }
 
 async function regenerateSessionPassword(showToast = true): Promise<void> {
   const newPassword = await window.bromeo.regeneratePassword();
   updateSessionPassword(newPassword);
-  if (showToast) toast("Nieuw sessiewachtwoord aangemaakt.");
+  if (showToast) toast(BromeoI18n.t("msg.newPasswordGenerated"));
 }
 
 async function saveDeviceLabel(): Promise<void> {
   const label = el.deviceLabel.value.trim();
   if (label.length < 2) {
-    toast("Kies een herkenbare apparaatnaam van minimaal 2 tekens.");
+    toast(BromeoI18n.t("msg.deviceNameTooShort"));
     return;
   }
   deviceLabel = await window.bromeo.setDeviceLabel(label);
   el.deviceLabel.value = deviceLabel;
   el.overviewLabel.textContent = deviceLabel;
-  toast("Apparaatnaam opgeslagen.");
+  toast(BromeoI18n.t("msg.deviceNameSaved"));
 }
 
 function updatePasswordStrength(): void {
   const visible = el.unattendedToggle.checked;
   const password = el.unattendedPassword.value;
   let level: "" | "weak" | "ok" | "good" | "strong" = "";
-  let label = "Minimaal 6 tekens";
+  let label = BromeoI18n.t("strength.min6");
 
   if (password) {
     let score = 0;
@@ -781,16 +787,16 @@ function updatePasswordStrength(): void {
     if (/[^A-Za-z0-9]/.test(password)) score++;
     if (score <= 1) {
       level = "weak";
-      label = "Zwak wachtwoord";
+      label = BromeoI18n.t("strength.weak");
     } else if (score <= 3) {
       level = "ok";
-      label = "Redelijk wachtwoord";
+      label = BromeoI18n.t("strength.ok");
     } else if (score === 4) {
       level = "good";
-      label = "Sterk wachtwoord";
+      label = BromeoI18n.t("strength.good");
     } else {
       level = "strong";
-      label = "Zeer sterk wachtwoord";
+      label = BromeoI18n.t("strength.strong");
     }
   }
 
@@ -816,7 +822,7 @@ function applyQualityLevel(level: QualityLevel, notifyPeer = true): void {
 }
 
 function qualityLabel(level: QualityLevel): string {
-  return { auto: "automatisch", high: "hoog", low: "laag" }[level];
+  return { auto: BromeoI18n.t("quality.auto"), high: BromeoI18n.t("quality.high"), low: BromeoI18n.t("quality.low") }[level];
 }
 
 // Unlike quality/failsafe, this can't be applied to an already-running
@@ -855,8 +861,8 @@ function applyIdleTimeout(value: string | number | null, showToast = true): void
   if (!showToast) return;
   toast(
     idleTimeoutMinutes === 0
-      ? "Automatisch verbreken bij inactiviteit is uitgeschakeld."
-      : `Sessie wordt verbroken na ${idleTimeoutMinutes} minuten zonder activiteit.`
+      ? BromeoI18n.t("msg.idleDisabled")
+      : BromeoI18n.t("msg.idleWillDisconnect", { minutes: idleTimeoutMinutes })
   );
 }
 
@@ -877,7 +883,7 @@ function startIdleTimer(): void {
     }
     const idleForMs = Date.now() - lastSessionActivityAt;
     if (idleForMs >= idleTimeoutMinutes * 60 * 1000) {
-      toast(`Sessie automatisch verbroken na ${idleTimeoutMinutes} minuten inactiviteit.`);
+      toast(BromeoI18n.t("msg.idleAutoDisconnected", { minutes: idleTimeoutMinutes }));
       endSession();
     }
   }, 10_000);
@@ -897,7 +903,7 @@ function applyRecordingMode(value: string | null, showToast = true): void {
   el.recordingModeSelect.value = recordingMode;
   localStorage.setItem(RECORDING_MODE_KEY, recordingMode);
   if (showToast) {
-    toast(recordingMode === "auto" ? "Automatische opname ingeschakeld voor uitgaande sessies." : "Opname staat weer op handmatig.");
+    toast(recordingMode === "auto" ? BromeoI18n.t("msg.recordingAutoOn") : BromeoI18n.t("msg.recordingManual"));
   }
   if (recordingMode === "auto" && currentRole === "viewer" && el.remoteVideo.srcObject && (!mediaRecorder || mediaRecorder.state === "inactive")) {
     startRecording(true);
@@ -911,29 +917,29 @@ function formatSessionStats(stats: { fps: number | null; bitrateKbps: number | n
     parts.push(stats.bitrateKbps >= 1000 ? `${(stats.bitrateKbps / 1000).toFixed(1)} Mbps` : `${stats.bitrateKbps} kbps`);
   }
   if (stats.rttMs != null) parts.push(`${stats.rttMs} ms`);
-  return parts.length > 0 ? parts.join(" | ") : "Meetgegevens volgen";
+  return parts.length > 0 ? parts.join(" | ") : BromeoI18n.t("stats.pending");
 }
 
 function toggleRemoteAudio(): void {
   remoteAudioMuted = !remoteAudioMuted;
   el.remoteVideo.muted = remoteAudioMuted;
-  setIconButtonState(el.audioToggleBtn, remoteAudioMuted ? "Geluid aan" : "Geluid uit", remoteAudioMuted ? "icon-volume" : "icon-volume-x");
-  toast(remoteAudioMuted ? "Geluid gedempt." : "Geluid ingeschakeld.");
+  setIconButtonState(el.audioToggleBtn, remoteAudioMuted ? BromeoI18n.t("msg.soundOn") : BromeoI18n.t("session.soundOff"), remoteAudioMuted ? "icon-volume" : "icon-volume-x");
+  toast(remoteAudioMuted ? BromeoI18n.t("msg.soundMuted") : BromeoI18n.t("msg.soundOnToast"));
 }
 
 function sendRemoteText(): void {
   const text = el.remoteTextInput.value;
   if (!text.trim()) {
-    toast("Vul eerst tekst in.");
+    toast(BromeoI18n.t("msg.textEmpty"));
     return;
   }
   if (!currentSession || currentRole !== "viewer") return;
   if (sessionViewOnly) {
-    toast("Tekst invoegen is uitgeschakeld in alleen-kijken modus.");
+    toast(BromeoI18n.t("msg.textDisabledViewOnly"));
     return;
   }
   currentSession.sendInput({ kind: "text", value: text });
-  toast("Tekst ingevoegd op het externe apparaat.");
+  toast(BromeoI18n.t("msg.textInserted"));
   el.remoteTextInput.value = "";
   el.textPanel.classList.add("hidden");
   el.videoWrap.focus();
@@ -942,7 +948,7 @@ function sendRemoteText(): void {
 function sendShortcut(keys: Array<{ key: string; code: string }>): void {
   if (!currentSession || currentRole !== "viewer") return;
   if (sessionViewOnly) {
-    toast("Sneltoetsen zijn uitgeschakeld in alleen-kijken modus.");
+    toast(BromeoI18n.t("msg.shortcutsDisabledViewOnly"));
     return;
   }
   for (const key of keys) currentSession.sendInput({ kind: "keydown", ...key });
@@ -1015,18 +1021,18 @@ function updateMiniController(): void {
 async function sendHostClipboard(): Promise<void> {
   if (!currentSession) return;
   if (!sessionPermissions.clipboard) {
-    toast("Klembord delen is uitgeschakeld voor deze sessie.");
+    toast(BromeoI18n.t("msg.clipboardDisabledSession"));
     return;
   }
   const text = await window.bromeo.getClipboard();
   currentSession.sendClipboard(text);
-  toast("Klembord verzonden naar de partner.");
+  toast(BromeoI18n.t("msg.clipboardSentToPartner"));
 }
 
 async function toggleHostScreenPower(): Promise<void> {
   monitorIsOff = !monitorIsOff;
   await window.bromeo.setMonitorPower(!monitorIsOff);
-  el.curtainManualToggle.textContent = monitorIsOff ? "Scherm aan" : "Scherm uit";
+  el.curtainManualToggle.textContent = monitorIsOff ? BromeoI18n.t("msg.screenOn") : BromeoI18n.t("sharingBar.curtainOff");
   updateMiniController();
 }
 
@@ -1043,7 +1049,7 @@ const hostVoiceAudioElements = new Map<string, HTMLAudioElement>();
 async function toggleHostMicrophone(): Promise<void> {
   if (hostMicStream) {
     stopHostMicrophone();
-    toast("Microfoon uitgeschakeld.");
+    toast(BromeoI18n.t("msg.micOff"));
     return;
   }
   try {
@@ -1052,9 +1058,9 @@ async function toggleHostMicrophone(): Promise<void> {
     await Promise.all([...hostViewers.values()].map((v) => v.session.setMicrophoneTrack(track)));
     el.hostVoiceToggleBtn.classList.remove("btn-outline");
     el.hostVoiceToggleBtn.classList.add("btn-primary");
-    toast("Microfoon ingeschakeld — verbonden kijkers kunnen je nu horen.");
+    toast(BromeoI18n.t("msg.micOnHost"));
   } catch (err) {
-    toast("Kon microfoon niet gebruiken: " + (err as Error).message);
+    toast(BromeoI18n.t("msg.micError", { error: (err as Error).message }));
   }
 }
 
@@ -1105,11 +1111,11 @@ let rawScreenStreamBehindOverlay: MediaStream | null = null;
 async function toggleWebcamOverlay(): Promise<void> {
   if (hostWebcamStream) {
     await disableWebcamOverlay();
-    toast("Camera uitgeschakeld.");
+    toast(BromeoI18n.t("msg.cameraOff"));
     return;
   }
   if (!hostCaptureStream) {
-    toast("Start eerst het delen van je scherm.");
+    toast(BromeoI18n.t("msg.cameraShareScreenFirst"));
     return;
   }
   try {
@@ -1119,11 +1125,11 @@ async function toggleWebcamOverlay(): Promise<void> {
     await broadcastVideoSwap(composited, false);
     el.hostCameraToggleBtn.classList.remove("btn-outline");
     el.hostCameraToggleBtn.classList.add("btn-primary");
-    toast("Camera ingeschakeld.");
+    toast(BromeoI18n.t("msg.cameraOn"));
   } catch (err) {
     hostWebcamStream = null;
     rawScreenStreamBehindOverlay = null;
-    toast("Kon camera niet gebruiken: " + (err as Error).message);
+    toast(BromeoI18n.t("msg.cameraError", { error: (err as Error).message }));
   }
 }
 
@@ -1145,7 +1151,7 @@ async function disableWebcamOverlay(): Promise<void> {
 async function endSessionAndRotatePassword(): Promise<void> {
   endSession();
   await regenerateSessionPassword(false);
-  toast("Sessie beëindigd en wachtwoord gewijzigd.");
+  toast(BromeoI18n.t("msg.sessionEndedPasswordChanged"));
 }
 
 function openHostChatPanel(): void {
@@ -1210,9 +1216,9 @@ function setBlockInputUi(enabled: boolean, pending = false): void {
   el.blockInputBtn.classList.toggle("btn-danger", enabled);
   el.blockInputBtn.classList.toggle("btn-outline", !enabled);
   if (pending) {
-    setIconButtonState(el.blockInputBtn, "Externe invoer blokkeren: aanvraag loopt");
+    setIconButtonState(el.blockInputBtn, BromeoI18n.t("msg.blockInputPending"));
   } else {
-    setIconButtonState(el.blockInputBtn, enabled ? "Externe invoer geblokkeerd" : "Externe invoer blokkeren");
+    setIconButtonState(el.blockInputBtn, enabled ? BromeoI18n.t("msg.blockInputOn") : BromeoI18n.t("msg.blockInputOff"));
   }
 }
 
@@ -1221,9 +1227,9 @@ function applyBlockInputStatus(enabled: boolean, ok: boolean): void {
   toast(
     ok
       ? enabled
-        ? "Lokale invoer van de host geblokkeerd."
-        : "Lokale invoer van de host niet meer geblokkeerd."
-      : "Kon lokale invoer van de host niet blokkeren."
+        ? BromeoI18n.t("msg.blockInputAppliedOn")
+        : BromeoI18n.t("msg.blockInputAppliedOff")
+      : BromeoI18n.t("msg.blockInputApplyFailed")
   );
 }
 
@@ -1231,7 +1237,7 @@ function setLockOnEndUi(enabled: boolean, pending = false): void {
   el.lockOnEndBtn.disabled = pending;
   el.lockOnEndBtn.classList.toggle("btn-danger", enabled);
   el.lockOnEndBtn.classList.toggle("btn-outline", !enabled);
-  setIconButtonState(el.lockOnEndBtn, pending ? "Vergrendel bij einde: aanvraag loopt" : enabled ? "Vergrendelt bij einde" : "Vergrendel bij einde");
+  setIconButtonState(el.lockOnEndBtn, pending ? BromeoI18n.t("msg.lockOnEndPending") : enabled ? BromeoI18n.t("msg.lockOnEndOn") : BromeoI18n.t("msg.lockOnEndOff"));
 }
 
 function applyLockOnEndStatus(enabled: boolean, ok: boolean): void {
@@ -1239,21 +1245,21 @@ function applyLockOnEndStatus(enabled: boolean, ok: boolean): void {
   toast(
     ok
       ? enabled
-        ? "Remote apparaat wordt vergrendeld bij sessie-einde."
-        : "Vergrendelen bij sessie-einde uitgeschakeld."
-      : "Kon vergrendelen bij sessie-einde niet instellen."
+        ? BromeoI18n.t("msg.lockOnEndAppliedOn")
+        : BromeoI18n.t("msg.lockOnEndAppliedOff")
+      : BromeoI18n.t("msg.lockOnEndApplyFailed")
   );
 }
 
 function updateSessionState(state: RTCPeerConnectionState | "starting"): void {
   const labels: Record<typeof state, string> = {
-    starting: "Verbinden",
-    new: "Verbinden",
-    connecting: "Verbinden",
-    connected: "Verbonden",
-    disconnected: "Onderbroken",
-    failed: "Mislukt",
-    closed: "Gesloten",
+    starting: BromeoI18n.t("sessionState.connecting"),
+    new: BromeoI18n.t("sessionState.connecting"),
+    connecting: BromeoI18n.t("sessionState.connecting"),
+    connected: BromeoI18n.t("sessionState.connected"),
+    disconnected: BromeoI18n.t("sessionState.interrupted"),
+    failed: BromeoI18n.t("sessionState.failed"),
+    closed: BromeoI18n.t("sessionState.closed"),
   };
   el.sessionState.textContent = labels[state];
   el.sessionState.classList.toggle("session-chip--ok", state === "connected");
@@ -1295,7 +1301,7 @@ async function renderTrustedDevices(): Promise<void> {
 
 function setSasUiState(installed: boolean, pending = false): void {
   el.sasInstallBtn.disabled = pending;
-  el.sasInstallBtn.textContent = pending ? "Bezig…" : "Inschakelen…";
+  el.sasInstallBtn.textContent = pending ? BromeoI18n.t("msg.sasBusy") : BromeoI18n.t("msg.sasEnable");
   el.sasDisabledState.classList.toggle("hidden", installed);
   el.sasEnabledState.classList.toggle("hidden", !installed);
 }
@@ -1317,12 +1323,12 @@ function updateIncomingTimeout(): void {
   const next = pendingIncomingQueue[0];
   if (!next || incomingExpiresAt === 0) return;
   const remaining = Math.max(0, Math.ceil((incomingExpiresAt - Date.now()) / 1000));
-  el.incomingTimeout.textContent = `Aanvraag verloopt over ${remaining} seconden.`;
+  el.incomingTimeout.textContent = BromeoI18n.t("msg.incomingExpiresIn", { seconds: remaining });
   if (remaining > 0) return;
   pendingIncomingQueue.shift();
   clearIncomingTimeout();
   signaling.send({ type: "connect-response", targetId: next.fromId, accept: false, reason: "declined" });
-  toast("Inkomende verbindingsaanvraag verlopen.");
+  toast(BromeoI18n.t("msg.incomingExpired"));
   showNextIncomingRequest();
 }
 
@@ -1352,14 +1358,14 @@ function wireUi(): void {
   el.deviceLabel.onkeydown = (e) => {
     if (e.key === "Enter") saveDeviceLabel();
   };
-  el.copyId.onclick = () => copyWithFeedback(myId, el.copyId, "ID gekopieerd.");
-  el.copyPassword.onclick = () => copyWithFeedback(el.myPassword.textContent ?? "", el.copyPassword, "Wachtwoord gekopieerd.");
-  el.copyInvite.onclick = () => copyWithFeedback(buildInviteText(), el.copyInvite, "Uitnodiging gekopieerd.");
+  el.copyId.onclick = () => copyWithFeedback(myId, el.copyId, BromeoI18n.t("msg.idCopied"));
+  el.copyPassword.onclick = () => copyWithFeedback(el.myPassword.textContent ?? "", el.copyPassword, BromeoI18n.t("msg.passwordCopied"));
+  el.copyInvite.onclick = () => copyWithFeedback(buildInviteText(), el.copyInvite, BromeoI18n.t("msg.inviteCopied"));
   el.regeneratePassword.onclick = () => regenerateSessionPassword();
   el.webinarModeToggle.onchange = () => {
     webinarModeActive = el.webinarModeToggle.checked;
     localStorage.setItem("bromeo:webinar-mode", webinarModeActive ? "1" : "0");
-    toast(webinarModeActive ? "Webinar-modus aan — tot 12 kijkers toegestaan." : "Webinar-modus uit — terug naar 3 kijkers.");
+    toast(webinarModeActive ? BromeoI18n.t("msg.webinarOn") : BromeoI18n.t("msg.webinarOff"));
   };
 
   el.themeToggle.onclick = async () => {
@@ -1379,13 +1385,13 @@ function wireUi(): void {
     const enabled = el.unattendedToggle.checked;
     const pw = el.unattendedPassword.value.trim();
     if (enabled && pw.length < 6) {
-      toast("Kies een wachtwoord van minstens 6 tekens.");
+      toast(BromeoI18n.t("msg.unattendedPasswordTooShort"));
       return;
     }
     const result = await window.bromeo.setUnattended(enabled, pw || null);
     el.unattendedToggle.checked = result.unattendedEnabled;
     el.unattendedPassword.value = "";
-    toast("Instelling voor onbeheerde toegang opgeslagen.");
+    toast(BromeoI18n.t("msg.unattendedSaved"));
   };
 
   el.connectBtn.onclick = onConnectClick;
@@ -1394,7 +1400,7 @@ function wireUi(): void {
     setSessionHistory([]);
     sessionHistoryExpanded = false;
     renderSessionHistory();
-    toast("Sessiegeschiedenis gewist.");
+    toast(BromeoI18n.t("msg.sessionHistoryCleared"));
   };
   el.toggleSessionHistory.onclick = () => {
     sessionHistoryExpanded = !sessionHistoryExpanded;
@@ -1413,17 +1419,17 @@ function wireUi(): void {
   el.sharingPanic.onclick = async () => {
     endSession();
     await regenerateSessionPassword(false);
-    toast("Sessie beëindigd en wachtwoord gewijzigd.");
+    toast(BromeoI18n.t("msg.sessionEndedPasswordChanged"));
   };
   el.hostClipboardBtn.onclick = async () => {
     if (!currentSession) return;
     if (!sessionPermissions.clipboard) {
-      toast("Klembord delen is uitgeschakeld voor deze sessie.");
+      toast(BromeoI18n.t("msg.clipboardDisabledSession"));
       return;
     }
     const text = await window.bromeo.getClipboard();
     currentSession.sendClipboard(text);
-    toast("Klembord verzonden naar de partner.");
+    toast(BromeoI18n.t("msg.clipboardSentToPartner"));
   };
   el.sharingPanic.onclick = () => endSessionAndRotatePassword();
   el.hostClipboardBtn.onclick = () => sendHostClipboard();
@@ -1440,7 +1446,7 @@ function wireUi(): void {
     else document.exitFullscreen();
   };
   document.addEventListener("fullscreenchange", () => {
-    setIconButtonState(el.fullscreenBtn, document.fullscreenElement ? "Venster" : "Volledig scherm", document.fullscreenElement ? "icon-window" : "icon-fullscreen");
+    setIconButtonState(el.fullscreenBtn, document.fullscreenElement ? BromeoI18n.t("msg.windowMode") : BromeoI18n.t("msg.fullscreenMode"), document.fullscreenElement ? "icon-window" : "icon-fullscreen");
   });
   el.fitModeSelect.onchange = () => {
     applyRemoteFitMode(el.fitModeSelect.value as RemoteFitMode);
@@ -1449,16 +1455,16 @@ function wireUi(): void {
   el.audioToggleBtn.onclick = () => toggleRemoteAudio();
   el.clipboardBtn.onclick = async () => {
     if (!sessionPermissions.clipboard) {
-      toast("Klembord delen is uitgeschakeld voor deze sessie.");
+      toast(BromeoI18n.t("msg.clipboardDisabledSession"));
       return;
     }
     const text = await window.bromeo.getClipboard();
     currentSession?.sendClipboard(text);
-    toast("Klembord verzonden naar de partner.");
+    toast(BromeoI18n.t("msg.clipboardSentToPartner"));
   };
   el.textToggleBtn.onclick = () => {
     if (sessionViewOnly) {
-      toast("Tekst invoegen is uitgeschakeld in alleen-kijken modus.");
+      toast(BromeoI18n.t("msg.textDisabledViewOnly"));
       return;
     }
     toggleSessionPanel(el.textPanel);
@@ -1471,7 +1477,7 @@ function wireUi(): void {
   };
   el.shortcutsToggleBtn.onclick = () => {
     if (sessionViewOnly) {
-      toast("Sneltoetsen zijn uitgeschakeld in alleen-kijken modus.");
+      toast(BromeoI18n.t("msg.shortcutsDisabledViewOnly"));
       return;
     }
     toggleSessionPanel(el.shortcutsPanel);
@@ -1482,7 +1488,7 @@ function wireUi(): void {
   });
   el.sendFileBtn.onclick = async () => {
     if (!sessionPermissions.files) {
-      toast("Bestandsoverdracht is uitgeschakeld voor deze sessie.");
+      toast(BromeoI18n.t("msg.fileTransferDisabledSession"));
       return;
     }
     const file = await window.bromeo.pickFile();
@@ -1490,7 +1496,7 @@ function wireUi(): void {
     const base64 = await window.bromeo.readFileBase64(file.path);
     await currentSession?.sendFile(file.name, base64);
     filesTransferredCount++;
-    toast(`Verzonden: ${file.name}`);
+    toast(BromeoI18n.t("msg.fileSent", { name: file.name }));
   };
   el.recordToggleBtn.onclick = () => toggleRecording();
 
@@ -1509,7 +1515,7 @@ function wireUi(): void {
   el.aiBuddyScreenshotBtn.onclick = () => {
     const frame = captureRemoteVideoFrame();
     if (!frame) {
-      toast("Kon geen screenshot maken — is het beeld al geladen?");
+      toast(BromeoI18n.t("msg.screenshotFailed"));
       return;
     }
     setAiBuddyScreenshot(frame);
@@ -1531,7 +1537,7 @@ function wireUi(): void {
     if (!currentSession || !lastConnectAttempt) return;
     currentSession.sendSystemCommand({ kind: "restart-request" });
     restartRequestedFor = lastConnectAttempt.targetId;
-    toast("Herstart aangevraagd. BromeoRemote probeert straks automatisch opnieuw te verbinden.");
+    toast(BromeoI18n.t("msg.restartRequested"));
   };
 
   // No confirmation modal here (unlike restart) — locking doesn't disconnect
@@ -1540,7 +1546,7 @@ function wireUi(): void {
   el.lockBtn.onclick = () => {
     if (!currentSession) return;
     currentSession.sendSystemCommand({ kind: "lock-request" });
-    toast("Vergrendelen aangevraagd.");
+    toast(BromeoI18n.t("msg.lockRequested"));
   };
   el.lockOnEndBtn.onclick = () => {
     if (!currentSession) return;
@@ -1569,13 +1575,13 @@ function wireUi(): void {
     setSasUiState(false, true);
     const installed = await window.bromeo.sasInstall();
     setSasUiState(installed);
-    toast(installed ? "Ctrl+Alt+Del op afstand ingeschakeld." : "Inschakelen geannuleerd of mislukt.");
+    toast(installed ? BromeoI18n.t("msg.sasInstalled") : BromeoI18n.t("msg.sasInstallFailed"));
   };
 
   el.sasUninstallBtn.onclick = async () => {
     const success = await window.bromeo.sasUninstall(); // true = now uninstalled
     setSasUiState(!success);
-    toast(success ? "Ctrl+Alt+Del op afstand uitgeschakeld." : "Uitschakelen geannuleerd of mislukt.");
+    toast(success ? BromeoI18n.t("msg.sasUninstalled") : BromeoI18n.t("msg.sasUninstallFailed"));
   };
 
   el.monitorSelect.onchange = () => {
@@ -1585,17 +1591,17 @@ function wireUi(): void {
 
   el.qualitySelect.onchange = () => {
     applyQualityLevel(el.qualitySelect.value as QualityLevel);
-    toast(`Kwaliteit ingesteld op ${qualityLabel(el.qualitySelect.value as QualityLevel)}.`);
+    toast(BromeoI18n.t("msg.qualitySet", { quality: qualityLabel(el.qualitySelect.value as QualityLevel) }));
   };
   el.codecPreferenceSelect.onchange = () => {
     const mode = el.codecPreferenceSelect.value as CodecPreferenceMode;
     applyCodecPreference(mode);
-    toast(`Video-codec ingesteld op ${mode === "sharp" ? "scherp" : "snel"} — geldt vanaf de volgende verbinding.`);
+    toast(BromeoI18n.t("msg.codecSet", { mode: mode === "sharp" ? BromeoI18n.t("session.codecSharp").toLowerCase() : BromeoI18n.t("session.codecFast").toLowerCase() }));
   };
   el.resolutionPreferenceSelect.onchange = () => {
     const mode = el.resolutionPreferenceSelect.value as ResolutionMode;
     applyResolutionPreference(mode);
-    toast(`Resolutie ingesteld op ${mode === "sharp" ? "scherp (native)" : "snel (max. 1080p)"}.`);
+    toast(BromeoI18n.t("msg.resolutionSet", { mode: mode === "sharp" ? BromeoI18n.t("msg.resolutionSharpLabel") : BromeoI18n.t("msg.resolutionFastLabel") }));
   };
   el.idleTimeoutSelect.onchange = () => applyIdleTimeout(el.idleTimeoutSelect.value);
   el.recordingModeSelect.onchange = () => applyRecordingMode(el.recordingModeSelect.value);
@@ -1609,7 +1615,7 @@ function wireUi(): void {
   el.trustedOnlyToggle.onchange = () => {
     trustedOnlyConnections = el.trustedOnlyToggle.checked;
     localStorage.setItem(TRUSTED_ONLY_KEY, trustedOnlyConnections ? "1" : "0");
-    toast(trustedOnlyConnections ? "Alleen opgeslagen apparaten mogen nu verbinden." : "Ook onbekende apparaten kunnen weer een aanvraag sturen.");
+    toast(trustedOnlyConnections ? BromeoI18n.t("msg.trustedOnlyOn") : BromeoI18n.t("msg.trustedOnlyOff"));
   };
   el.curtainManualToggle.onclick = () => toggleHostScreenPower();
 
@@ -1630,21 +1636,21 @@ function wireUi(): void {
   };
   el.totpCopy.onclick = () => {
     navigator.clipboard.writeText(el.totpSecret.textContent ?? "");
-    toast("Sleutel gekopieerd.");
+    toast(BromeoI18n.t("msg.totpKeyCopied"));
   };
   el.totpConfirm.onclick = async () => {
     const { ok } = await window.bromeo.enableTotp(el.totpVerifyCode.value.trim());
     if (!ok) {
-      toast("Onjuiste code. Controleer of je authenticator-app de juiste sleutel gebruikt en probeer opnieuw.");
+      toast(BromeoI18n.t("msg.totpSetupBadCode"));
       return;
     }
     setTotpUiState(true);
-    toast("2FA is ingeschakeld voor onbeheerde toegang.");
+    toast(BromeoI18n.t("msg.totpEnabledUnattended"));
   };
   el.totpDisable.onclick = async () => {
     await window.bromeo.disableTotp();
     setTotpUiState(false);
-    toast("2FA is uitgeschakeld.");
+    toast(BromeoI18n.t("msg.totpDisabledToast"));
   };
   el.totpRequiredCancel.onclick = () => {
     el.totpRequiredModal.classList.add("hidden");
@@ -1671,18 +1677,18 @@ function wireUi(): void {
   el.notifyForwardSave.onclick = async () => {
     const val = el.notifyForwardId.value.replace(/\s+/g, "");
     if (val && !/^\d{9}$/.test(val)) {
-      toast("Vul een geldig 9-cijferig BromeoRemote-ID in, of laat het veld leeg.");
+      toast(BromeoI18n.t("msg.notifyIdInvalid"));
       return;
     }
     notifyForwardId = await window.bromeo.setNotifyForward(val || null);
-    toast(notifyForwardId ? `Meldingen worden ook doorgestuurd naar ${formatId(notifyForwardId)}.` : "Doorsturen van meldingen uitgeschakeld.");
+    toast(notifyForwardId ? BromeoI18n.t("msg.notifyForwardSet", { id: formatId(notifyForwardId) }) : BromeoI18n.t("msg.notifyForwardOff"));
   };
   el.openaiKeySave.onclick = async () => {
     const key = el.openaiKeyInput.value.trim();
     const hasKey = await window.bromeo.setOpenAiKey(key || null);
     el.openaiKeyInput.value = "";
-    el.openaiKeyStatus.textContent = hasKey ? "Sleutel ingesteld en versleuteld opgeslagen." : "Nog geen sleutel ingesteld.";
-    toast(hasKey ? "OpenAI-sleutel opgeslagen." : "OpenAI-sleutel verwijderd.");
+    el.openaiKeyStatus.textContent = hasKey ? BromeoI18n.t("tools.aiBuddyKeySetStatus") : BromeoI18n.t("tools.aiBuddyKeyNotSet");
+    toast(hasKey ? BromeoI18n.t("msg.openaiKeySaved") : BromeoI18n.t("msg.openaiKeyRemoved"));
   };
   el.notifyBellBtn.onclick = () => {
     el.notifyPanel.classList.toggle("hidden");
@@ -1733,7 +1739,7 @@ async function onConnectClick(): Promise<void> {
   const targetId = el.targetId.value.replace(/\s+/g, "");
   const password = el.targetPassword.value;
   if (!/^\d{9}$/.test(targetId)) {
-    toast("Vul een geldig 9-cijferig BromeoRemote-ID in.");
+    toast(BromeoI18n.t("msg.targetIdInvalid"));
     return;
   }
   const passwordHash = await sha256Hex(password);
@@ -1750,12 +1756,12 @@ function connectByIdAndHash(
   trustDevice?: boolean
 ): void {
   if (currentSession) {
-    toast("Er is al een actieve sessie.");
+    toast(BromeoI18n.t("msg.activeSessionExists"));
     return;
   }
   const normalizedPermissions = normalizePermissions(permissions, viewOnly);
   lastConnectAttempt = { targetId, passwordHash, viewOnly: !normalizedPermissions.control, permissions: normalizedPermissions };
-  el.connectStatus.textContent = "Verbinding maken…";
+  el.connectStatus.textContent = BromeoI18n.t("msg.connectingStatus");
   signaling.send({
     type: "connect-request",
     targetId,
@@ -1777,7 +1783,7 @@ function scheduleAutoReconnect(targetId: string, passwordHash: string, viewOnly:
   const intervalMs = 15_000;
   const maxAttempts = 20; // ~5 minutes
   let attempt = 0;
-  toast(`Verbinding verbroken. BromeoRemote probeert automatisch opnieuw te verbinden met ${formatId(targetId)}…`);
+  toast(BromeoI18n.t("msg.autoReconnecting", { id: formatId(targetId) }));
   const tryOnce = () => {
     attempt++;
     if (currentSession || attempt > maxAttempts) return;
@@ -1799,7 +1805,7 @@ function viewActiveConfirmOrigin(): void {
   } else {
     el.targetId.value = formatId(targetId);
     el.targetPassword.focus();
-    toast("Vul het wachtwoord van dat apparaat in om live mee te kijken.");
+    toast(BromeoI18n.t("msg.enterPartnerPassword"));
   }
 }
 
@@ -1815,31 +1821,32 @@ function renderSavedDevices(): void {
   el.savedDevicesFilter.classList.remove("hidden");
   el.savedDevicesList.classList.remove("hidden");
 
-  const filter = el.savedDevicesFilter.value.trim().toLocaleLowerCase("nl-NL");
+  const filter = el.savedDevicesFilter.value.trim().toLocaleLowerCase(BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB");
   const visibleDevices = filter
     ? savedDevices.filter((d) => {
-        const haystack = [d.label, d.id, formatId(d.id), d.group ?? "", d.mac ?? ""].join(" ").toLocaleLowerCase("nl-NL");
+        const haystack = [d.label, d.id, formatId(d.id), d.group ?? "", d.mac ?? ""].join(" ").toLocaleLowerCase(BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB");
         return haystack.includes(filter);
       })
     : savedDevices;
 
   if (visibleDevices.length === 0) {
-    el.savedDevicesList.innerHTML = '<p class="muted small">Geen opgeslagen apparaten gevonden.</p>';
+    el.savedDevicesList.innerHTML = `<p class="muted small">${BromeoI18n.t("msg.noSavedDevicesFound")}</p>`;
     return;
   }
 
+  const otherGroupLabel = BromeoI18n.t("msg.otherGroup");
   const favorites = visibleDevices.filter((d) => d.favorite);
   const rest = visibleDevices.filter((d) => !d.favorite);
   const groups = new Map<string, SavedDevice[]>();
   for (const d of rest) {
-    const key = d.group?.trim() || "Overig";
+    const key = d.group?.trim() || otherGroupLabel;
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key)!.push(d);
   }
-  const sortedGroupNames = [...groups.keys()].sort((a, b) => (a === "Overig" ? 1 : b === "Overig" ? -1 : a.localeCompare(b)));
+  const sortedGroupNames = [...groups.keys()].sort((a, b) => (a === otherGroupLabel ? 1 : b === otherGroupLabel ? -1 : a.localeCompare(b)));
 
   let html = "";
-  if (favorites.length > 0) html += renderDeviceRows(favorites, "Favorieten");
+  if (favorites.length > 0) html += renderDeviceRows(favorites, BromeoI18n.t("msg.favorites"));
   for (const name of sortedGroupNames) html += renderDeviceRows(groups.get(name)!, name);
   el.savedDevicesList.innerHTML = html;
 
@@ -1860,7 +1867,7 @@ function renderSavedDevices(): void {
       const device = savedDevices.find((d) => d.id === btn.dataset.id);
       if (!device?.mac) return;
       const res = await window.bromeo.wakeDevice(device.mac);
-      toast(res.ok ? `Wake-on-LAN-signaal verstuurd naar "${device.label}".` : `Kon niet wekken: ${res.error}`);
+      toast(res.ok ? BromeoI18n.t("msg.wakeSent", { label: device.label }) : BromeoI18n.t("msg.wakeFailed", { error: res.error ?? "" }));
     };
   });
   el.savedDevicesList.querySelectorAll<HTMLButtonElement>(".saved-favorite-btn").forEach((btn) => {
@@ -1877,14 +1884,14 @@ function renderDeviceRows(devices: SavedDevice[], groupLabel: string): string {
   const rows = devices
     .map(
       (d) => `<div class="saved-device-row">
-        <button class="saved-favorite-btn ${d.favorite ? "is-active" : ""}" data-id="${d.id}" title="${d.favorite ? "Favoriet verwijderen" : "Als favoriet markeren"}">${d.favorite ? "★" : "☆"}</button>
+        <button class="saved-favorite-btn ${d.favorite ? "is-active" : ""}" data-id="${d.id}" title="${d.favorite ? BromeoI18n.t("msg.favoriteRemove") : BromeoI18n.t("msg.favoriteAdd")}">${d.favorite ? "★" : "☆"}</button>
         <div class="saved-device-info">
           <div class="saved-device-label"><span>${escapeHtml(d.label)}</span> ${permissionBadges(normalizePermissions(d.permissions, d.viewOnly))}</div>
           <div class="saved-device-id">${formatId(d.id)}</div>
         </div>
-        ${d.mac ? `<button class="btn btn-outline btn-sm saved-wake-btn" data-id="${d.id}" title="Wake-on-LAN">Wek</button>` : ""}
-        <button class="btn btn-primary btn-sm saved-connect-btn" data-id="${d.id}">Verbinden</button>
-        <button class="saved-device-remove" data-id="${d.id}" title="Verwijderen">✕</button>
+        ${d.mac ? `<button class="btn btn-outline btn-sm saved-wake-btn" data-id="${d.id}" title="Wake-on-LAN">${BromeoI18n.t("msg.wakeButton")}</button>` : ""}
+        <button class="btn btn-primary btn-sm saved-connect-btn" data-id="${d.id}">${BromeoI18n.t("connectCard.connect")}</button>
+        <button class="saved-device-remove" data-id="${d.id}" title="${BromeoI18n.t("msg.remove")}">✕</button>
       </div>`
     )
     .join("");
@@ -1908,27 +1915,33 @@ function setSessionHistory(history: SessionHistoryEntry[]): void {
 
 function renderSessionHistory(): void {
   const history = getSessionHistory();
+  const locale = BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB";
   if (history.length === 0) {
-    el.sessionHistorySummary.textContent = "Nog geen sessies opgeslagen.";
-    el.sessionHistoryList.innerHTML = '<p class="muted small">Nog geen sessies.</p>';
+    el.sessionHistorySummary.textContent = BromeoI18n.t("msg.noSessionsSavedYet");
+    el.sessionHistoryList.innerHTML = `<p class="muted small">${BromeoI18n.t("sessions.emptyList")}</p>`;
     el.sessionHistoryList.classList.add("hidden");
-    el.toggleSessionHistory.textContent = "Tonen";
+    el.toggleSessionHistory.textContent = BromeoI18n.t("sessions.show");
     el.toggleSessionHistory.disabled = true;
     el.clearSessionHistory.disabled = true;
     return;
   }
   const latest = history[0];
-  const latestStarted = new Date(latest.startedAt).toLocaleString("nl-NL", {
+  const latestStarted = new Date(latest.startedAt).toLocaleString(locale, {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
-  const latestDirection = latest.role === "viewer" ? "laatste uitgaand" : "laatste inkomend";
-  el.sessionHistorySummary.textContent = `${history.length} sessie${history.length === 1 ? "" : "s"} opgeslagen, ${latestDirection} ${latestStarted} met ${formatId(latest.peerId)}.`;
+  const latestDirection = latest.role === "viewer" ? BromeoI18n.t("msg.lastOutgoing") : BromeoI18n.t("msg.lastIncoming");
+  el.sessionHistorySummary.textContent = BromeoI18n.t("msg.sessionHistorySummary", {
+    count: history.length,
+    direction: latestDirection,
+    started: latestStarted,
+    peerId: formatId(latest.peerId),
+  });
   el.toggleSessionHistory.disabled = false;
   el.clearSessionHistory.disabled = false;
-  el.toggleSessionHistory.textContent = sessionHistoryExpanded ? "Verbergen" : "Tonen";
+  el.toggleSessionHistory.textContent = sessionHistoryExpanded ? BromeoI18n.t("sessions.hide") : BromeoI18n.t("sessions.show");
   el.sessionHistoryList.classList.toggle("hidden", !sessionHistoryExpanded);
   if (!sessionHistoryExpanded) {
     el.sessionHistoryList.innerHTML = "";
@@ -1938,29 +1951,29 @@ function renderSessionHistory(): void {
   const visibleHistory = history.slice(0, 5);
   const rows = visibleHistory
     .map((entry) => {
-      const started = new Date(entry.startedAt).toLocaleString("nl-NL", {
+      const started = new Date(entry.startedAt).toLocaleString(locale, {
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
         minute: "2-digit",
       });
-      const direction = entry.role === "viewer" ? "Uitgaand" : "Inkomend";
-      const mode = entry.viewOnly ? "Alleen kijken" : "Besturing";
+      const direction = entry.role === "viewer" ? BromeoI18n.t("history.outgoing") : BromeoI18n.t("history.incoming");
+      const mode = entry.viewOnly ? BromeoI18n.t("session.viewOnlyBadge") : BromeoI18n.t("history.control");
       const permissions = permissionsSummary(normalizePermissions(entry.permissions, entry.viewOnly));
       const duration = formatDuration(entry.durationSec);
-      const recorded = entry.recorded ? " | opname" : "";
+      const recorded = entry.recorded ? BromeoI18n.t("history.recordedSuffix") : "";
       const note = entry.note ? `<div class="history-note">${escapeHtml(entry.note)}</div>` : "";
       return `<div class="history-row">
         <div class="history-main">
           <strong>${direction} - ${formatId(entry.peerId)}</strong>
-          <span>${started} | ${duration} | ${mode} | ${permissions} | ${entry.filesTransferred} bestand(en)${recorded}</span>
+          <span>${started} | ${duration} | ${mode} | ${permissions} | ${BromeoI18n.t("msg.filesCountShort", { count: entry.filesTransferred })}${recorded}</span>
           ${note}
         </div>
       </div>`;
     })
     .join("");
   const overflowNote = history.length > visibleHistory.length
-    ? `<p class="muted small session-history-overflow">Laatste ${visibleHistory.length} van ${history.length} sessies getoond.</p>`
+    ? `<p class="muted small session-history-overflow">${BromeoI18n.t("history.overflowNote", { shown: visibleHistory.length, total: history.length })}</p>`
     : "";
   el.sessionHistoryList.innerHTML = rows + overflowNote;
 }
@@ -1984,7 +1997,7 @@ async function maybeSaveDeviceAfterConnect(targetId: string): Promise<void> {
   const group = el.rememberGroup.value.trim() || undefined;
   const macInput = el.rememberMac.value.trim();
   const macValid = /^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$/.test(macInput);
-  if (macInput && !macValid) toast("MAC-adres genegeerd (ongeldig formaat), rest is wel opgeslagen.");
+  if (macInput && !macValid) toast(BromeoI18n.t("msg.macIgnored"));
   const existing = savedDevices.find((d) => d.id === targetId);
   savedDevices = await window.bromeo.saveDevice({
     id: targetId,
@@ -2004,7 +2017,7 @@ async function maybeSaveDeviceAfterConnect(targetId: string): Promise<void> {
   el.rememberGroup.classList.add("hidden");
   el.rememberMac.value = "";
   el.rememberMac.classList.add("hidden");
-  toast(`"${label}" opgeslagen voor één-tik verbinden.`);
+  toast(BromeoI18n.t("msg.deviceSavedOneTap", { label }));
 }
 
 function onServerMessage(msg: ServerMessage): void {
@@ -2036,10 +2049,10 @@ function onServerMessage(msg: ServerMessage): void {
         // Scoped to just the one viewer that left — must not tear down
         // every other connected viewer (see removeHostViewer).
         if (hostViewers.has(msg.peerId)) {
-          removeHostViewer(msg.peerId, { sendBye: false, toastMessage: `${hostViewers.get(msg.peerId)?.label ?? formatId(msg.peerId)} heeft de verbinding verbroken.` });
+          removeHostViewer(msg.peerId, { sendBye: false, toastMessage: BromeoI18n.t("msg.viewerDisconnected", { label: hostViewers.get(msg.peerId)?.label ?? formatId(msg.peerId) }) });
         }
       } else if (currentSession) {
-        toast("De partner heeft de verbinding verbroken.");
+        toast(BromeoI18n.t("msg.partnerDisconnected"));
         endSession();
       }
       break;
@@ -2070,7 +2083,7 @@ function handleBridgeNotification(notification: NotificationPayload): void {
   } else if (notification.kind === "confirm") {
     enqueueConfirm(entry);
   } else {
-    toast(`${notification.source}: ${notification.title}`);
+    toast(BromeoI18n.t("msg.notifyToast", { source: notification.source, title: notification.title }));
   }
 }
 
@@ -2078,7 +2091,7 @@ function handleIncomingNotify(fromId: string, notification: NotificationPayload)
   const entry: NotifyHistoryEntry = { ...notification, origin: "remote", replyTo: fromId };
   addNotifyHistory(entry);
   if (notification.kind === "confirm") enqueueConfirm(entry);
-  else toast(`${notification.source}: ${notification.title}`);
+  else toast(BromeoI18n.t("msg.notifyToast", { source: notification.source, title: notification.title }));
 }
 
 function addNotifyHistory(entry: NotifyHistoryEntry): void {
@@ -2133,7 +2146,7 @@ function showNextConfirm(): void {
 }
 
 function riskLabel(level: "low" | "medium" | "high"): string {
-  return { low: "Laag risico", medium: "Middelmatig risico", high: "Hoog risico" }[level];
+  return { low: BromeoI18n.t("risk.low"), medium: BromeoI18n.t("risk.medium"), high: BromeoI18n.t("risk.high") }[level];
 }
 
 function answerActiveConfirm(decision: "allow" | "deny"): void {
@@ -2156,17 +2169,17 @@ function dismissConfirmIfMatches(id: string, decision: "allow" | "deny"): void {
 
 function renderNotifyList(): void {
   if (notifyHistory.length === 0) {
-    el.notifyList.innerHTML = '<p class="muted small">Nog geen meldingen.</p>';
+    el.notifyList.innerHTML = `<p class="muted small">${BromeoI18n.t("topbar.notificationsEmpty")}</p>`;
     return;
   }
   el.notifyList.innerHTML = notifyHistory
     .map((n) => {
-      const time = new Date(n.createdAt).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+      const time = new Date(n.createdAt).toLocaleTimeString(BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB", { hour: "2-digit", minute: "2-digit" });
       const status =
         n.status === "allow"
-          ? '<div class="notify-item-status allow">✓ Bevestigd</div>'
+          ? `<div class="notify-item-status allow">${BromeoI18n.t("notify.confirmed")}</div>`
           : n.status === "deny"
-            ? '<div class="notify-item-status deny">✕ Geweigerd</div>'
+            ? `<div class="notify-item-status deny">${BromeoI18n.t("notify.denied")}</div>`
             : "";
       const risk = n.riskLevel ? `<span class="risk-badge risk-badge--${n.riskLevel}">${riskLabel(n.riskLevel)}</span>` : "";
       const command = n.command ? `<pre class="notify-command">${escapeHtml(n.command)}</pre>` : "";
@@ -2213,7 +2226,7 @@ async function handleIncomingRequest(
   if (trustedOnlyConnections && !savedDevices.some((d) => d.id === fromId)) {
     signaling.send({ type: "connect-response", targetId: fromId, accept: false, reason: "not-trusted" });
     const name = fromLabel?.trim();
-    toast(`Verbinding van onbekend apparaat geweigerd${name ? `: ${name}` : ""}.`);
+    toast(BromeoI18n.t("msg.unknownDeviceRejected", { name: name ? `: ${name}` : "" }));
     return;
   }
   const check = await window.bromeo.checkPassword(passwordHash, totpCode, fromId, fromLabel, trustDevice);
@@ -2245,8 +2258,8 @@ function showNextIncomingRequest(): void {
   const name = next.fromLabel?.trim() || known?.label;
   el.incomingFrom.textContent = name ? `${name} (${formatId(next.fromId)})` : formatId(next.fromId);
   el.incomingAction.textContent = next.isExtra
-    ? "wil ook meekijken (alleen-lezen, er is al een sessie actief)"
-    : `met rechten: ${permissionsSummary(next.permissions)}`;
+    ? BromeoI18n.t("msg.incomingExtraViewer")
+    : BromeoI18n.t("msg.incomingWithPermissions", { perms: permissionsSummary(next.permissions) });
   startIncomingTimeout();
   el.incomingModal.classList.remove("hidden");
 }
@@ -2306,9 +2319,11 @@ async function broadcastVideoSwap(newStream: MediaStream, stopOld = true): Promi
 
 function updateSharingStatusUI(): void {
   if (hostViewers.size === 0) return;
-  const names = [...hostViewers.values()].map((v) => `${v.label}${v.viewOnly ? " (alleen-lezen)" : ""}`);
+  const names = [...hostViewers.values()].map((v) => `${v.label}${v.viewOnly ? BromeoI18n.t("msg.viewerReadOnlySuffix") : ""}`);
   el.sharingText.textContent =
-    hostViewers.size === 1 ? `${names[0]} kijkt mee met dit apparaat` : `${hostViewers.size} kijkers verbonden: ${names.join(", ")}`;
+    hostViewers.size === 1
+      ? BromeoI18n.t("msg.viewerWatchingSingle", { name: names[0] })
+      : BromeoI18n.t("msg.viewersConnected", { count: hostViewers.size, names: names.join(", ") });
 }
 
 function saveHostViewerHistoryEntry(entry: HostViewerConnection): void {
@@ -2334,7 +2349,7 @@ function saveHostViewerHistoryEntry(entry: HostViewerConnection): void {
 // thread/UI in phase 1 (see plan doc) — surfaced as a toast so they're never
 // silently lost, without building a full multi-thread chat switcher.
 function receiveExtraViewerChatMessage(peerId: string, label: string, text: string, _timestamp: number): void {
-  toast(`${label} (kijker): ${text}`);
+  toast(BromeoI18n.t("msg.viewerChat", { label, text }));
 }
 
 // Host-machine-wide teardown — runs exactly once, when the last connected
@@ -2392,10 +2407,10 @@ function finishHostSharing(): void {
   sessionStartedAt = null;
   filesTransferredCount = 0;
   el.curtainManualToggle.classList.add("hidden");
-  el.curtainManualToggle.textContent = "Scherm uit";
+  el.curtainManualToggle.textContent = BromeoI18n.t("sharingBar.curtainOff");
   el.sharingBar.classList.add("hidden");
   el.hostChatPanel.classList.add("hidden");
-  el.hostChatMessages.innerHTML = '<p class="muted small">Nog geen berichten.</p>';
+  el.hostChatMessages.innerHTML = `<p class="muted small">${BromeoI18n.t("session.noMessages")}</p>`;
   el.hostChatInput.value = "";
   el.sessionNotesInput.value = "";
   el.notesPanel.classList.add("hidden");
@@ -2462,7 +2477,7 @@ function promoteViewerToControl(peerId: string): void {
   sessionPermissions = target.permissions;
   sessionViewOnly = false;
   startCursorShapePoll();
-  toast(`${target.label} heeft nu de besturing.`);
+  toast(BromeoI18n.t("msg.controlGivenTo", { label: target.label }));
   broadcastViewerList();
   updateMiniController();
   updateSharingStatusUI();
@@ -2487,7 +2502,7 @@ function onHostViewerConnectionState(peerId: string, state: RTCPeerConnectionSta
       if (curtainModeEnabled) {
         monitorIsOff = true;
         window.bromeo.setMonitorPower(false);
-        el.curtainManualToggle.textContent = "Scherm aan";
+        el.curtainManualToggle.textContent = BromeoI18n.t("msg.screenOn");
       }
       // Only worth polling if the primary viewer can actually act on hover
       // context — matches the original single-viewer behavior.
@@ -2512,7 +2527,7 @@ function onHostViewerConnectionState(peerId: string, state: RTCPeerConnectionSta
     // session.ts), so the host waits for the viewer's own short grace-period
     // close (producing this "closed" state) before tearing down, instead of
     // reacting to the first "failed" blip.
-    removeHostViewer(peerId, { sendBye: false, toastMessage: `${entry.label} heeft de verbinding verbroken.` });
+    removeHostViewer(peerId, { sendBye: false, toastMessage: BromeoI18n.t("msg.viewerDisconnected", { label: entry.label }) });
   }
 }
 
@@ -2534,7 +2549,7 @@ async function captureAndAnswerForViewer(peerId: string, offer: RTCSessionDescri
     }
     await entry.session.acceptAsHost(offer, hostCaptureStream);
   } catch (err) {
-    toast("Kon het scherm niet delen: " + (err as Error).message);
+    toast(BromeoI18n.t("msg.screenShareFailed", { error: (err as Error).message }));
     removeHostViewer(peerId, { sendBye: true });
   }
 }
@@ -2563,11 +2578,11 @@ function buildHostViewerCallbacks(peerId: string, displayLabel: string): Session
     },
     onClipboard: async (text) => {
       if (!hostViewers.get(peerId)?.permissions.clipboard) {
-        toast("Klembord ontvangen, maar geweigerd door sessierechten.");
+        toast(BromeoI18n.t("msg.clipboardRejectedPermissions"));
         return;
       }
       await window.bromeo.setClipboard(text);
-      toast(`Klembord ontvangen van ${displayLabel} (${text.length} tekens).`);
+      toast(BromeoI18n.t("msg.clipboardReceivedFrom", { label: displayLabel, count: text.length }));
     },
     onChatMessage: (text, timestamp) => {
       if (hostViewers.get(peerId)?.permissions.control) receiveChatMessage(text, timestamp);
@@ -2576,7 +2591,7 @@ function buildHostViewerCallbacks(peerId: string, displayLabel: string): Session
     onSystemCommand: (cmd) => void handleHostSystemCommand(peerId, cmd),
     onFileOffer: (offer) => {
       if (!hostViewers.get(peerId)?.permissions.files) {
-        toast(`Bestand geweigerd door sessierechten: ${offer.name}`);
+        toast(BromeoI18n.t("msg.fileRejectedPermissions", { name: offer.name }));
         return false;
       }
       addFileRow(offer.id, offer.name);
@@ -2588,7 +2603,7 @@ function buildHostViewerCallbacks(peerId: string, displayLabel: string): Session
       if (!hostViewers.get(peerId)?.permissions.files) return;
       const res = await window.bromeo.saveFile(name, chunks);
       filesTransferredCount++;
-      finishFileRow(id, res.ok ? `Opgeslagen: ${res.path}` : "Opslaan geannuleerd");
+      finishFileRow(id, res.ok ? BromeoI18n.t("msg.fileSaved", { path: res.path ?? "" }) : BromeoI18n.t("msg.saveCancelled"));
     },
   };
 }
@@ -2626,7 +2641,7 @@ async function handleHostSystemCommand(peerId: string, cmd: SystemCommand): Prom
     captureResolutionMode = cmd.mode;
     if (hostWebcamStream) {
       await disableWebcamOverlay();
-      toast("Camera-overlay uitgeschakeld door het wijzigen van de resolutie.");
+      toast(BromeoI18n.t("msg.cameraOverlayOffResolution"));
     }
     // Re-capture whatever is currently active (window/monitor/dual — that
     // selection lives in main.ts and setDisplayMediaRequestHandler picks it
@@ -2700,7 +2715,7 @@ async function handleHostSystemCommand(peerId: string, cmd: SystemCommand): Prom
     // turn back on after the switch.
     if (hostWebcamStream) {
       await disableWebcamOverlay();
-      toast("Camera-overlay uitgeschakeld door het wisselen van scherm/venster.");
+      toast(BromeoI18n.t("msg.cameraOverlayOffSwitch"));
     }
 
     if (cmd.kind === "switch-monitor") {
@@ -2770,7 +2785,7 @@ async function handleHostSystemCommand(peerId: string, cmd: SystemCommand): Prom
     stopDualMonitorRawStreams();
     if (hostWebcamStream) {
       await disableWebcamOverlay();
-      toast("Camera-overlay uitgeschakeld door het wisselen van scherm/venster.");
+      toast(BromeoI18n.t("msg.cameraOverlayOffSwitch"));
     }
     await window.bromeo.setActiveMonitor(cmd.monitorId1);
     const streamA = await navigator.mediaDevices.getDisplayMedia({ video: getCaptureVideoConstraints(), audio: false });
@@ -2784,7 +2799,7 @@ async function handleHostSystemCommand(peerId: string, cmd: SystemCommand): Prom
     if (!control || !dualMonitorStreams) return;
     if (hostWebcamStream) {
       await disableWebcamOverlay();
-      toast("Camera-overlay uitgeschakeld door het wisselen van scherm/venster.");
+      toast(BromeoI18n.t("msg.cameraOverlayOffSwitch"));
     }
     // Fired on every phone rotation — recompose the already-captured pair
     // at the new split, no fresh getDisplayMedia calls needed (mirrors
@@ -2867,21 +2882,21 @@ function handleConnectResponse(fromId: string, accept: boolean, reason?: string)
   if (reason === "totp-required" || reason === "bad-totp") {
     el.totpRequiredMessage.textContent =
       reason === "bad-totp"
-        ? "Onjuiste code. Voer de actuele 6-cijferige code uit de authenticator-app in."
-        : "Dit apparaat gebruikt twee-factor-authenticatie. Voer de 6-cijferige code uit de authenticator-app in.";
+        ? BromeoI18n.t("msg.totpBadCodeRetry")
+        : BromeoI18n.t("totpRequired.message");
     el.totpRequiredInput.value = "";
     el.totpTrustDevice.checked = false;
     el.totpRequiredModal.classList.remove("hidden");
     return;
   }
   const reasons: Record<string, string> = {
-    offline: "Dat apparaat is niet online.",
-    "bad-password": "Onjuist wachtwoord.",
-    declined: "De partner heeft de aanvraag geweigerd.",
-    "not-trusted": "Dit apparaat accepteert alleen opgeslagen apparaten.",
-    busy: "De partner heeft al een actieve sessie.",
+    offline: BromeoI18n.t("reason.offline"),
+    "bad-password": BromeoI18n.t("reason.badPassword"),
+    declined: BromeoI18n.t("reason.declined"),
+    "not-trusted": BromeoI18n.t("reason.notTrusted"),
+    busy: BromeoI18n.t("reason.busy"),
   };
-  toast(reasons[reason ?? ""] ?? "Verbinding geweigerd.");
+  toast(reasons[reason ?? ""] ?? BromeoI18n.t("reason.generic"));
 }
 
 // Toggles the viewer-role toolbar affordances to match a permission set.
@@ -2920,11 +2935,11 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
   setLockOnEndUi(false);
   updateSessionState("starting");
   el.sessionNotesInput.value = "";
-  el.sessionStats.textContent = "Beeld wordt geladen";
+  el.sessionStats.textContent = BromeoI18n.t("session.imageLoading");
   el.sessionHint.classList.remove("hidden");
   remoteAudioMuted = false;
   el.remoteVideo.muted = false;
-  setIconButtonState(el.audioToggleBtn, "Geluid uit", "icon-volume-x");
+  setIconButtonState(el.audioToggleBtn, BromeoI18n.t("session.soundOff"), "icon-volume-x");
   el.home.classList.add("hidden");
   el.sessionView.classList.remove("hidden");
   currentSession = new PeerSession("viewer", DEFAULT_ICE_SERVERS, signaling, peerId, {
@@ -2960,11 +2975,11 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     },
     onClipboard: async (text) => {
       if (!sessionPermissions.clipboard) {
-        toast("Klembord ontvangen, maar geweigerd door sessierechten.");
+        toast(BromeoI18n.t("msg.clipboardRejectedPermissions"));
         return;
       }
       await window.bromeo.setClipboard(text);
-      toast(`Klembord ontvangen (${text.length} tekens).`);
+      toast(BromeoI18n.t("msg.clipboardReceived", { count: text.length }));
     },
     onChatMessage: (text, timestamp) => receiveChatMessage(text, timestamp),
     onSystemCommand: (cmd) => {
@@ -2974,20 +2989,20 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
         // of what we requested), so it's always safe to trust directly —
         // `ok` only controls whether we also surface a failure toast.
         setBlockInputUi(cmd.enabled, false);
-        if (!cmd.ok) toast("Blokkeren van externe invoer is mislukt.");
+        if (!cmd.ok) toast(BromeoI18n.t("msg.blockInputFailedRemote"));
       } else if (cmd.kind === "lock-on-session-end-status") {
         applyLockOnEndStatus(cmd.enabled, cmd.ok);
       } else if (cmd.kind === "ctrl-alt-del-status") {
-        if (cmd.ok) toast("Ctrl+Alt+Del verzonden.");
-        else if (!cmd.installed) toast("De host heeft Ctrl+Alt+Del op afstand niet ingeschakeld.");
-        else toast("Versturen van Ctrl+Alt+Del is mislukt.");
+        if (cmd.ok) toast(BromeoI18n.t("msg.cadSent"));
+        else if (!cmd.installed) toast(BromeoI18n.t("msg.cadNotEnabled"));
+        else toast(BromeoI18n.t("msg.cadSendFailed"));
       } else if (cmd.kind === "permissions-update") {
         // A multi-viewer-hosting promotion/demotion on the host's side —
         // re-apply our own toolbar UI live instead of requiring a reconnect.
         sessionPermissions = cmd.permissions;
         sessionViewOnly = !sessionPermissions.control;
         applyViewerPermissionsUi(sessionPermissions, sessionViewOnly);
-        toast(sessionPermissions.control ? "Je hebt nu de besturing." : "Je bent nu alleen-lezen.");
+        toast(sessionPermissions.control ? BromeoI18n.t("msg.viewerNowControlling") : BromeoI18n.t("msg.viewerNowReadOnly"));
       } else if (cmd.kind === "annotation-stroke") {
         receiveAnnotationStroke(cmd.id, cmd.points, cmd.color);
       } else if (cmd.kind === "annotation-clear") {
@@ -2996,7 +3011,7 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     },
     onFileOffer: (offer) => {
       if (!sessionPermissions.files) {
-        toast(`Bestand geweigerd door sessierechten: ${offer.name}`);
+        toast(BromeoI18n.t("msg.fileRejectedPermissions", { name: offer.name }));
         return false;
       }
       addFileRow(offer.id, offer.name);
@@ -3008,13 +3023,13 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
       if (!sessionPermissions.files) return;
       const res = await window.bromeo.saveFile(name, chunks);
       filesTransferredCount++;
-      finishFileRow(id, res.ok ? `Opgeslagen: ${res.path}` : "Opslaan geannuleerd");
+      finishFileRow(id, res.ok ? BromeoI18n.t("msg.fileSaved", { path: res.path ?? "" }) : BromeoI18n.t("msg.saveCancelled"));
     },
   });
   currentSession.startAsViewer(el.codecPreferenceSelect.value as CodecPreferenceMode);
   applyQualityLevel(el.qualitySelect.value as QualityLevel);
   applyResolutionPreference(el.resolutionPreferenceSelect.value as ResolutionMode);
-  el.connectStatus.textContent = "Verbonden.";
+  el.connectStatus.textContent = BromeoI18n.t("msg.connectedStatus");
 }
 
 function handleSignal(fromId: string, payload: unknown): void {
@@ -3121,7 +3136,7 @@ function endSession(): void {
   // outlive the session that started it, however it ends.
   if (currentRole === "host") window.bromeo.setCaptureDesktop();
   el.curtainManualToggle.classList.add("hidden");
-  el.curtainManualToggle.textContent = "Scherm uit";
+  el.curtainManualToggle.textContent = BromeoI18n.t("sharingBar.curtainOff");
 
   // Notify the peer immediately rather than letting it wait out a WebRTC
   // ICE-failure timeout (which can take many seconds) to notice we're gone.
@@ -3152,15 +3167,15 @@ function endSession(): void {
   el.remoteVideo.srcObject = null;
   el.remoteVideo.muted = false;
   remoteAudioMuted = false;
-  setIconButtonState(el.audioToggleBtn, "Geluid uit", "icon-volume-x");
-  el.sessionStats.textContent = "Beeld wordt geladen";
+  setIconButtonState(el.audioToggleBtn, BromeoI18n.t("session.soundOff"), "icon-volume-x");
+  el.sessionStats.textContent = BromeoI18n.t("session.imageLoading");
   updateSessionState("starting");
   el.sessionHint.classList.remove("hidden");
   chatLog = [];
   el.chatPanel.classList.add("hidden");
   el.hostChatPanel.classList.add("hidden");
-  el.chatMessages.innerHTML = '<p class="muted small">Nog geen berichten.</p>';
-  el.hostChatMessages.innerHTML = '<p class="muted small">Nog geen berichten.</p>';
+  el.chatMessages.innerHTML = `<p class="muted small">${BromeoI18n.t("session.noMessages")}</p>`;
+  el.hostChatMessages.innerHTML = `<p class="muted small">${BromeoI18n.t("session.noMessages")}</p>`;
   el.chatInput.value = "";
   el.hostChatInput.value = "";
   aiBuddyLog = [];
@@ -3205,7 +3220,7 @@ function showSessionSummary(): void {
   const durationSec = Math.round((Date.now() - sessionStartedAt) / 1000);
   const endedAt = Date.now();
   const durationText = formatDuration(durationSec);
-  const filesText = filesTransferredCount === 0 ? "geen bestanden overgezet" : `${filesTransferredCount} bestand(en) overgezet`;
+  const filesText = filesTransferredCount === 0 ? BromeoI18n.t("msg.noFilesTransferred") : BromeoI18n.t("msg.filesTransferredCount", { count: filesTransferredCount });
   saveSessionHistoryEntry({
     id: crypto.randomUUID(),
     peerId: currentPeerId,
@@ -3219,7 +3234,7 @@ function showSessionSummary(): void {
     note: el.sessionNotesInput.value.trim(),
     recorded: sessionWasRecorded,
   });
-  toast(`Sessie beëindigd — duurde ${durationText}, ${filesText}.`);
+  toast(BromeoI18n.t("msg.sessionEndedSummary", { duration: durationText, files: filesText }));
   sessionStartedAt = null;
   filesTransferredCount = 0;
 }
@@ -3234,7 +3249,7 @@ function toggleRecording(): void {
 function startRecording(auto = false): void {
   const stream = el.remoteVideo.srcObject as MediaStream | null;
   if (!stream || currentRole !== "viewer") {
-    if (!auto) toast("Kan alleen opnemen tijdens een actieve sessie.");
+    if (!auto) toast(BromeoI18n.t("msg.recordOnlyDuringSession"));
     return;
   }
   if (mediaRecorder && mediaRecorder.state !== "inactive") return;
@@ -3249,16 +3264,16 @@ function startRecording(auto = false): void {
     const buffer = new Uint8Array(await blob.arrayBuffer());
     const suggestedName = `BromeoRemote-opname-${new Date().toISOString().replace(/[:.]/g, "-")}.webm`;
     const res = await window.bromeo.saveRecording(buffer, suggestedName);
-    toast(res.ok ? `Opname opgeslagen: ${res.path}` : "Opslaan van opname geannuleerd.");
+    toast(res.ok ? BromeoI18n.t("msg.recordingSaved", { path: res.path ?? "" }) : BromeoI18n.t("msg.recordingSaveCancelled"));
   };
   mediaRecorder.start();
   sessionWasRecorded = true;
   recordingStartedAt = Date.now();
-  setIconButtonState(el.recordToggleBtn, "Stop opname", "icon-stop");
+  setIconButtonState(el.recordToggleBtn, BromeoI18n.t("msg.stopRecording"), "icon-stop");
   el.recordingIndicator.classList.remove("hidden");
   recordingTimerHandle = setInterval(updateRecordingTimer, 1000);
   updateRecordingTimer();
-  if (auto) toast("Automatische opname gestart.");
+  if (auto) toast(BromeoI18n.t("msg.autoRecordingStarted"));
 }
 
 function stopRecording(): void {
@@ -3266,7 +3281,7 @@ function stopRecording(): void {
   mediaRecorder = null;
   if (recordingTimerHandle) clearInterval(recordingTimerHandle);
   recordingTimerHandle = null;
-  setIconButtonState(el.recordToggleBtn, "Opnemen", "icon-record");
+  setIconButtonState(el.recordToggleBtn, BromeoI18n.t("session.record"), "icon-record");
   el.recordingIndicator.classList.add("hidden");
 }
 
@@ -3303,12 +3318,12 @@ function receiveChatMessage(text: string, timestamp: number): void {
 function renderChat(): void {
   const container = currentRole === "host" ? el.hostChatMessages : el.chatMessages;
   if (chatLog.length === 0) {
-    container.innerHTML = '<p class="muted small">Nog geen berichten.</p>';
+    container.innerHTML = `<p class="muted small">${BromeoI18n.t("session.noMessages")}</p>`;
     return;
   }
   container.innerHTML = chatLog
     .map((m) => {
-      const time = new Date(m.timestamp).toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" });
+      const time = new Date(m.timestamp).toLocaleTimeString(BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB", { hour: "2-digit", minute: "2-digit" });
       return `<div class="chat-bubble ${m.mine ? "chat-bubble--mine" : ""}">${escapeHtml(m.text)}<span class="chat-bubble-time">${time}</span></div>`;
     })
     .join("");
@@ -3349,7 +3364,7 @@ function clearAiBuddyScreenshot(): void {
 function renderAiBuddyMessages(): void {
   if (aiBuddyLog.length === 0) {
     el.aiBuddyMessages.innerHTML =
-      '<p class="muted small">Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</p>';
+      `<p class="muted small">${BromeoI18n.t("session.aiBuddyScreenshotHint")}</p>`;
     return;
   }
   el.aiBuddyMessages.innerHTML = aiBuddyLog
@@ -3365,7 +3380,7 @@ async function sendAiBuddyMessage(): Promise<void> {
   const text = el.aiBuddyInput.value.trim();
   if (!text || aiBuddySending) return;
   if (!(await window.bromeo.getOpenAiKeyStatus())) {
-    toast("Stel eerst je OpenAI API-sleutel in bij de AI Buddy-instellingen.");
+    toast(BromeoI18n.t("msg.aiBuddyKeyMissing"));
     return;
   }
   const imageBase64 = aiBuddyPendingScreenshot ?? undefined;
@@ -3376,13 +3391,13 @@ async function sendAiBuddyMessage(): Promise<void> {
 
   aiBuddySending = true;
   el.aiBuddySendBtn.disabled = true;
-  el.aiBuddyStatus.textContent = "AI Buddy denkt na…";
+  el.aiBuddyStatus.textContent = BromeoI18n.t("msg.aiBuddyThinking");
   try {
     const history = aiBuddyLog.map((m) => ({ role: m.role, text: m.text, imageBase64: m.imageBase64 }));
     const result = await window.bromeo.askAiBuddy(history);
     aiBuddyLog.push({
       role: "assistant",
-      text: result.ok && result.reply ? result.reply : `⚠️ ${result.error ?? "Onbekende fout."}`,
+      text: result.ok && result.reply ? result.reply : `⚠️ ${result.error ?? BromeoI18n.t("msg.aiBuddyUnknownError")}`,
       timestamp: Date.now(),
     });
   } catch (err) {
@@ -3643,7 +3658,7 @@ async function toggleMicrophone(): Promise<void> {
     micStream = null;
     el.voiceToggleBtn.classList.remove("btn-primary");
     el.voiceToggleBtn.classList.add("btn-outline");
-    toast("Microfoon uitgeschakeld.");
+    toast(BromeoI18n.t("msg.micOff"));
     return;
   }
   try {
@@ -3651,9 +3666,9 @@ async function toggleMicrophone(): Promise<void> {
     await currentSession.setMicrophoneTrack(micStream.getAudioTracks()[0]);
     el.voiceToggleBtn.classList.remove("btn-outline");
     el.voiceToggleBtn.classList.add("btn-primary");
-    toast("Microfoon ingeschakeld — de ander kan je nu horen.");
+    toast(BromeoI18n.t("msg.micOnViewer"));
   } catch (err) {
-    toast("Kon microfoon niet gebruiken: " + (err as Error).message);
+    toast(BromeoI18n.t("msg.micError", { error: (err as Error).message }));
   }
 }
 
@@ -3669,9 +3684,9 @@ function updateFooterLicenseInfo(status: { valid: boolean; plan?: string; isTria
   const footerText = document.getElementById("footer-license-info");
   if (!footerText) return;
   if (status?.valid) {
-    footerText.textContent = `· Licentie: ${status.plan || "Free"}${status.isTrial ? " (Trial)" : ""}`;
+    footerText.textContent = BromeoI18n.t("license.footerPlan", { plan: status.plan || "Free", trial: status.isTrial ? BromeoI18n.t("license.trialSuffix") : "" });
   } else {
-    footerText.textContent = "· Licentie: Free";
+    footerText.textContent = BromeoI18n.t("license.freeFooter");
   }
 }
 
@@ -3683,14 +3698,14 @@ function updateExpiryText(expiresAt: string | null | undefined): void {
     return;
   }
   const date = new Date(expiresAt);
-  const dateLabel = date.toLocaleDateString("nl-NL", { day: "numeric", month: "long", year: "numeric" });
+  const dateLabel = date.toLocaleDateString(BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB", { day: "numeric", month: "long", year: "numeric" });
   const daysLeft = Math.ceil((date.getTime() - Date.now()) / 86_400_000);
   if (daysLeft < 0) {
-    expiryText.textContent = `Verlopen op ${dateLabel}.`;
+    expiryText.textContent = BromeoI18n.t("license.expiredOn", { date: dateLabel });
   } else if (daysLeft === 0) {
-    expiryText.textContent = `Verloopt vandaag (${dateLabel}).`;
+    expiryText.textContent = BromeoI18n.t("license.expiresToday", { date: dateLabel });
   } else {
-    expiryText.textContent = `Verloopt op ${dateLabel} (nog ${daysLeft} ${daysLeft === 1 ? "dag" : "dagen"}).`;
+    expiryText.textContent = BromeoI18n.t("license.expiresIn", { date: dateLabel, days: daysLeft });
   }
 }
 
@@ -3747,21 +3762,21 @@ async function initLicenseSection(): Promise<void> {
       if (info.licenseStatus) {
         if (info.licenseStatus.valid) {
           statusText.style.color = "#0be881";
-          statusText.textContent = `Licentiestatus: Actief (${info.licenseStatus.plan || "Free"}) — HWID: ${info.hwid.slice(0, 12)}...`;
+          statusText.textContent = BromeoI18n.t("license.statusActive", { plan: info.licenseStatus.plan || "Free", hwid: info.hwid.slice(0, 12) });
         } else {
           statusText.style.color = "#ff4d6d";
-          statusText.textContent = `Licentiestatus: ${info.licenseStatus.reason || "Ongeldig"}`;
+          statusText.textContent = BromeoI18n.t("license.statusInvalid", { reason: info.licenseStatus.reason || BromeoI18n.t("license.invalidReason") });
         }
         updateFooterLicenseInfo(info.licenseStatus);
         updateExpiryText(info.licenseStatus.expiresAt);
         checkAndShowFreeUpsell(info.licenseStatus);
       } else {
-        statusText.textContent = `Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).`;
+        statusText.textContent = BromeoI18n.t("license.statusNotChecked");
         updateFooterLicenseInfo(null);
         checkAndShowFreeUpsell(null);
       }
     } catch {
-      statusText.textContent = `Licentiestatus: Standaard Gratis (15 min per sessie).`;
+      statusText.textContent = BromeoI18n.t("license.statusDefaultFree");
       updateFooterLicenseInfo(null);
       checkAndShowFreeUpsell(null);
     }
@@ -3776,7 +3791,7 @@ async function initLicenseSection(): Promise<void> {
       .then((res) => {
         if (res.valid) {
           statusText.style.color = "#0be881";
-          statusText.textContent = `Licentiestatus: Actief (${res.plan || "Free"}) — HWID: ${cachedHwid.slice(0, 12)}...`;
+          statusText.textContent = BromeoI18n.t("license.statusActive", { plan: res.plan || "Free", hwid: cachedHwid.slice(0, 12) });
           updateExpiryText(res.expiresAt);
         }
         updateFooterLicenseInfo(res);
@@ -3788,35 +3803,35 @@ async function initLicenseSection(): Promise<void> {
     const email = emailInput.value.trim();
     const key = keyInput.value.trim();
     if (!email && !key) {
-      toast("Vul een e-mailadres of licentiesleutel in.");
+      toast(BromeoI18n.t("license.emailOrKeyRequired"));
       return;
     }
 
     verifyBtn.disabled = true;
-    verifyBtn.textContent = "Controleren...";
+    verifyBtn.textContent = BromeoI18n.t("license.checkingBtn");
     statusText.style.color = "#8898aa";
-    statusText.textContent = "Licentie wordt gecontroleerd bij bromeoremote.com...";
+    statusText.textContent = BromeoI18n.t("license.statusCheckingServer");
 
     try {
       const res = await window.bromeo.verifyLicense(key, email);
       if (res.valid) {
         statusText.style.color = "#0be881";
-        statusText.textContent = `✅ Licentie Geactiveerd! Plan: ${res.plan || "Pro"}`;
-        toast(`Licentie succesvol geactiveerd voor ${res.userEmail || email}!`);
+        statusText.textContent = BromeoI18n.t("license.activatedStatus", { plan: res.plan || "Pro" });
+        toast(BromeoI18n.t("license.activatedToast", { email: res.userEmail || email }));
         updateExpiryText(res.expiresAt);
       } else {
         statusText.style.color = "#ff4d6d";
-        statusText.textContent = `❌ ${res.reason || "Licentie controle mislukt."}`;
-        toast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
+        statusText.textContent = BromeoI18n.t("license.failedStatus", { reason: res.reason || BromeoI18n.t("license.checkFailedGeneric") });
+        toast(BromeoI18n.t("license.failedToast", { reason: res.reason || BromeoI18n.t("license.unknownError") }));
         updateExpiryText(null);
       }
       updateFooterLicenseInfo(res);
     } catch (err: any) {
       statusText.style.color = "#ff4d6d";
-      statusText.textContent = `❌ Fout bij verbinden: ${err.message || err}`;
+      statusText.textContent = BromeoI18n.t("license.connectError", { message: err.message || err });
     } finally {
       verifyBtn.disabled = false;
-      verifyBtn.textContent = "Licentie Controleren & Activeren";
+      verifyBtn.textContent = BromeoI18n.t("license.verifyBtn");
     }
   };
 }

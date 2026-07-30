@@ -37,10 +37,11 @@ import { requestNotificationPermission, getPushToken, onPushTokenRefresh, onFore
 import { ensureNotificationChannels, onNotificationPress, getInitialNotificationPress, openConfirmNotificationSettings } from "./notifications";
 import { getOpenAiApiKey, setOpenAiApiKey, captureRemoteVideoFrame, askAiBuddy, type AiBuddyMessage } from "./aiBuddy";
 import { isAccessibilityServiceEnabled, openAccessibilitySettings } from "./remoteControl";
-import { isVirtualKeyboardEnabled, isVirtualKeyboardActive, openKeyboardSettings } from "./virtualKeyboard";
+import { isVirtualKeyboardEnabled, openKeyboardSettings } from "./virtualKeyboard";
 import { RemoteInputTranslator } from "./inputTranslator";
 import { getSavedDevices, saveDevice, removeSavedDevice, toggleFavorite, sortSavedDevices } from "./savedDevices";
 import { getSessionHistory, addSessionHistoryEntry, clearSessionHistory, type SessionHistoryEntry } from "./sessionHistory";
+import { useI18n, loadLang, setLang, getLang } from "./i18n";
 import { pick, isErrorWithCode, errorCodes } from "@react-native-documents/picker";
 import ReactNativeBlobUtil from "react-native-blob-util";
 import {
@@ -111,22 +112,26 @@ const THEME_KEY = "bromeoremote_theme";
 
 // Mirrors the actual gesture handling in the panResponder below exactly —
 // keep in sync if that logic changes.
-const MOUSE_MODE_GESTURES = [
-  { Icon: MousePointerClick, title: "Tikken", desc: "Klikken (links)" },
-  { Icon: Timer, title: "Lang indrukken", desc: "Rechtsklikken" },
-  { Icon: Move, title: "Slepen", desc: "Muis verplaatsen" },
-  { Icon: MousePointerClick, title: "Dubbeltikken + slepen", desc: "Klik-en-sleep om te selecteren" },
-  { Icon: ArrowUpDown, title: "2 vingers slepen", desc: "Scrollen" },
-  { Icon: ZoomIn, title: "Knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
-] as const;
-const TOUCH_MODE_GESTURES = [
-  { Icon: TapGestureIcon, title: "Tikken", desc: "Klikken op die plek" },
-  { Icon: TapGestureIcon, title: "Dubbeltikken", desc: "Dubbelklikken op die plek" },
-  { Icon: LongPressGestureIcon, title: "Lang indrukken", desc: "Rechtsklikken op die plek" },
-  { Icon: DragGestureIcon, title: "Snel slepen", desc: "Scrollen" },
-  { Icon: LongPressDragGestureIcon, title: "Lang indrukken + slepen", desc: "Selecteren" },
-  { Icon: PinchGestureIcon, title: "Knijpen", desc: "In-/uitzoomen (alleen op je scherm)" },
-] as const;
+function buildMouseModeGestures(tFn: (key: string, vars?: Record<string, string | number>) => string) {
+  return [
+    { id: "tap", Icon: MousePointerClick, title: tFn("gesture.tap.title"), desc: tFn("gesture.tap.mouseDesc") },
+    { id: "longPress", Icon: Timer, title: tFn("gesture.longPress.title"), desc: tFn("gesture.longPress.mouseDesc") },
+    { id: "drag", Icon: Move, title: tFn("gesture.drag.title"), desc: tFn("gesture.drag.mouseDesc") },
+    { id: "doubleTapDrag", Icon: MousePointerClick, title: tFn("gesture.doubleTapDrag.title"), desc: tFn("gesture.doubleTapDrag.mouseDesc") },
+    { id: "twoFingerDrag", Icon: ArrowUpDown, title: tFn("gesture.twoFingerDrag.title"), desc: tFn("gesture.twoFingerDrag.mouseDesc") },
+    { id: "pinch", Icon: ZoomIn, title: tFn("gesture.pinch.title"), desc: tFn("gesture.pinch.desc") },
+  ];
+}
+function buildTouchModeGestures(tFn: (key: string, vars?: Record<string, string | number>) => string) {
+  return [
+    { id: "tap", Icon: TapGestureIcon, title: tFn("gesture.tap.title"), desc: tFn("gesture.tap.touchDesc") },
+    { id: "doubleTap", Icon: TapGestureIcon, title: tFn("gesture.doubleTap.title"), desc: tFn("gesture.doubleTap.touchDesc") },
+    { id: "longPress", Icon: LongPressGestureIcon, title: tFn("gesture.longPress.title"), desc: tFn("gesture.longPress.touchDesc") },
+    { id: "fastDrag", Icon: DragGestureIcon, title: tFn("gesture.fastDrag.title"), desc: tFn("gesture.fastDrag.touchDesc") },
+    { id: "longPressDrag", Icon: LongPressDragGestureIcon, title: tFn("gesture.longPressDrag.title"), desc: tFn("gesture.longPressDrag.touchDesc") },
+    { id: "pinch", Icon: PinchGestureIcon, title: tFn("gesture.pinch.title"), desc: tFn("gesture.pinch.desc") },
+  ];
+}
 
 type AppTheme = "light" | "dark";
 type IconComponent = React.ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
@@ -257,6 +262,13 @@ export default function App(): React.JSX.Element {
   // sit right under the phone's own gesture/button navigation area. Applied
   // directly to that container's `bottom` below.
   const insets = useSafeAreaInsets();
+  const { lang, t } = useI18n();
+  // `lang` isn't read directly in these callbacks, but it's what actually changes when the
+  // language switches (t's own identity is stable); it must stay in the deps to force a rebuild.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const mouseModeGestures = useMemo(() => buildMouseModeGestures(t), [lang, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const touchModeGestures = useMemo(() => buildTouchModeGestures(t), [lang, t]);
   const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const isLandscape = windowWidth > windowHeight;
   const [theme, setThemeState] = useState<AppTheme>("light");
@@ -406,13 +418,13 @@ export default function App(): React.JSX.Element {
     await setOpenAiApiKey(key || null);
     setOpenaiKeyConfigured(!!key);
     setOpenaiKeyInput("");
-    showToast(key ? "OpenAI-sleutel opgeslagen." : "OpenAI-sleutel verwijderd.");
+    showToast(key ? t("aiBuddy.keySavedToast") : t("aiBuddy.keyRemovedToast"));
   }
 
   async function takeAiBuddyScreenshot(): Promise<void> {
     const frame = await captureRemoteVideoFrame(rtcViewRef);
     if (!frame) {
-      showToast("Kon geen screenshot maken — is het beeld al geladen?");
+      showToast(t("aiBuddy.screenshotFailed"));
       return;
     }
     setAiBuddyScreenshot(frame);
@@ -422,7 +434,7 @@ export default function App(): React.JSX.Element {
     const text = aiBuddyInput.trim();
     if (!text || aiBuddySending) return;
     if (!(await getOpenAiApiKey())) {
-      showToast("Stel eerst je OpenAI API-sleutel in bij Instellingen.");
+      showToast(t("aiBuddy.keyMissingHint"));
       return;
     }
     const imageBase64 = aiBuddyScreenshot ?? undefined;
@@ -436,10 +448,10 @@ export default function App(): React.JSX.Element {
       const result = await askAiBuddy(history);
       setAiBuddyLog((prev) => [
         ...prev,
-        { role: "assistant", text: result.ok && result.reply ? result.reply : `Ã¢Å¡Â ïÂ¸Â ${result.error ?? "Onbekende fout."}`, timestamp: Date.now() },
+        { role: "assistant", text: result.ok && result.reply ? result.reply : `⚠️ ${result.error ?? t("aiBuddy.unknownError")}`, timestamp: Date.now() },
       ]);
     } catch (err) {
-      setAiBuddyLog((prev) => [...prev, { role: "assistant", text: `Ã¢Å¡Â ïÂ¸Â ${(err as Error).message}`, timestamp: Date.now() }]);
+      setAiBuddyLog((prev) => [...prev, { role: "assistant", text: `⚠️ ${(err as Error).message}`, timestamp: Date.now() }]);
     } finally {
       setAiBuddySending(false);
     }
@@ -460,7 +472,25 @@ export default function App(): React.JSX.Element {
             onPress={() => applyTheme(value)}
           >
             <Text style={[styles.settingsQualityText, theme === value && styles.settingsQualityTextActive]}>
-              {value === "light" ? "Licht" : "Donker"}
+              {value === "light" ? t("theme.light") : t("theme.dark")}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+  }
+
+  function renderLangToggle(): React.JSX.Element {
+    return (
+      <View style={styles.modeToggle}>
+        {(["en", "nl"] as const).map((value) => (
+          <TouchableOpacity
+            key={value}
+            style={[styles.modeToggleBtn, getLang() === value && styles.modeToggleBtnActive]}
+            onPress={() => setLang(value)}
+          >
+            <Text style={[styles.settingsQualityText, getLang() === value && styles.settingsQualityTextActive]}>
+              {value === "en" ? "EN" : "NL"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -521,10 +551,10 @@ export default function App(): React.JSX.Element {
       await ReactNativeBlobUtil.fs.scanFile([{ path: dest, mime: "" }]).catch(() => undefined);
       setFileTransfers((prev) => prev.map((f) => (f.id === id ? { ...f, done: true, savedPath: dest } : f)));
       filesTransferredCountRef.current++;
-      showToast(`Ontvangen: ${name} (opgeslagen in Downloads)`);
+      showToast(t("files.receivedToast", { name }));
     } catch {
       setFileTransfers((prev) => prev.filter((f) => f.id !== id));
-      Alert.alert("Mislukt", `"${name}" kon niet worden opgeslagen.`);
+      Alert.alert(t("common.failed"), t("files.saveFailedMsg", { name }));
     }
   }
 
@@ -535,11 +565,11 @@ export default function App(): React.JSX.Element {
       picked = await pick({ mode: "open" });
     } catch (err) {
       if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
-      Alert.alert("Mislukt", "Kon geen bestand kiezen.");
+      Alert.alert(t("common.failed"), t("files.pickFailedMsg"));
       return;
     }
     const doc = picked[0];
-    const name = doc.name ?? "bestand";
+    const name = doc.name ?? t("files.defaultName");
     const id = `${Date.now()}-out`;
     try {
       const base64: string = await ReactNativeBlobUtil.fs.readFile(doc.uri, "base64");
@@ -547,10 +577,10 @@ export default function App(): React.JSX.Element {
       await sessionRef.current.sendFile(name, base64);
       setFileTransfers((prev) => prev.map((f) => (f.id === id ? { ...f, done: true } : f)));
       filesTransferredCountRef.current++;
-      showToast(`Verzonden: ${name}`);
+      showToast(t("files.sentToast", { name }));
     } catch {
       setFileTransfers((prev) => prev.filter((f) => f.id !== id));
-      Alert.alert("Mislukt", `"${name}" kon niet worden verstuurd.`);
+      Alert.alert(t("common.failed"), t("files.sendFailedMsg", { name }));
     }
   }
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
@@ -604,7 +634,7 @@ export default function App(): React.JSX.Element {
     const timer = setInterval(() => {
       const now = Date.now();
       setAnnotationStrokes((prev) => prev.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS));
-      setAnnotationTick((t) => t + 1);
+      setAnnotationTick((n) => n + 1);
     }, 150);
     return () => clearInterval(timer);
   }, [annotationStrokes.length]);
@@ -630,10 +660,10 @@ export default function App(): React.JSX.Element {
   async function toggleMicrophone(): Promise<void> {
     if (micStreamRef.current) {
       await sessionRef.current?.setMicrophoneTrack(null);
-      micStreamRef.current.getTracks().forEach((t: any) => t.stop());
+      micStreamRef.current.getTracks().forEach((track: any) => track.stop());
       micStreamRef.current = null;
       setMicActive(false);
-      showToast("Microfoon uitgeschakeld.");
+      showToast(t("msg.micOff"));
       return;
     }
     try {
@@ -641,13 +671,13 @@ export default function App(): React.JSX.Element {
       micStreamRef.current = stream as unknown as MediaStream;
       await sessionRef.current?.setMicrophoneTrack(stream.getAudioTracks()[0]);
       setMicActive(true);
-      showToast("Microfoon ingeschakeld.");
+      showToast(t("msg.micOn"));
     } catch {
-      showToast("Kon microfoon niet gebruiken.");
+      showToast(t("msg.micError"));
     }
   }
   function resetMicrophoneState(): void {
-    micStreamRef.current?.getTracks().forEach((t: any) => t.stop());
+    micStreamRef.current?.getTracks().forEach((track: any) => track.stop());
     micStreamRef.current = null;
     setMicActive(false);
   }
@@ -750,7 +780,7 @@ export default function App(): React.JSX.Element {
   const keyboardInputRef = useRef<TextInput>(null);
   const lastTouchRef = useRef<{ x: number; y: number; time: number; moved: boolean }>({ x: 0, y: 0, time: 0, moved: false });
 
-  // Pinch-to-zoom on the video (visual only — the touchÃ¢â€ â€™mouse mapping below
+  // Pinch-to-zoom on the video (visual only — the touch→mouse mapping below
   // inverts this transform so clicks stay accurate while zoomed in).
   const [zoom, setZoomState] = useState({ scale: 1, panX: 0, panY: 0 });
   // Mirrors `zoom` for reading inside the PanResponder closures below, which
@@ -832,8 +862,8 @@ export default function App(): React.JSX.Element {
     return Math.hypot(touches[0].pageX - touches[1].pageX, touches[0].pageY - touches[1].pageY);
   }
   function touchCentroid(touches: { pageX: number; pageY: number }[]): { x: number; y: number } {
-    const x = touches.reduce((sum, t) => sum + t.pageX, 0) / touches.length;
-    const y = touches.reduce((sum, t) => sum + t.pageY, 0) / touches.length;
+    const x = touches.reduce((sum, touch) => sum + touch.pageX, 0) / touches.length;
+    const y = touches.reduce((sum, touch) => sum + touch.pageY, 0) / touches.length;
     return { x, y };
   }
   // Kept wired in case a future react-native-webrtc/Fabric combination
@@ -916,16 +946,16 @@ export default function App(): React.JSX.Element {
   function getZoomTiers(mode: "tiered" | "always-max"): number[] {
     const max = getMaxZoomScale();
     if (mode === "always-max") return [max];
-    const steps = [1, 2, 4].filter((t) => t < max - 0.01);
+    const steps = [1, 2, 4].filter((tier) => tier < max - 0.01);
     steps.push(max);
     return steps;
   }
   // The smallest tier that's still >= the given scale — i.e. "just enough"
   // render resolution for this zoom level, never less.
   function pickTier(scale: number, tiers: number[]): number {
-    return tiers.find((t) => t >= scale - 0.001) ?? tiers[tiers.length - 1];
+    return tiers.find((tier) => tier >= scale - 0.001) ?? tiers[tiers.length - 1];
   }
-  // Inverts the current zoom/pan transform: page-absolute touch point Ã¢â€ â€™ the
+  // Inverts the current zoom/pan transform: page-absolute touch point → the
   // underlying (unzoomed) content point, as a 0..1 fraction of the video.
   // RN's transform array `[translateX, translateY, scale]` applies translate
   // FIRST (in the view's own local space), then scale around its center — so
@@ -979,7 +1009,7 @@ export default function App(): React.JSX.Element {
       panY: clampPan(targetPanY, scale, height, rect.y, rect.height),
     };
   }
-  // Forward transform (content 0..1 fraction Ã¢â€ â€™ local screen point, relative to
+  // Forward transform (content 0..1 fraction → local screen point, relative to
   // videoWrap) — the inverse of pageToContentPct's math — used to draw the
   // mouse-mode cursor overlay at the right spot, including while zoomed.
   function contentPctToLocal(xPct: number, yPct: number): { lx: number; ly: number } {
@@ -1144,7 +1174,7 @@ export default function App(): React.JSX.Element {
       }
 
       // Push: register a token if Firebase is actually configured (no-ops
-      // gracefully otherwise, see docs/MOBILE.md Ã‚Â§5). Re-register on refresh
+      // gracefully otherwise, see docs/MOBILE.md §5). Re-register on refresh
       // since FCM tokens can rotate at any time.
       await requestNotificationPermission();
       await ensureNotificationChannels();
@@ -1206,6 +1236,7 @@ export default function App(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
+    loadLang();
     AsyncStorage.getItem(THEME_KEY).then((v) => {
       if (v === "dark" || v === "light") setThemeState(v);
     });
@@ -1241,7 +1272,7 @@ export default function App(): React.JSX.Element {
     const email = licenseEmailInput.trim();
     const key = licenseKeyInput.trim();
     if (!email && !key) {
-      showToast("Vul een e-mailadres of licentiesleutel in.");
+      showToast(t("license.emailOrKeyRequired"));
       return;
     }
     setLicenseVerifying(true);
@@ -1249,9 +1280,9 @@ export default function App(): React.JSX.Element {
       const res = await verifyMobileLicense(key, email);
       setLicenseStatusInfo(res);
       if (res.valid) {
-        showToast(`Licentie succesvol geactiveerd voor ${res.userEmail || email}!`);
+        showToast(t("license.activatedToast", { email: res.userEmail || email }));
       } else {
-        showToast(`Licentie controle mislukt: ${res.reason || "Onbekende fout"}`);
+        showToast(t("license.failedToast", { reason: res.reason || t("license.unknownError") }));
       }
     } finally {
       setLicenseVerifying(false);
@@ -1269,7 +1300,7 @@ export default function App(): React.JSX.Element {
           if (pending?.remember) {
             saveDevice({ id: pending.targetId, label: pending.label, passwordHash: pending.passwordHash, viewOnly: false }).then((devices) => {
               setSavedDevicesState(sortSavedDevices(devices));
-              showToast(`"${pending.label}" opgeslagen.`);
+              showToast(t("msg.deviceSaved", { label: pending.label }));
             });
           }
           pendingConnectRef.current = null;
@@ -1283,12 +1314,12 @@ export default function App(): React.JSX.Element {
             break;
           }
           const reasons: Record<string, string> = {
-            offline: "Dat apparaat is niet online.",
-            "bad-password": "Onjuist wachtwoord.",
-            declined: "De partner heeft de aanvraag geweigerd.",
-            busy: "De partner heeft al een actieve sessie.",
+            offline: t("reason.offline"),
+            "bad-password": t("reason.badPassword"),
+            declined: t("reason.declined"),
+            busy: t("reason.busy"),
           };
-          setConnectStatus(reasons[msg.reason ?? ""] ?? "Verbinding geweigerd.");
+          setConnectStatus(reasons[msg.reason ?? ""] ?? t("reason.generic"));
         }
         break;
       case "peer-disconnected":
@@ -1372,7 +1403,7 @@ export default function App(): React.JSX.Element {
     console.trace("[connectTo] call stack");
     pendingConnectRef.current = { targetId: id, passwordHash, remember, label };
     lastConnectRef.current = { targetId: id, passwordHash };
-    setConnectStatus("Verbinding maken…");
+    setConnectStatus(t("connect.making"));
     signalingRef.current?.send({
       type: "connect-request",
       targetId: id,
@@ -1396,7 +1427,7 @@ export default function App(): React.JSX.Element {
   async function onConnectPress(): Promise<void> {
     const cleanTarget = targetId.replace(/\s+/g, "");
     if (!/^\d{9}$/.test(cleanTarget)) {
-      setConnectStatus("Vul een geldig 9-cijferig BromeoRemote-ID in.");
+      setConnectStatus(t("connect.invalidId"));
       return;
     }
     const passwordHash = await sha256Hex(targetPassword);
@@ -1416,7 +1447,7 @@ export default function App(): React.JSX.Element {
     const intervalMs = 15_000;
     const maxAttempts = 20;
     let attempt = 0;
-    showToast(`Verbinding verbroken. Opnieuw verbinden met ${formatId(reconnectId)}…`);
+    showToast(t("msg.autoReconnecting", { id: formatId(reconnectId) }));
     const tryOnce = () => {
       attempt++;
       if (sessionRef.current || attempt > maxAttempts) return;
@@ -1431,15 +1462,15 @@ export default function App(): React.JSX.Element {
   }
 
   function handleRemoveSaved(id: string, label: string): void {
-    Alert.alert(`"${label}" verwijderen?`, "Dit verwijdert het opgeslagen apparaat uit je adresboek.", [
-      { text: "Annuleren", style: "cancel" },
+    Alert.alert(t("msg.removeDeviceConfirmTitle", { label }), t("msg.removeDeviceConfirmMsg"), [
+      { text: t("common.cancel"), style: "cancel" },
       {
-        text: "Verwijderen",
+        text: t("common.remove"),
         style: "destructive",
         onPress: () =>
           removeSavedDevice(id).then((devices) => {
             setSavedDevicesState(sortSavedDevices(devices));
-            showToast("Apparaat verwijderd.");
+            showToast(t("msg.deviceRemoved"));
           }),
       },
     ]);
@@ -1510,12 +1541,12 @@ export default function App(): React.JSX.Element {
           videoDimsRef.current = { width: stats.width, height: stats.height };
         }
         const parts: string[] = [];
-        if (stats.width != null && stats.height != null) parts.push(`${stats.width}Ãƒâ€”${stats.height}`);
+        if (stats.width != null && stats.height != null) parts.push(`${stats.width}×${stats.height}`);
         if (stats.fps != null) parts.push(`${stats.fps} fps`);
         if (stats.bitrateKbps != null) parts.push(`${stats.bitrateKbps} kbps`);
         if (stats.rttMs != null) parts.push(`${stats.rttMs} ms`);
         if (encoderLimitationRef.current && encoderLimitationRef.current !== "none") {
-          parts.push(`limiet: ${encoderLimitationRef.current}`);
+          parts.push(t("stats.limitSuffix", { reason: encoderLimitationRef.current }));
         }
         setStatsText(parts.join(" · "));
       },
@@ -1529,14 +1560,14 @@ export default function App(): React.JSX.Element {
         // decides whether we also surface a failure warning.
         if (cmd.kind === "block-input-status") {
           setInputBlocked(cmd.enabled);
-          if (cmd.ok) showToast(cmd.enabled ? "Externe invoer geblokkeerd." : "Externe invoer niet meer geblokkeerd.");
-          else Alert.alert("Mislukt", "Blokkeren van externe invoer op de host is mislukt.");
+          if (cmd.ok) showToast(cmd.enabled ? t("msg.inputBlockedOn") : t("msg.inputBlockedOff"));
+          else Alert.alert(t("common.failed"), t("msg.inputBlockFailed"));
         } else if (cmd.kind === "hide-wallpaper-status") {
           setWallpaperHidden(cmd.enabled);
-          if (!cmd.ok) Alert.alert("Mislukt", "Achtergrond verbergen op de host is mislukt (alleen op Windows).");
+          if (!cmd.ok) Alert.alert(t("common.failed"), t("msg.wallpaperHideFailed"));
         } else if (cmd.kind === "ctrl-alt-del-status") {
-          if (cmd.ok) showToast("Ctrl+Alt+Del verzonden.");
-          else Alert.alert("Mislukt", cmd.installed ? "Versturen van Ctrl+Alt+Del is mislukt." : "De host heeft Ctrl+Alt+Del op afstand niet ingeschakeld.");
+          if (cmd.ok) showToast(t("msg.cadSent"));
+          else Alert.alert(t("common.failed"), cmd.installed ? t("msg.cadFailed") : t("msg.cadNotEnabled"));
         } else if (cmd.kind === "monitor-list") {
           setMonitors(cmd.monitors);
         } else if (cmd.kind === "window-list") {
@@ -1558,7 +1589,7 @@ export default function App(): React.JSX.Element {
           // side (desktop-only feature) — mobile doesn't gate its own UI by
           // permission today (the host enforces control server-side
           // regardless), so this is just a heads-up toast, not a UI change.
-          showToast(cmd.permissions.control ? "Je hebt nu de besturing." : "Je bent nu alleen-lezen.");
+          showToast(cmd.permissions.control ? t("msg.nowControlling") : t("msg.nowReadOnly"));
         } else if (cmd.kind === "annotation-stroke") {
           setAnnotationStrokes((prev) => [...prev, { id: cmd.id, points: cmd.points, color: cmd.color, createdAt: Date.now() }]);
         } else if (cmd.kind === "annotation-clear") {
@@ -1573,7 +1604,7 @@ export default function App(): React.JSX.Element {
     // the desktop viewer applying its own saved setting right after connecting.
     session.sendSystemCommand({ kind: "quality-request", level: qualityLevel });
     session.sendSystemCommand({ kind: "resolution-preference", mode: resolutionPreference });
-    setConnectStatus("Verbonden.");
+    setConnectStatus(t("connect.connected"));
   }
 
   function respondToIncoming(accept: boolean): void {
@@ -1632,8 +1663,8 @@ export default function App(): React.JSX.Element {
     if (sessionStartedAtRef.current != null) {
       const startedAt = sessionStartedAtRef.current;
       const durationSec = Math.round((Date.now() - startedAt) / 1000);
-      const filesText = filesTransferredCountRef.current === 0 ? "geen bestanden overgezet" : `${filesTransferredCountRef.current} bestand(en) overgezet`;
-      showToast(`Sessie beëindigd — duurde ${formatDuration(durationSec)}, ${filesText}.`);
+      const filesText = filesTransferredCountRef.current === 0 ? t("msg.noFilesTransferred") : t("msg.filesTransferredCount", { count: filesTransferredCountRef.current });
+      showToast(t("msg.sessionEndedSummary", { duration: formatDuration(durationSec), files: filesText }));
       addSessionHistoryEntry({
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         peerId: sessionPeer,
@@ -1682,7 +1713,7 @@ export default function App(): React.JSX.Element {
     endSession();
   }
 
-  // --- Touch Ã¢â€ â€™ mouse mapping (+ pinch-to-zoom) ---
+  // --- Touch → mouse mapping (+ pinch-to-zoom) ---
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -1972,7 +2003,7 @@ export default function App(): React.JSX.Element {
   function lockRemote(): void {
     sessionRef.current?.sendSystemCommand({ kind: "lock-request" });
     setActivePanel(null);
-    showToast("Vergrendelen aangevraagd.");
+    showToast(t("msg.lockRequested"));
   }
   // Only works if the host has explicitly enabled it (Sessie-instellingen op
   // de desktop-app) — the host reports back via ctrl-alt-del-status if not.
@@ -1981,7 +2012,7 @@ export default function App(): React.JSX.Element {
     setActivePanel(null);
   }
   // Whatever zoom/pan was dialed in applied to the *previous* video content
-  // — switching source (desktop Ã¢â€ â€ a specific window, or between windows)
+  // — switching source (desktop ↔ a specific window, or between windows)
   // swaps in content with a completely different resolution/aspect ratio,
   // but contentPctToLocal doesn't clamp its output to the visible container.
   // Carrying over a stale scale/pan onto new content could place the mouse-
@@ -2147,18 +2178,18 @@ export default function App(): React.JSX.Element {
   }
   function restartRemote(): void {
     Alert.alert(
-      "Computer herstarten?",
-      `${formatId(sessionPeer)} wordt opnieuw opgestart. Niet-opgeslagen werk op dat apparaat kan verloren gaan.`,
+      t("msg.restartConfirmTitle"),
+      t("msg.restartConfirmMsg", { peer: formatId(sessionPeer) }),
       [
-        { text: "Annuleren", style: "cancel" },
+        { text: t("common.cancel"), style: "cancel" },
         {
-          text: "Herstarten",
+          text: t("common.restart"),
           style: "destructive",
           onPress: () => {
             sessionRef.current?.sendSystemCommand({ kind: "restart-request" });
             restartRequestedForRef.current = sessionPeer;
             setActivePanel(null);
-            showToast("Herstart aangevraagd.");
+            showToast(t("msg.restartRequested"));
           },
         },
       ]
@@ -2171,7 +2202,7 @@ export default function App(): React.JSX.Element {
         <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} backgroundColor={colors.bg} />
         <Image source={logo2} style={styles.bootLogo} resizeMode="contain" />
         <ActivityIndicator size="small" color={colors.primary} style={styles.bootSpinner} />
-        <Text style={styles.bootText}>Verbinden…</Text>
+        <Text style={styles.bootText}>{t("boot.connecting")}</Text>
       </SafeAreaView>
     );
   }
@@ -2181,9 +2212,9 @@ export default function App(): React.JSX.Element {
       <SafeAreaView style={styles.root}>
         <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} />
         <View style={styles.hostBanner}>
-          <Text style={styles.hostBannerText}>{formatId(sessionPeer)} bekijkt en bedient deze telefoon</Text>
+          <Text style={styles.hostBannerText}>{t("host.watching", { peer: formatId(sessionPeer) })}</Text>
           <TouchableOpacity style={[styles.primaryBtn, styles.dangerBtn]} onPress={disconnectSession}>
-            <Text style={styles.primaryBtnText}>Sessie beëindigen</Text>
+            <Text style={styles.primaryBtnText}>{t("host.endSession")}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -2196,13 +2227,13 @@ export default function App(): React.JSX.Element {
     const renderAiBuddyContent = () => (
       <View style={styles.aiBuddyCardInner}>
         <View style={styles.chatHeader}>
-          <Text style={styles.cardTitle}>AI Buddy</Text>
-          <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="AI Buddy sluiten">
+          <Text style={styles.cardTitle}>{t("aiBuddy.title")}</Text>
+          <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel={t("aiBuddy.closeA11y")}>
             {toolbarIcon(X)}
           </TouchableOpacity>
         </View>
         {!openaiKeyConfigured ? (
-          <Text style={styles.fileEmptyText}>Stel eerst je OpenAI API-sleutel in bij Instellingen op het beginscherm.</Text>
+          <Text style={styles.fileEmptyText}>{t("aiBuddy.keyMissingHint")}</Text>
         ) : (
           <>
             <ScrollView
@@ -2211,7 +2242,7 @@ export default function App(): React.JSX.Element {
               onContentSizeChange={() => aiBuddyScrollRef.current?.scrollToEnd({ animated: true })}
             >
               {aiBuddyLog.length === 0 && (
-                <Text style={styles.muted}>Maak een screenshot van het scherm op afstand en stel een vraag — AI Buddy helpt je stap voor stap.</Text>
+                <Text style={styles.muted}>{t("aiBuddy.emptyHint")}</Text>
               )}
               {aiBuddyLog.map((m, i) => (
                 <View key={i} style={[styles.chatBubble, m.role === "user" ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
@@ -2219,7 +2250,7 @@ export default function App(): React.JSX.Element {
                   <Text style={styles.chatBubbleText}>{m.text}</Text>
                 </View>
               ))}
-              {aiBuddySending && <Text style={styles.muted}>AI Buddy denkt na…</Text>}
+              {aiBuddySending && <Text style={styles.muted}>{t("aiBuddy.thinking")}</Text>}
             </ScrollView>
             {aiBuddyScreenshot && (
               <View style={styles.aiBuddyScreenshotPreview}>
@@ -2230,21 +2261,21 @@ export default function App(): React.JSX.Element {
               </View>
             )}
             <View style={styles.chatInputRow}>
-              <TouchableOpacity style={styles.toolbarBtn} onPress={takeAiBuddyScreenshot} accessibilityRole="button" accessibilityLabel="Screenshot maken">
+              <TouchableOpacity style={styles.toolbarBtn} onPress={takeAiBuddyScreenshot} accessibilityRole="button" accessibilityLabel={t("aiBuddy.screenshotA11y")}>
                 {toolbarIcon(Camera)}
               </TouchableOpacity>
               <TextInput
                 style={[styles.input, styles.chatInputField]}
                 value={aiBuddyInput}
                 onChangeText={setAiBuddyInput}
-                placeholder="Stel een vraag over dit probleem…"
+                placeholder={t("aiBuddy.placeholder")}
                 placeholderTextColor="#8b96b8"
                 onSubmitEditing={sendAiBuddyMessage}
                 returnKeyType="send"
                 editable={!aiBuddySending}
               />
               <TouchableOpacity style={styles.chatSendBtn} onPress={sendAiBuddyMessage} disabled={aiBuddySending}>
-                <Text style={styles.primaryBtnText}>Versturen</Text>
+                <Text style={styles.primaryBtnText}>{t("common.send")}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -2255,7 +2286,7 @@ export default function App(): React.JSX.Element {
     return (
       <SafeAreaView style={[styles.sessionRoot, { marginBottom: keyboardHeight }]} edges={["top"]}>
         <StatusBar barStyle="light-content" />
-        <View style={{ flex: 1, flexDirection: "column" }}>
+        <View style={styles.sessionColumn}>
           {/* ── Portrait: TOP bar (Vensters · AI Buddy · Opties · Stop) ─────
               A real flex sibling now (see portraitTopBar's own style comment
               for why it wasn't before), placed here so it's first in the
@@ -2268,10 +2299,10 @@ export default function App(): React.JSX.Element {
                 style={[styles.portraitTopBtn, activePanel === "programs" && styles.portraitTopBtnActive]}
                 onPress={openProgramsPanel}
                 accessibilityRole="button"
-                accessibilityLabel="Vensters"
+                accessibilityLabel={t("toolbar.windowsA11y")}
               >
                 <AppWindow size={20} color={activePanel === "programs" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-                <Text style={[styles.portraitTopBtnLabel, activePanel === "programs" && styles.portraitTopBtnLabelActive]}>Vensters</Text>
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "programs" && styles.portraitTopBtnLabelActive]}>{t("toolbar.windows")}</Text>
               </TouchableOpacity>
 
               <View style={styles.portraitTopSpacer} />
@@ -2281,10 +2312,10 @@ export default function App(): React.JSX.Element {
                 style={[styles.portraitTopBtn, activePanel === "aiBuddy" && styles.portraitTopBtnActive]}
                 onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
                 accessibilityRole="button"
-                accessibilityLabel="AI Buddy"
+                accessibilityLabel={t("aiBuddy.title")}
               >
                 <Sparkles size={20} color={activePanel === "aiBuddy" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-                <Text style={[styles.portraitTopBtnLabel, activePanel === "aiBuddy" && styles.portraitTopBtnLabelActive]}>AI Buddy</Text>
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "aiBuddy" && styles.portraitTopBtnLabelActive]}>{t("aiBuddy.title")}</Text>
               </TouchableOpacity>
 
               {/* Opties */}
@@ -2292,10 +2323,10 @@ export default function App(): React.JSX.Element {
                 style={[styles.portraitTopBtn, activePanel === "settings" && styles.portraitTopBtnActive]}
                 onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
                 accessibilityRole="button"
-                accessibilityLabel="Opties"
+                accessibilityLabel={t("toolbar.options")}
               >
                 <Settings size={20} color={activePanel === "settings" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-                <Text style={[styles.portraitTopBtnLabel, activePanel === "settings" && styles.portraitTopBtnLabelActive]}>Opties</Text>
+                <Text style={[styles.portraitTopBtnLabel, activePanel === "settings" && styles.portraitTopBtnLabelActive]}>{t("toolbar.options")}</Text>
               </TouchableOpacity>
 
               {/* Stop */}
@@ -2303,10 +2334,10 @@ export default function App(): React.JSX.Element {
                 style={[styles.portraitTopBtn, styles.portraitTopBtnDanger]}
                 onPress={disconnectSession}
                 accessibilityRole="button"
-                accessibilityLabel="Verbinding verbreken"
+                accessibilityLabel={t("toolbar.disconnectA11y")}
               >
                 <Power size={20} color="#fff" strokeWidth={2.2} />
-                <Text style={[styles.portraitTopBtnLabel, styles.portraitTopBtnLabelActive]}>Stop</Text>
+                <Text style={[styles.portraitTopBtnLabel, styles.portraitTopBtnLabelActive]}>{t("toolbar.stop")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -2459,13 +2490,13 @@ export default function App(): React.JSX.Element {
                       id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
                       points: [{ x: locationX / rect.width, y: locationY / rect.height }],
                     };
-                    setAnnotationTick((t) => t + 1);
+                    setAnnotationTick((n) => n + 1);
                   }}
                   onResponderMove={(e) => {
                     if (!currentStrokeRef.current) return;
                     const { locationX, locationY } = e.nativeEvent;
                     currentStrokeRef.current.points.push({ x: locationX / rect.width, y: locationY / rect.height });
-                    setAnnotationTick((t) => t + 1);
+                    setAnnotationTick((n) => n + 1);
                   }}
                   onResponderRelease={() => {
                     const stroke = currentStrokeRef.current;
@@ -2514,7 +2545,7 @@ export default function App(): React.JSX.Element {
           {qualityDegraded && (
             <View pointerEvents="none" style={styles.qualityBadge}>
               <WifiOff size={13} color="#fff" strokeWidth={2.4} />
-              <Text style={styles.qualityBadgeText}>Zwakke verbinding</Text>
+              <Text style={styles.qualityBadgeText}>{t("quality.weakBadge")}</Text>
             </View>
           )}
           {activeAppWindow && (
@@ -2526,7 +2557,7 @@ export default function App(): React.JSX.Element {
               style={styles.appModeCloseBtn}
               onPress={closeProgramMode}
               accessibilityRole="button"
-              accessibilityLabel={`Programma sluiten (${activeAppWindow.name}), terug naar bureaublad`}
+              accessibilityLabel={t("portrait.programCloseA11y", { name: activeAppWindow.name })}
             >
               <X size={16} color="#fff" strokeWidth={2.5} />
             </TouchableOpacity>
@@ -2534,7 +2565,7 @@ export default function App(): React.JSX.Element {
           {/* Floating overlay toolbar */}
         </View>
         {!isLandscape && isAiBuddyOpen && (
-          <View style={[styles.aiBuddyPortraitPanel, { paddingHorizontal: 12, paddingBottom: 64 + Math.max(insets.bottom, 4) }]}>
+          <View style={[styles.aiBuddyPortraitPanel, { paddingBottom: 64 + Math.max(insets.bottom, 4) }]}>
             {renderAiBuddyContent()}
           </View>
         )}
@@ -2548,13 +2579,13 @@ export default function App(): React.JSX.Element {
               style={[styles.portraitBottomBtn, activePanel === "interactionHelp" && styles.portraitBottomBtnActive]}
               onPress={() => setActivePanel((p) => (p === "interactionHelp" ? null : "interactionHelp"))}
               accessibilityRole="button"
-              accessibilityLabel="Besturingmodus"
+              accessibilityLabel={t("portrait.controlModeA11y")}
             >
               {interactionMode === "touch"
                 ? <Hand size={22} color={activePanel === "interactionHelp" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
                 : <MousePointer2 size={22} color={activePanel === "interactionHelp" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />}
               <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "interactionHelp" && styles.portraitBottomBtnLabelActive]}>
-                {interactionMode === "touch" ? "Touch" : "Muis"}
+                {interactionMode === "touch" ? t("portrait.touch") : t("toolbar.mouse")}
               </Text>
             </TouchableOpacity>
 
@@ -2563,10 +2594,10 @@ export default function App(): React.JSX.Element {
               style={[styles.portraitBottomBtn, activePanel === "files" && styles.portraitBottomBtnActive]}
               onPress={() => setActivePanel((p) => (p === "files" ? null : "files"))}
               accessibilityRole="button"
-              accessibilityLabel="Bestanden"
+              accessibilityLabel={t("toolbar.filesA11y")}
             >
               <Folder size={22} color={activePanel === "files" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "files" && styles.portraitBottomBtnLabelActive]}>Bestand</Text>
+              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "files" && styles.portraitBottomBtnLabelActive]}>{t("toolbar.files")}</Text>
             </TouchableOpacity>
 
             {/* Snel */}
@@ -2574,10 +2605,10 @@ export default function App(): React.JSX.Element {
               style={[styles.portraitBottomBtn, activePanel === "quickActions" && styles.portraitBottomBtnActive]}
               onPress={() => setActivePanel((p) => (p === "quickActions" ? null : "quickActions"))}
               accessibilityRole="button"
-              accessibilityLabel="Snelle acties"
+              accessibilityLabel={t("toolbar.quickA11y")}
             >
               <Zap size={22} color={activePanel === "quickActions" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "quickActions" && styles.portraitBottomBtnLabelActive]}>Snel</Text>
+              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "quickActions" && styles.portraitBottomBtnLabelActive]}>{t("toolbar.quick")}</Text>
             </TouchableOpacity>
 
             {/* Toetsenbord */}
@@ -2585,10 +2616,10 @@ export default function App(): React.JSX.Element {
               style={[styles.portraitBottomBtn, keyboardVisible && styles.portraitBottomBtnActive]}
               onPress={() => setKeyboardVisible((v) => !v)}
               accessibilityRole="button"
-              accessibilityLabel="Toetsenbord"
+              accessibilityLabel={t("toolbar.keyboardA11y")}
             >
               <Keyboard size={22} color={keyboardVisible ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
-              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, keyboardVisible && styles.portraitBottomBtnLabelActive]}>Toetsenbord</Text>
+              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, keyboardVisible && styles.portraitBottomBtnLabelActive]}>{t("portrait.keyboard")}</Text>
             </TouchableOpacity>
 
             {/* Chat */}
@@ -2596,11 +2627,11 @@ export default function App(): React.JSX.Element {
               style={[styles.portraitBottomBtn, activePanel === "chat" && styles.portraitBottomBtnActive]}
               onPress={openChat}
               accessibilityRole="button"
-              accessibilityLabel="Chat"
+              accessibilityLabel={t("toolbar.chat")}
             >
               <MessageCircle size={22} color={activePanel === "chat" ? "#fff" : colors.toolbarButton} strokeWidth={2.2} />
               {hasUnreadChat && <View style={styles.unreadDot} />}
-              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "chat" && styles.portraitBottomBtnLabelActive]}>Chat</Text>
+              <Text numberOfLines={1} style={[styles.portraitBottomBtnLabel, activePanel === "chat" && styles.portraitBottomBtnLabelActive]}>{t("toolbar.chat")}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -2611,7 +2642,7 @@ export default function App(): React.JSX.Element {
             style={[styles.expandBtn, { bottom: 8 + insets.bottom }]}
             onPress={() => setToolbarCollapsed(false)}
             accessibilityRole="button"
-            accessibilityLabel="Werkbalk uitklappen"
+            accessibilityLabel={t("toolbar.expandA11y")}
           >
             <ChevronUp size={20} color={colors.muted} strokeWidth={2.4} />
           </TouchableOpacity>
@@ -2628,27 +2659,27 @@ export default function App(): React.JSX.Element {
                   style={[styles.toolbarBtn, activePanel === "programs" && styles.toolbarBtnActive]}
                   onPress={openProgramsPanel}
                   accessibilityRole="button"
-                  accessibilityLabel="Programma's"
+                  accessibilityLabel={t("toolbar.windowsA11y")}
                 >
-                  {toolbarIcon(AppWindow, "Vensters", activePanel === "programs")}
+                  {toolbarIcon(AppWindow, t("toolbar.windows"), activePanel === "programs")}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.toolbarBtn}
                   onPress={() => setKeyboardVisible((v) => !v)}
                   accessibilityRole="button"
-                  accessibilityLabel="Toetsenbord"
+                  accessibilityLabel={t("toolbar.keyboardA11y")}
                 >
-                  {toolbarIcon(Keyboard, "Bord")}
+                  {toolbarIcon(Keyboard, t("toolbar.keyboardShort"))}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "interactionHelp" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "interactionHelp" ? null : "interactionHelp"))}
                   accessibilityRole="button"
-                  accessibilityLabel="Besturing"
+                  accessibilityLabel={t("toolbar.controlA11y")}
                 >
                   {toolbarIcon(
                     interactionMode === "touch" ? Hand : MousePointer2,
-                    interactionMode === "touch" ? "Tik" : "Muis",
+                    interactionMode === "touch" ? t("toolbar.tap") : t("toolbar.mouse"),
                     activePanel === "interactionHelp"
                   )}
                 </TouchableOpacity>
@@ -2656,9 +2687,9 @@ export default function App(): React.JSX.Element {
                   style={[styles.toolbarBtn, annotateModeActive && styles.toolbarBtnActive]}
                   onPress={toggleAnnotateMode}
                   accessibilityRole="button"
-                  accessibilityLabel="Tekenen op het beeld"
+                  accessibilityLabel={t("toolbar.drawA11y")}
                 >
-                  {toolbarIcon(Pencil, "Teken", annotateModeActive)}
+                  {toolbarIcon(Pencil, t("toolbar.draw"), annotateModeActive)}
                 </TouchableOpacity>
                 {annotateModeActive && (
                   <TouchableOpacity
@@ -2668,74 +2699,74 @@ export default function App(): React.JSX.Element {
                       sessionRef.current?.sendSystemCommand({ kind: "annotation-clear" });
                     }}
                     accessibilityRole="button"
-                    accessibilityLabel="Tekeningen wissen"
+                    accessibilityLabel={t("toolbar.clearA11y")}
                   >
-                    {toolbarIcon(Trash2, "Wis")}
+                    {toolbarIcon(Trash2, t("toolbar.clear"))}
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
                   style={[styles.toolbarBtn, micActive && styles.toolbarBtnActive]}
-                  onPress={() => void toggleMicrophone()}
+                  onPress={() => toggleMicrophone()}
                   accessibilityRole="button"
-                  accessibilityLabel="Microfoon delen"
+                  accessibilityLabel={t("toolbar.micA11y")}
                 >
-                  {toolbarIcon(micActive ? Mic : MicOff, "Mic", micActive)}
+                  {toolbarIcon(micActive ? Mic : MicOff, t("toolbar.mic"), micActive)}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "quickActions" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "quickActions" ? null : "quickActions"))}
                   accessibilityRole="button"
-                  accessibilityLabel="Snelle acties"
+                  accessibilityLabel={t("toolbar.quickA11y")}
                 >
-                  {toolbarIcon(Zap, "Snel", activePanel === "quickActions")}
+                  {toolbarIcon(Zap, t("toolbar.quick"), activePanel === "quickActions")}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "chat" && styles.toolbarBtnActive]}
                   onPress={openChat}
                   accessibilityRole="button"
-                  accessibilityLabel="Chat"
+                  accessibilityLabel={t("toolbar.chat")}
                 >
-                  {toolbarIcon(MessageCircle, "Chat", activePanel === "chat")}
+                  {toolbarIcon(MessageCircle, t("toolbar.chat"), activePanel === "chat")}
                   {hasUnreadChat && <View style={styles.unreadDot} />}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "files" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "files" ? null : "files"))}
                   accessibilityRole="button"
-                  accessibilityLabel="Bestanden"
+                  accessibilityLabel={t("toolbar.filesA11y")}
                 >
-                  {toolbarIcon(Folder, "Bestand", activePanel === "files")}
+                  {toolbarIcon(Folder, t("toolbar.files"), activePanel === "files")}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "aiBuddy" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "aiBuddy" ? null : "aiBuddy"))}
                   accessibilityRole="button"
-                  accessibilityLabel="AI Buddy"
+                  accessibilityLabel={t("aiBuddy.title")}
                 >
-                  {toolbarIcon(Sparkles, "AI Buddy", activePanel === "aiBuddy")}
+                  {toolbarIcon(Sparkles, t("aiBuddy.title"), activePanel === "aiBuddy")}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, activePanel === "settings" && styles.toolbarBtnActive]}
                   onPress={() => setActivePanel((p) => (p === "settings" ? null : "settings"))}
                   accessibilityRole="button"
-                  accessibilityLabel="Sessie-instellingen"
+                  accessibilityLabel={t("toolbar.settingsA11y")}
                 >
-                  {toolbarIcon(Settings, "Opties", activePanel === "settings")}
+                  {toolbarIcon(Settings, t("toolbar.options"), activePanel === "settings")}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.toolbarBtn, styles.dangerBtn]}
                   onPress={disconnectSession}
                   accessibilityRole="button"
-                  accessibilityLabel="Verbinding verbreken"
+                  accessibilityLabel={t("toolbar.disconnectA11y")}
                 >
-                  {toolbarIcon(Power, "Stop", false, true)}
+                  {toolbarIcon(Power, t("toolbar.stop"), false, true)}
                 </TouchableOpacity>
               </ScrollView>
               <TouchableOpacity
                 style={styles.collapseBtn}
                 onPress={() => setToolbarCollapsed(true)}
                 accessibilityRole="button"
-                accessibilityLabel="Werkbalk inklappen"
+                accessibilityLabel={t("toolbar.collapseA11y")}
               >
                 <ChevronDown size={20} color={colors.muted} strokeWidth={2.4} />
               </TouchableOpacity>
@@ -2745,17 +2776,17 @@ export default function App(): React.JSX.Element {
         <Modal visible={activePanel === "settings"} transparent animationType="fade" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <Text style={styles.cardTitle}>Sessie-instellingen</Text>
+              <Text style={styles.cardTitle}>{t("session.settingsTitle")}</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Verbinding</Text>
+                  <Text style={styles.settingsLabel}>{t("session.connectionLabel")}</Text>
                   <Text style={styles.settingsValueText}>
                     {formatId(sessionPeer)}
                     {statsText ? ` · ${statsText}` : ""}
                   </Text>
                 </View>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Kwaliteit</Text>
+                  <Text style={styles.settingsLabel}>{t("session.qualityLabel")}</Text>
                   <View style={styles.modeToggle}>
                     {(["auto", "high", "low"] as QualityLevel[]).map((level) => (
                       <TouchableOpacity
@@ -2764,14 +2795,14 @@ export default function App(): React.JSX.Element {
                         onPress={() => setQualityLevel(level)}
                       >
                         <Text style={[styles.settingsQualityText, qualityLevel === level && styles.settingsQualityTextActive]}>
-                          {level === "auto" ? "Auto" : level === "high" ? "Hoog" : "Laag"}
+                          {level === "auto" ? t("session.qualityAuto") : level === "high" ? t("session.qualityHigh") : t("session.qualityLow")}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Scherpte bij zoomen</Text>
+                  <Text style={styles.settingsLabel}>{t("session.zoomSharpnessLabel")}</Text>
                   <View style={styles.modeToggle}>
                     {(["tiered", "always-max"] as const).map((mode) => (
                       <TouchableOpacity
@@ -2780,17 +2811,17 @@ export default function App(): React.JSX.Element {
                         onPress={() => setRenderQualityMode(mode)}
                       >
                         <Text style={[styles.settingsQualityText, renderQualityMode === mode && styles.settingsQualityTextActive]}>
-                          {mode === "tiered" ? "Gebalanceerd" : "Altijd scherp"}
+                          {mode === "tiered" ? t("session.renderBalanced") : t("session.renderAlwaysSharp")}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <Text style={styles.muted}>
-                  "Altijd scherp" houdt tijdens de hele sessie de scherpst mogelijke weergave aan, ook helemaal uitgezoomd — dat kost continu meer batterij/geheugen. "Gebalanceerd" (aanbevolen) verhoogt de scherpte alleen in stappen naarmate je verder inzoomt.
+                  {t("session.renderTierHint")}
                 </Text>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Video-codec</Text>
+                  <Text style={styles.settingsLabel}>{t("session.codecLabel")}</Text>
                   <View style={styles.modeToggle}>
                     {(["sharp", "fast"] as const).map((mode) => (
                       <TouchableOpacity
@@ -2799,17 +2830,17 @@ export default function App(): React.JSX.Element {
                         onPress={() => setCodecPreference(mode)}
                       >
                         <Text style={[styles.settingsQualityText, codecPreference === mode && styles.settingsQualityTextActive]}>
-                          {mode === "sharp" ? "Scherp" : "Snel"}
+                          {mode === "sharp" ? t("session.codecSharp") : t("session.codecFast")}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <Text style={styles.muted}>
-                  "Scherp" (standaard) geeft prioriteit aan een codec die tekst het scherpst weergeeft, maar draait meestal in software en kan de cursor in beeld iets trager laten aanvoelen. "Snel" geeft prioriteit aan een codec die op de meeste pc's hardwareversnelling gebruikt — merkbaar sneller, iets minder scherpe tekst bij inzoomen. Geldt pas vanaf de eerstvolgende keer verbinden, niet voor de huidige sessie.
+                  {t("session.codecHint")}
                 </Text>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Resolutie</Text>
+                  <Text style={styles.settingsLabel}>{t("session.resolutionLabel")}</Text>
                   <View style={styles.modeToggle}>
                     {(["sharp", "fast"] as const).map((mode) => (
                       <TouchableOpacity
@@ -2818,21 +2849,25 @@ export default function App(): React.JSX.Element {
                         onPress={() => setResolutionPreference(mode)}
                       >
                         <Text style={[styles.settingsQualityText, resolutionPreference === mode && styles.settingsQualityTextActive]}>
-                          {mode === "sharp" ? "Scherp" : "Snel"}
+                          {mode === "sharp" ? t("session.codecSharp") : t("session.codecFast")}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </View>
                 <Text style={styles.muted}>
-                  "Scherp" (standaard) neemt het scherm op in de volledige, originele resolutie — het scherpst bij inzoomen, maar kan op tragere pc's de opgevraagde framerate niet bijhouden (merkbaar als vertraging van de cursor in beeld). "Snel" beperkt de opname tot maximaal 1080p, zodat de pc de framerate makkelijker bijhoudt. Geldt direct, ook tijdens een lopende sessie.
+                  {t("session.resolutionHint")}
                 </Text>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Thema</Text>
+                  <Text style={styles.settingsLabel}>{t("session.themeLabel")}</Text>
                   {renderThemeToggle()}
                 </View>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Externe cursor tonen</Text>
+                  <Text style={styles.settingsLabel}>{t("lang.switch")}</Text>
+                  {renderLangToggle()}
+                </View>
+                <View style={styles.settingsRow}>
+                  <Text style={styles.settingsLabel}>{t("session.showCursorLabel")}</Text>
                   <Switch
                     value={showRemoteCursor}
                     onValueChange={setShowRemoteCursor}
@@ -2841,7 +2876,7 @@ export default function App(): React.JSX.Element {
                   />
                 </View>
                 <View style={styles.settingsRow}>
-                  <Text style={styles.settingsLabel}>Achtergrond verbergen</Text>
+                  <Text style={styles.settingsLabel}>{t("session.hideWallpaperLabel")}</Text>
                   <Switch
                     value={wallpaperHidden}
                     onValueChange={toggleHideWallpaper}
@@ -2851,30 +2886,30 @@ export default function App(): React.JSX.Element {
                 </View>
                 {monitors.length > 1 && (
                   <View style={styles.settingsRow}>
-                    <Text style={styles.settingsLabel}>Scherm</Text>
+                    <Text style={styles.settingsLabel}>{t("session.screenLabel")}</Text>
                     <View style={styles.modeToggle}>
                       <TouchableOpacity
                         style={[styles.modeToggleBtn, !monitorSplitMode && styles.modeToggleBtnActive]}
                         onPress={() => { setMonitorSplitMode(false); setSelectedSplitMonitors([]); }}
                       >
-                        <Text style={[styles.settingsQualityText, !monitorSplitMode && styles.settingsQualityTextActive]}>1 scherm</Text>
+                        <Text style={[styles.settingsQualityText, !monitorSplitMode && styles.settingsQualityTextActive]}>{t("session.oneScreen")}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.modeToggleBtn, monitorSplitMode && styles.modeToggleBtnActive]}
                         onPress={() => { setMonitorSplitMode(true); setSelectedSplitMonitors([]); }}
                       >
-                        <Text style={[styles.settingsQualityText, monitorSplitMode && styles.settingsQualityTextActive]}>2 schermen</Text>
+                        <Text style={[styles.settingsQualityText, monitorSplitMode && styles.settingsQualityTextActive]}>{t("session.twoScreens")}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
                 )}
                 {monitors.length > 1 && monitorSplitMode && (
-                  <Text style={[styles.muted, { marginBottom: 8, fontSize: 12 }]}>
+                  <Text style={[styles.muted, styles.splitHint]}>
                     {selectedSplitMonitors.length === 0
-                      ? "Kies 2 schermen: tik op het 1e scherm"
+                      ? t("session.chooseTwoScreensStart")
                       : selectedSplitMonitors.length === 1
-                      ? `1e: ${selectedSplitMonitors[0].label} — tik nu op het 2e scherm`
-                      : "2 schermen geselecteerd"}
+                      ? t("session.chooseTwoScreensSecond", { label: selectedSplitMonitors[0].label })
+                      : t("session.twoScreensSelected")}
                   </Text>
                 )}
                 {monitors.length > 1 && (
@@ -2903,7 +2938,7 @@ export default function App(): React.JSX.Element {
                 )}
               </ScrollView>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => setActivePanel(null)}>
-                <Text style={styles.primaryBtnText}>Sluiten</Text>
+                <Text style={styles.primaryBtnText}>{t("common.close")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2911,30 +2946,30 @@ export default function App(): React.JSX.Element {
         <Modal visible={activePanel === "interactionHelp"} transparent animationType="fade" onRequestClose={() => setActivePanel(null)}>
           <View style={styles.modalBackdrop}>
             <View style={styles.modalCard}>
-              <Text style={styles.cardTitle}>Besturing</Text>
+              <Text style={styles.cardTitle}>{t("control.title")}</Text>
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View style={styles.modeToggle}>
                   <TouchableOpacity
                     style={[styles.modeToggleBtn, styles.interactionHelpToggleBtn, interactionMode === "touch" && styles.modeToggleBtnActive]}
                     onPress={() => setInteractionMode("touch")}
                   >
-                    {modeIcon(Hand, "Tik-modus", interactionMode === "touch")}
+                    {modeIcon(Hand, t("control.tapMode"), interactionMode === "touch")}
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.modeToggleBtn, styles.interactionHelpToggleBtn, interactionMode === "mouse" && styles.modeToggleBtnActive]}
                     onPress={() => setInteractionMode("mouse")}
                   >
-                    {modeIcon(MousePointer2, "Muis-modus", interactionMode === "mouse")}
+                    {modeIcon(MousePointer2, t("control.mouseMode"), interactionMode === "mouse")}
                   </TouchableOpacity>
                 </View>
                 <Text style={styles.interactionHelpIntro}>
                   {interactionMode === "mouse"
-                    ? "Gebruik je scherm als touchpad om de muis op afstand te besturen."
-                    : "Tik direct op de plek op het scherm waar je wilt klikken."}
+                    ? t("control.mouseIntro")
+                    : t("control.touchIntro")}
                 </Text>
                 <View style={styles.interactionHelpGrid}>
-                  {(interactionMode === "mouse" ? MOUSE_MODE_GESTURES : TOUCH_MODE_GESTURES).map((g) => (
-                    <View key={g.title} style={styles.interactionHelpItem}>
+                  {(interactionMode === "mouse" ? mouseModeGestures : touchModeGestures).map((g) => (
+                    <View key={g.id} style={styles.interactionHelpItem}>
                       <View style={styles.interactionHelpIconWrap}>
                         <g.Icon size={22} color={colors.primary} strokeWidth={2} />
                       </View>
@@ -2945,7 +2980,7 @@ export default function App(): React.JSX.Element {
                 </View>
               </ScrollView>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => setActivePanel(null)}>
-                <Text style={styles.primaryBtnText}>Sluiten</Text>
+                <Text style={styles.primaryBtnText}>{t("common.close")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2954,32 +2989,33 @@ export default function App(): React.JSX.Element {
           <View style={styles.chatBackdrop}>
             <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
-                <Text style={styles.cardTitle}>Snelkoppelingen</Text>
-                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Sluiten">
+                <Text style={styles.cardTitle}>{t("quickActions.title")}</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel={t("common.close")}>
                   {toolbarIcon(X)}
                 </TouchableOpacity>
               </View>
               <ScrollView>
                 {(
                   [
-                    { Icon: Copy, title: "Kopiëren", subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
-                    { Icon: ClipboardPaste, title: "Plakken", subtitle: "Ctrl+V", onPress: () => sendShortcut(["ControlLeft", "KeyV"]), danger: false },
-                    { Icon: Camera, title: "Schermafbeelding", subtitle: "PrtScn", onPress: () => sendShortcut(["PrintScreen"]), danger: false },
-                    { Icon: AppWindow, title: "Wissel venster", subtitle: "Alt+Tab", onPress: () => sendShortcut(["AltLeft", "Tab"]), danger: false },
-                    { Icon: Save, title: "Opslaan", subtitle: "Ctrl+S", onPress: () => sendShortcut(["ControlLeft", "KeyS"]), danger: false },
-                    { Icon: Lock, title: "Vergrendelen", subtitle: undefined, onPress: lockRemote, danger: false },
-                    { Icon: Keyboard, title: "Ctrl+Alt+Del", subtitle: undefined, onPress: sendCtrlAltDel, danger: false },
+                    { id: "copy", Icon: Copy, title: t("quickActions.copy"), subtitle: "Ctrl+C", onPress: () => sendShortcut(["ControlLeft", "KeyC"]), danger: false },
+                    { id: "paste", Icon: ClipboardPaste, title: t("quickActions.paste"), subtitle: "Ctrl+V", onPress: () => sendShortcut(["ControlLeft", "KeyV"]), danger: false },
+                    { id: "screenshot", Icon: Camera, title: t("quickActions.screenshot"), subtitle: "PrtScn", onPress: () => sendShortcut(["PrintScreen"]), danger: false },
+                    { id: "switchWindow", Icon: AppWindow, title: t("quickActions.switchWindow"), subtitle: "Alt+Tab", onPress: () => sendShortcut(["AltLeft", "Tab"]), danger: false },
+                    { id: "save", Icon: Save, title: t("common.save"), subtitle: "Ctrl+S", onPress: () => sendShortcut(["ControlLeft", "KeyS"]), danger: false },
+                    { id: "lock", Icon: Lock, title: t("quickActions.lock"), subtitle: undefined, onPress: lockRemote, danger: false },
+                    { id: "cad", Icon: Keyboard, title: "Ctrl+Alt+Del", subtitle: undefined, onPress: sendCtrlAltDel, danger: false },
                     {
+                      id: "blockInput",
                       Icon: Ban,
-                      title: inputBlocked ? "Invoer geblokkeerd" : "Invoer blokkeren",
+                      title: inputBlocked ? t("quickActions.inputBlocked") : t("quickActions.blockInput"),
                       subtitle: undefined,
                       onPress: toggleBlockInput,
                       danger: inputBlocked,
                     },
-                    { Icon: RotateCw, title: "Herstarten", subtitle: undefined, onPress: restartRemote, danger: true },
+                    { id: "restart", Icon: RotateCw, title: t("quickActions.restart"), subtitle: undefined, onPress: restartRemote, danger: true },
                   ] as const
                 ).map((item) => (
-                  <TouchableOpacity key={item.title} style={styles.quickActionRow} onPress={item.onPress}>
+                  <TouchableOpacity key={item.id} style={styles.quickActionRow} onPress={item.onPress}>
                     <View style={[styles.interactionHelpIconWrap, item.danger && styles.quickActionIconWrapDanger]}>
                       <item.Icon size={20} color={item.danger ? colors.danger : colors.primary} strokeWidth={2} />
                     </View>
@@ -2997,8 +3033,8 @@ export default function App(): React.JSX.Element {
           <View style={styles.chatBackdrop}>
             <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
-                <Text style={styles.cardTitle}>Chat</Text>
-                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Chat sluiten">
+                <Text style={styles.cardTitle}>{t("toolbar.chat")}</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel={t("chat.closeA11y")}>
                   {toolbarIcon(X)}
                 </TouchableOpacity>
               </View>
@@ -3007,7 +3043,7 @@ export default function App(): React.JSX.Element {
                 style={styles.chatMessagesList}
                 onContentSizeChange={() => chatScrollRef.current?.scrollToEnd({ animated: true })}
               >
-                {chatMessages.length === 0 && <Text style={styles.muted}>Nog geen berichten.</Text>}
+                {chatMessages.length === 0 && <Text style={styles.muted}>{t("chat.empty")}</Text>}
                 {chatMessages.map((m, i) => (
                   <View key={i} style={[styles.chatBubble, m.fromMe ? styles.chatBubbleMine : styles.chatBubbleTheirs]}>
                     <Text style={styles.chatBubbleText}>{m.text}</Text>
@@ -3019,13 +3055,13 @@ export default function App(): React.JSX.Element {
                   style={[styles.input, styles.chatInputField]}
                   value={chatInput}
                   onChangeText={setChatInput}
-                  placeholder="Typ een bericht…"
+                  placeholder={t("chat.placeholder")}
                   placeholderTextColor="#8b96b8"
                   onSubmitEditing={sendChatMessage}
                   returnKeyType="send"
                 />
                 <TouchableOpacity style={styles.chatSendBtn} onPress={sendChatMessage}>
-                  <Text style={styles.primaryBtnText}>Versturen</Text>
+                  <Text style={styles.primaryBtnText}>{t("common.send")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3035,16 +3071,16 @@ export default function App(): React.JSX.Element {
           <View style={styles.chatBackdrop}>
             <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
-                <Text style={styles.cardTitle}>Bestanden</Text>
-                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Bestanden sluiten">
+                <Text style={styles.cardTitle}>{t("files.title")}</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel={t("files.closeA11y")}>
                   {toolbarIcon(X)}
                 </TouchableOpacity>
               </View>
               <TouchableOpacity style={styles.primaryBtn} onPress={sendFilePress}>
-                <Text style={styles.primaryBtnText}>Bestand versturen…</Text>
+                <Text style={styles.primaryBtnText}>{t("files.send")}</Text>
               </TouchableOpacity>
               <ScrollView style={styles.chatMessagesList}>
-                {fileTransfers.length === 0 && <Text style={styles.fileEmptyText}>Nog geen bestandsoverdrachten.</Text>}
+                {fileTransfers.length === 0 && <Text style={styles.fileEmptyText}>{t("files.empty")}</Text>}
                 {fileTransfers.map((f) => {
                   const pct = f.total > 0 ? Math.min(1, f.received / f.total) : f.done ? 1 : 0;
                   return (
@@ -3056,7 +3092,7 @@ export default function App(): React.JSX.Element {
                       <View style={styles.fileProgressTrack}>
                         <View style={[styles.fileProgressFill, { width: `${Math.round(pct * 100)}%` }]} />
                       </View>
-                      <Text style={styles.fileRowStatus}>{f.done ? (f.direction === "receive" ? "Opgeslagen in Downloads" : "Verzonden") : `${Math.round(pct * 100)}%`}</Text>
+                      <Text style={styles.fileRowStatus}>{f.done ? (f.direction === "receive" ? t("files.savedInDownloads") : t("files.sent")) : `${Math.round(pct * 100)}%`}</Text>
                     </View>
                   );
                 })}
@@ -3068,49 +3104,46 @@ export default function App(): React.JSX.Element {
           <View style={styles.chatBackdrop}>
             <View style={[styles.chatCard, { paddingBottom: Math.max(insets.bottom + 12, 20) }]}>
               <View style={styles.chatHeader}>
-                <Text style={styles.cardTitle}>Programma's</Text>
-                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel="Programma's sluiten">
+                <Text style={styles.cardTitle}>{t("programs.title")}</Text>
+                <TouchableOpacity style={styles.toolbarBtn} onPress={() => setActivePanel(null)} accessibilityRole="button" accessibilityLabel={t("programs.closeA11y")}>
                   {toolbarIcon(X)}
                 </TouchableOpacity>
               </View>
 
-              <View style={[styles.modeToggle, { marginBottom: 10 }]}>
+              <View style={[styles.modeToggle, styles.splitModeToggle]}>
                 <TouchableOpacity
                   style={[styles.modeToggleBtn, !splitMode && styles.modeToggleBtnActive]}
                   onPress={() => { setSplitMode(false); setSelectedSplitWindows([]); }}
                 >
-                  <Text style={[styles.settingsQualityText, !splitMode && styles.settingsQualityTextActive]}>1 Venster</Text>
+                  <Text style={[styles.settingsQualityText, !splitMode && styles.settingsQualityTextActive]}>{t("programs.oneWindow")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.modeToggleBtn, splitMode && styles.modeToggleBtnActive]}
                   onPress={() => { setSplitMode(true); setSelectedSplitWindows([]); }}
                 >
-                  <Text style={[styles.settingsQualityText, splitMode && styles.settingsQualityTextActive]}>2 Vensters (Splitsen)</Text>
+                  <Text style={[styles.settingsQualityText, splitMode && styles.settingsQualityTextActive]}>{t("programs.twoWindowsSplit")}</Text>
                 </TouchableOpacity>
               </View>
 
               {splitMode && (
-                <Text style={[styles.muted, { marginBottom: 8, fontSize: 12 }]}>
+                <Text style={[styles.muted, styles.splitHint]}>
                   {selectedSplitWindows.length === 0
-                    ? "Kies 2 vensters: tik op het 1e venster"
+                    ? t("programs.chooseTwoStart")
                     : selectedSplitWindows.length === 1
-                    ? `1e: ${selectedSplitWindows[0].name} — tik nu op het 2e venster`
-                    : "2 vensters geselecteerd"}
+                    ? t("programs.chooseTwoSecond", { name: selectedSplitWindows[0].name })
+                    : t("programs.twoSelected")}
                 </Text>
               )}
 
               <ScrollView style={styles.chatMessagesList}>
-                {windowList.length === 0 && <Text style={styles.fileEmptyText}>Geen open programma's gevonden.</Text>}
+                {windowList.length === 0 && <Text style={styles.fileEmptyText}>{t("programs.empty")}</Text>}
                 {windowList.map((w) => {
                   const isSelected = selectedSplitWindows.some((sw) => sw.id === w.id);
                   const idx = selectedSplitWindows.findIndex((sw) => sw.id === w.id);
                   return (
                     <TouchableOpacity
                       key={w.id}
-                      style={[
-                        styles.programRow,
-                        isSelected && { backgroundColor: "rgba(52, 120, 246, 0.2)", borderColor: colors.primary, borderWidth: 1.5 },
-                      ]}
+                      style={[styles.programRow, isSelected && styles.programRowSelected]}
                       onPress={() => (splitMode ? toggleSplitWindowSelection(w) : selectProgram(w))}
                     >
                       {w.thumbnail ? (
@@ -3124,8 +3157,8 @@ export default function App(): React.JSX.Element {
                         {w.name}
                       </Text>
                       {splitMode && isSelected && (
-                        <View style={{ backgroundColor: colors.primary, borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center" }}>
-                          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 12 }}>{idx + 1}</Text>
+                        <View style={styles.selectionBadge}>
+                          <Text style={styles.selectionBadgeText}>{idx + 1}</Text>
                         </View>
                       )}
                     </TouchableOpacity>
@@ -3160,10 +3193,10 @@ export default function App(): React.JSX.Element {
               {!!activeConfirm?.command && <Text style={styles.notifyCommand}>{activeConfirm.command}</Text>}
               <View style={styles.modalActions}>
                 <TouchableOpacity style={styles.outlineBtn} onPress={() => answerConfirm("deny")}>
-                  <Text style={styles.outlineBtnText}>Weigeren</Text>
+                  <Text style={styles.outlineBtnText}>{t("common.decline")}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.primaryBtn} onPress={() => answerConfirm("allow")}>
-                  <Text style={styles.primaryBtnText}>Bevestigen</Text>
+                  <Text style={styles.primaryBtnText}>{t("common.confirm")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3178,17 +3211,17 @@ export default function App(): React.JSX.Element {
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle={theme === "dark" ? "light-content" : "dark-content"} />
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Tab: Home Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Tab: Home ─────────────────────────────────────────────────── */}
       {activeTab === "home" && (
         <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           {/* Verbinden bovenaan */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Verbinden met een apparaat</Text>
+            <Text style={styles.cardTitle}>{t("home.cardTitle")}</Text>
             {savedDevices.length > 0 && (
               <>
-                <Text style={styles.label}>Opgeslagen apparaten</Text>
+                <Text style={styles.label}>{t("home.savedDevices")}</Text>
                 {savedDevices.map((device) => (
                   <View key={device.id} style={styles.savedDeviceRow}>
                     <TouchableOpacity style={styles.savedDeviceMain} onPress={() => connectToSaved(device)}>
@@ -3198,14 +3231,14 @@ export default function App(): React.JSX.Element {
                     <TouchableOpacity
                       style={styles.savedDeviceIconBtn}
                       onPress={() => handleToggleFavorite(device.id)}
-                      accessibilityLabel={device.favorite ? "Favoriet verwijderen" : "Als favoriet markeren"}
+                      accessibilityLabel={device.favorite ? t("home.favoriteRemove") : t("home.favoriteAdd")}
                     >
                       <Star size={18} color={device.favorite ? colors.primary : colors.muted} fill={device.favorite ? colors.primary : "transparent"} strokeWidth={2.2} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.savedDeviceIconBtn}
                       onPress={() => handleRemoveSaved(device.id, device.label)}
-                      accessibilityLabel="Apparaat verwijderen"
+                      accessibilityLabel={t("home.removeDeviceA11y")}
                     >
                       <Trash2 size={18} color={colors.muted} strokeWidth={2.2} />
                     </TouchableOpacity>
@@ -3214,12 +3247,12 @@ export default function App(): React.JSX.Element {
                 <View style={styles.divider} />
               </>
             )}
-            <Text style={styles.label}>Partner-ID</Text>
-            <TextInput style={styles.input} value={targetId} onChangeText={setTargetId} keyboardType="number-pad" placeholder="bv. 482913650" />
-            <Text style={styles.label}>Wachtwoord</Text>
-            <TextInput style={styles.input} value={targetPassword} onChangeText={setTargetPassword} secureTextEntry placeholder="Wachtwoord" />
+            <Text style={styles.label}>{t("home.partnerId")}</Text>
+            <TextInput style={styles.input} value={targetId} onChangeText={setTargetId} keyboardType="number-pad" placeholder={t("home.partnerIdPlaceholder")} />
+            <Text style={styles.label}>{t("home.password")}</Text>
+            <TextInput style={styles.input} value={targetPassword} onChangeText={setTargetPassword} secureTextEntry placeholder={t("home.password")} />
             <View style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Dit apparaat onthouden</Text>
+              <Text style={styles.settingsLabel}>{t("home.rememberDevice")}</Text>
               <Switch
                 value={rememberDevice}
                 onValueChange={setRememberDevice}
@@ -3232,131 +3265,136 @@ export default function App(): React.JSX.Element {
                 style={styles.input}
                 value={rememberLabel}
                 onChangeText={setRememberLabel}
-                placeholder="Naam (bv. Kantoor-pc)"
+                placeholder={t("home.rememberNamePlaceholder")}
                 placeholderTextColor={colors.muted}
               />
             )}
             <TouchableOpacity style={styles.primaryBtn} onPress={onConnectPress}>
-              <Text style={styles.primaryBtnText}>Verbinden</Text>
+              <Text style={styles.primaryBtnText}>{t("common.connect")}</Text>
             </TouchableOpacity>
             {!!connectStatus && <Text style={styles.connectStatus}>{connectStatus}</Text>}
           </View>
 
           {/* Dit apparaat eronder */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Dit apparaat</Text>
-            <Text style={styles.label}>Jouw BromeoRemote-ID (voor agent-meldingen)</Text>
+            <Text style={styles.cardTitle}>{t("home.thisDeviceTitle")}</Text>
+            <Text style={styles.label}>{t("home.myIdLabel")}</Text>
             <Text style={styles.mono}>{myId ? formatId(myId) : "—"}</Text>
             <Text style={[styles.statusText, serverStatus === "connected" ? styles.statusOk : styles.statusBad]}>
-              {serverStatus === "connected" ? "●Â Verbonden met server" : serverStatus === "connecting" ? "Verbinden…" : "●Â Niet verbonden"}
+              {serverStatus === "connected" ? t("home.serverConnected") : serverStatus === "connecting" ? t("boot.connecting") : t("home.serverDisconnected")}
             </Text>
-            <Text style={styles.label}>Sessiewachtwoord (verandert bij elke herstart)</Text>
+            <Text style={styles.label}>{t("home.sessionPasswordLabel")}</Text>
             <Text style={styles.mono}>{hostSessionPassword}</Text>
-            <Text style={styles.muted}>Geef dit ID + wachtwoord door aan iemand die deze telefoon op afstand wil bekijken/bedienen.</Text>
+            <Text style={styles.muted}>{t("home.shareHint")}</Text>
           </View>
         </ScrollView>
       )}
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Tab: Instellingen Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Tab: Instellingen ─────────────────────────────────────────── */}
       {activeTab === "instellingen" && (
         <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Weergave</Text>
+            <Text style={styles.cardTitle}>{t("settings.displayCardTitle")}</Text>
             <View style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>Thema</Text>
+              <Text style={styles.settingsLabel}>{t("session.themeLabel")}</Text>
               {renderThemeToggle()}
             </View>
-            <Text style={styles.muted}>Lichte modus is standaard. Je keuze wordt op dit apparaat onthouden.</Text>
+            <Text style={styles.muted}>{t("settings.themeHint")}</Text>
+            <View style={styles.settingsRow}>
+              <Text style={styles.settingsLabel}>{t("lang.switch")}</Text>
+              {renderLangToggle()}
+            </View>
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Bediening op afstand</Text>
+            <Text style={styles.cardTitle}>{t("settings.remoteControlCardTitle")}</Text>
             <Text style={styles.muted}>
-              Nodig zodat een pc echt kan tikken/vegen op deze telefoon, niet alleen het scherm kan zien. Android vereist hiervoor een
-              handmatig ingeschakelde toegankelijkheidsservice.
+              {t("settings.remoteControlHint")}
             </Text>
             <Text style={[styles.statusText, accessibilityEnabled ? styles.statusOk : styles.statusBad]}>
-              {accessibilityEnabled ? "●Â Ingeschakeld" : "●Â Niet ingeschakeld — schermdelen werkt wel, bediening niet"}
+              {accessibilityEnabled ? t("settings.enabled") : t("settings.remoteControlDisabled")}
             </Text>
             {!accessibilityEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openAccessibilitySettings}>
-                <Text style={styles.primaryBtnText}>Instellingen openen</Text>
+                <Text style={styles.primaryBtnText}>{t("settings.openSettings")}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Virtueel Toetsenbord (Perfect Typen)</Text>
+            <Text style={styles.cardTitle}>{t("settings.virtualKeyboardCardTitle")}</Text>
             <Text style={styles.muted}>
-              Nodig zodat je vanaf de PC direct zinnen kunt typen op deze telefoon in plaats van losse schermkliks.
+              {t("settings.virtualKeyboardHint")}
             </Text>
             <Text style={[styles.statusText, virtualKeyboardEnabled ? styles.statusOk : styles.statusBad]}>
-              {virtualKeyboardEnabled ? "●Â Ingeschakeld" : "●Â Niet ingeschakeld — typen op afstand is beperkt"}
+              {virtualKeyboardEnabled ? t("settings.enabled") : t("settings.virtualKeyboardDisabled")}
             </Text>
             {!virtualKeyboardEnabled && (
               <TouchableOpacity style={styles.primaryBtn} onPress={openKeyboardSettings}>
-                <Text style={styles.primaryBtnText}>Instellingen openen</Text>
+                <Text style={styles.primaryBtnText}>{t("settings.openSettings")}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Licentie</Text>
+            <Text style={styles.cardTitle}>{t("license.cardTitle")}</Text>
             <Text style={styles.muted}>
-              Vul je e-mailadres en licentiesleutel in (te vinden op bromeoremote.com onder "Mijn Dashboard / Licentie")
-              om je licentie op dit apparaat te activeren.
+              {t("license.hint")}
             </Text>
-            <Text style={styles.label}>E-mailadres</Text>
+            <Text style={styles.label}>{t("license.emailLabel")}</Text>
             <TextInput
               style={styles.input}
               value={licenseEmailInput}
               onChangeText={setLicenseEmailInput}
-              placeholder="jouw@email.nl"
+              placeholder={t("license.emailPlaceholder")}
               autoCapitalize="none"
               keyboardType="email-address"
             />
-            <Text style={styles.label}>Licentiesleutel</Text>
+            <Text style={styles.label}>{t("license.keyLabel")}</Text>
             <TextInput
               style={styles.input}
               value={licenseKeyInput}
               onChangeText={setLicenseKeyInput}
-              placeholder="bv. 619ae23d-db7a-43f7-b006-876bc368edf6"
+              placeholder={t("license.keyPlaceholder")}
               autoCapitalize="none"
             />
             <TouchableOpacity style={styles.primaryBtn} onPress={handleVerifyLicense} disabled={licenseVerifying}>
-              <Text style={styles.primaryBtnText}>{licenseVerifying ? "Controleren..." : "Licentie Controleren & Activeren"}</Text>
+              <Text style={styles.primaryBtnText}>{licenseVerifying ? t("license.checking") : t("license.verifyBtn")}</Text>
             </TouchableOpacity>
             {licenseStatusInfo ? (
               <Text style={[styles.statusText, licenseStatusInfo.valid ? styles.statusOk : styles.statusBad]}>
                 {licenseStatusInfo.valid
-                  ? `Licentiestatus: Actief (${licenseStatusInfo.plan || "Free"})`
-                  : `Licentiestatus: ${licenseStatusInfo.reason || "Ongeldig"}`}
+                  ? t("license.statusActive", { plan: licenseStatusInfo.plan || "Free" })
+                  : t("license.statusInvalid", { reason: licenseStatusInfo.reason || t("license.invalidReason") })}
               </Text>
             ) : (
-              <Text style={styles.muted}>Licentiestatus: Nog niet gecontroleerd. Standaard Gratis (15 min per sessie).</Text>
+              <Text style={styles.muted}>{t("license.statusNotChecked")}</Text>
             )}
           </View>
         </ScrollView>
       )}
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Tab: Meer Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Tab: Meer ─────────────────────────────────────────────────── */}
       {activeTab === "meer" && (
         <ScrollView contentContainerStyle={styles.scroll} style={styles.tabContent}>
           <Image source={logo2} style={styles.logo} resizeMode="contain" />
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Geschiedenis</Text>
+            <Text style={styles.cardTitle}>{t("history.cardTitle")}</Text>
             {sessionHistory.length === 0 ? (
-              <Text style={styles.muted}>Nog geen sessies opgeslagen.</Text>
+              <Text style={styles.muted}>{t("history.empty")}</Text>
             ) : (
               <>
                 <TouchableOpacity onPress={() => setSessionHistoryExpanded((v) => !v)}>
                   <Text style={styles.label}>
-                    {sessionHistory.length} sessie{sessionHistory.length === 1 ? "" : "s"} opgeslagen — laatste{" "}
-                    {new Date(sessionHistory[0].startedAt).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })} met{" "}
-                    {formatId(sessionHistory[0].peerId)}. {sessionHistoryExpanded ? "Verbergen" : "Tonen"}
+                    {t("history.summary", {
+                      count: sessionHistory.length,
+                      started: new Date(sessionHistory[0].startedAt).toLocaleString(lang === "nl" ? "nl-NL" : "en-GB", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
+                      peerId: formatId(sessionHistory[0].peerId),
+                      toggle: sessionHistoryExpanded ? t("history.hide") : t("history.show"),
+                    })}
                   </Text>
                 </TouchableOpacity>
                 {sessionHistoryExpanded && (
@@ -3366,10 +3404,10 @@ export default function App(): React.JSX.Element {
                         <View style={styles.savedDeviceMain}>
                           <Text style={styles.savedDeviceLabel}>{formatId(entry.peerId)}</Text>
                           <Text style={styles.savedDeviceId}>
-                            {new Date(entry.startedAt).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                            {new Date(entry.startedAt).toLocaleString(lang === "nl" ? "nl-NL" : "en-GB", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
                             {" · "}
                             {formatDuration(entry.durationSec)}
-                            {entry.filesTransferred > 0 ? ` · ${entry.filesTransferred} bestand(en)` : ""}
+                            {entry.filesTransferred > 0 ? t("history.filesTransferredSuffix", { count: entry.filesTransferred }) : ""}
                           </Text>
                         </View>
                       </View>
@@ -3377,22 +3415,22 @@ export default function App(): React.JSX.Element {
                     <TouchableOpacity
                       style={styles.outlineBtn}
                       onPress={() => {
-                        Alert.alert("Geschiedenis wissen", "Weet je zeker dat je de sessiegeschiedenis wilt wissen?", [
-                          { text: "Annuleren", style: "cancel" },
+                        Alert.alert(t("history.clearConfirmTitle"), t("history.clearConfirmMsg"), [
+                          { text: t("common.cancel"), style: "cancel" },
                           {
-                            text: "Wissen",
+                            text: t("common.clear"),
                             style: "destructive",
                             onPress: () =>
                               clearSessionHistory().then((h) => {
                                 setSessionHistoryState(h);
                                 setSessionHistoryExpanded(false);
-                                showToast("Sessiegeschiedenis gewist.");
+                                showToast(t("history.clearedToast"));
                               }),
                           },
                         ]);
                       }}
                     >
-                      <Text style={styles.outlineBtnText}>Geschiedenis wissen</Text>
+                      <Text style={styles.outlineBtnText}>{t("history.clearBtn")}</Text>
                     </TouchableOpacity>
                   </>
                 )}
@@ -3401,15 +3439,14 @@ export default function App(): React.JSX.Element {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Meldingen</Text>
+            <Text style={styles.cardTitle}>{t("notifications.cardTitle")}</Text>
             <Text style={styles.muted}>
-              Bevestigingsverzoeken (bijv. van Google Antigravity) verschijnen als volledig scherm, zelfs als de telefoon
-              vergrendeld is.
+              {t("notifications.hint")}
             </Text>
             <TouchableOpacity style={styles.outlineBtn} onPress={() => openConfirmNotificationSettings()}>
-              <Text style={styles.outlineBtnText}>Meldingsgeluid aanpassen</Text>
+              <Text style={styles.outlineBtnText}>{t("notifications.adjustSound")}</Text>
             </TouchableOpacity>
-            {notifications.length === 0 && <Text style={styles.muted}>Nog geen meldingen.</Text>}
+            {notifications.length === 0 && <Text style={styles.muted}>{t("notifications.empty")}</Text>}
             {notifications.map((n) => (
               <View key={n.id} style={styles.notifyRow}>
                 <Text style={styles.notifyTitle}>{n.title}</Text>
@@ -3418,7 +3455,7 @@ export default function App(): React.JSX.Element {
                 {!!n.command && <Text style={styles.notifyCommand}>{n.command}</Text>}
                 {n.status && (
                   <Text style={n.status === "allow" ? styles.statusOk : styles.statusBad}>
-                    {n.status === "allow" ? "Ã¢Å“â€œ Bevestigd" : "Ã¢Å“â€¢ Geweigerd"}
+                    {n.status === "allow" ? t("notifications.confirmed") : t("notifications.denied")}
                   </Text>
                 )}
               </View>
@@ -3426,45 +3463,44 @@ export default function App(): React.JSX.Element {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>AI Buddy</Text>
+            <Text style={styles.cardTitle}>{t("aiBuddy.title")}</Text>
             <Text style={styles.muted}>
-              Koppel je eigen OpenAI-sleutel om tijdens een sessie hulp te vragen — maak een screenshot van het scherm op
-              afstand en stel een vraag, AI Buddy helpt stap voor stap.
+              {t("aiBuddy.cardDesc")}
             </Text>
-            <Text style={styles.label}>OpenAI API-sleutel</Text>
+            <Text style={styles.label}>{t("aiBuddy.keyLabel")}</Text>
             <TextInput
               style={styles.input}
               value={openaiKeyInput}
               onChangeText={setOpenaiKeyInput}
-              placeholder="sk-…"
+              placeholder={t("aiBuddy.keyPlaceholder")}
               placeholderTextColor="#8b96b8"
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />
             <TouchableOpacity style={styles.primaryBtn} onPress={saveOpenAiKey}>
-              <Text style={styles.primaryBtnText}>Opslaan</Text>
+              <Text style={styles.primaryBtnText}>{t("common.save")}</Text>
             </TouchableOpacity>
-            <Text style={styles.muted}>{openaiKeyConfigured ? "Sleutel ingesteld." : "Nog geen sleutel ingesteld."}</Text>
+            <Text style={styles.muted}>{openaiKeyConfigured ? t("aiBuddy.keySet") : t("aiBuddy.keyNotSet")}</Text>
           </View>
         </ScrollView>
       )}
 
 
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬ Bottom tab bar Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+      {/* ── Bottom tab bar ────────────────────────────────────────────── */}
       <View style={styles.tabBar}>
         <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("home")}>
           <Home size={22} color={activeTab === "home" ? colors.primary : colors.muted} strokeWidth={activeTab === "home" ? 2.5 : 2} />
-          <Text style={[styles.tabBarLabel, activeTab === "home" && styles.tabBarLabelActive]}>Home</Text>
+          <Text style={[styles.tabBarLabel, activeTab === "home" && styles.tabBarLabelActive]}>{t("tabBar.home")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("instellingen")}>
           <Settings size={22} color={activeTab === "instellingen" ? colors.primary : colors.muted} strokeWidth={activeTab === "instellingen" ? 2.5 : 2} />
-          <Text style={[styles.tabBarLabel, activeTab === "instellingen" && styles.tabBarLabelActive]}>Instellingen</Text>
+          <Text style={[styles.tabBarLabel, activeTab === "instellingen" && styles.tabBarLabelActive]}>{t("tabBar.settings")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.tabBarBtn} onPress={() => setActiveTab("meer")}>
           <MoreHorizontal size={22} color={activeTab === "meer" ? colors.primary : colors.muted} strokeWidth={activeTab === "meer" ? 2.5 : 2} />
-          <Text style={[styles.tabBarLabel, activeTab === "meer" && styles.tabBarLabelActive]}>Meer</Text>
+          <Text style={[styles.tabBarLabel, activeTab === "meer" && styles.tabBarLabelActive]}>{t("tabBar.more")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -3478,10 +3514,10 @@ export default function App(): React.JSX.Element {
             {!!activeConfirm?.command && <Text style={styles.notifyCommand}>{activeConfirm.command}</Text>}
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => answerConfirm("deny")}>
-                <Text style={styles.outlineBtnText}>Weigeren</Text>
+                <Text style={styles.outlineBtnText}>{t("common.decline")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => answerConfirm("allow")}>
-                <Text style={styles.primaryBtnText}>Bevestigen</Text>
+                <Text style={styles.primaryBtnText}>{t("common.confirm")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3491,14 +3527,14 @@ export default function App(): React.JSX.Element {
       <Modal visible={!!pendingIncoming} transparent animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.cardTitle}>Inkomende verbinding</Text>
-            <Text style={styles.notifyMessage}>{pendingIncoming ? formatId(pendingIncoming.fromId) : ""} wil deze telefoon bekijken en bedienen.</Text>
+            <Text style={styles.cardTitle}>{t("incoming.title")}</Text>
+            <Text style={styles.notifyMessage}>{t("incoming.message", { id: pendingIncoming ? formatId(pendingIncoming.fromId) : "" })}</Text>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => respondToIncoming(false)}>
-                <Text style={styles.outlineBtnText}>Weigeren</Text>
+                <Text style={styles.outlineBtnText}>{t("common.decline")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={() => respondToIncoming(true)}>
-                <Text style={styles.primaryBtnText}>Toestaan</Text>
+                <Text style={styles.primaryBtnText}>{t("incoming.allow")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3507,22 +3543,22 @@ export default function App(): React.JSX.Element {
       <Modal visible={!!totpRequired} transparent animationType="fade" onRequestClose={() => setTotpRequired(null)}>
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
-            <Text style={styles.cardTitle}>Tweestapsverificatie</Text>
+            <Text style={styles.cardTitle}>{t("totp.title")}</Text>
             <Text style={styles.notifyMessage}>
-              {totpRequired === "bad-totp" ? "Onjuiste code. Probeer opnieuw." : "Dit apparaat vereist een 6-cijferige code uit je authenticator-app."}
+              {totpRequired === "bad-totp" ? t("totp.badCode") : t("totp.required")}
             </Text>
             <TextInput
               style={styles.input}
               value={totpCode}
               onChangeText={setTotpCode}
-              placeholder="6-cijferige code"
+              placeholder={t("totp.placeholder")}
               placeholderTextColor="#8b96b8"
               keyboardType="number-pad"
               maxLength={6}
               autoFocus
             />
             <View style={styles.settingsRow}>
-              <Text style={styles.settingsLabel}>30 dagen onthouden</Text>
+              <Text style={styles.settingsLabel}>{t("totp.remember")}</Text>
               <Switch
                 value={trustThisDevice}
                 onValueChange={setTrustThisDevice}
@@ -3532,10 +3568,10 @@ export default function App(): React.JSX.Element {
             </View>
             <View style={styles.modalActions}>
               <TouchableOpacity style={styles.outlineBtn} onPress={() => setTotpRequired(null)}>
-                <Text style={styles.outlineBtnText}>Annuleren</Text>
+                <Text style={styles.outlineBtnText}>{t("common.cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.primaryBtn} onPress={submitTotpCode}>
-                <Text style={styles.primaryBtnText}>Bevestigen</Text>
+                <Text style={styles.primaryBtnText}>{t("common.confirm")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3642,6 +3678,11 @@ function createStyles(theme: AppTheme) {
     fileRowStatus: { color: colors.muted, fontSize: 11, marginTop: 6 },
     fileEmptyText: { color: colors.muted, fontSize: 13, marginTop: 12 },
     programRow: { flexDirection: "row", alignItems: "center", backgroundColor: colors.field, borderRadius: 8, padding: 10, marginTop: 8 },
+    programRowSelected: { backgroundColor: "rgba(52, 120, 246, 0.2)", borderColor: colors.primary, borderWidth: 1.5 },
+    selectionBadge: { backgroundColor: colors.primary, borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center" },
+    selectionBadgeText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+    splitModeToggle: { marginBottom: 10 },
+    splitHint: { marginBottom: 8, fontSize: 12 },
     programThumbnail: { width: 48, height: 48, borderRadius: 6, marginRight: 12, backgroundColor: colors.border },
     programThumbnailPlaceholder: { alignItems: "center", justifyContent: "center" },
     programName: { flex: 1, color: colors.text, fontWeight: "700", fontSize: 13 },
@@ -3652,6 +3693,7 @@ function createStyles(theme: AppTheme) {
     hostBanner: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
     hostBannerText: { color: colors.text, fontSize: 16, fontWeight: "700", textAlign: "center", marginBottom: 20 },
     sessionRoot: { flex: 1, backgroundColor: "#000" },
+    sessionColumn: { flex: 1, flexDirection: "column" },
     sessionContainer: { flex: 1, backgroundColor: "#000", flexDirection: "column" },
     sessionContainerLandscape: { flexDirection: "row" },
     videoWrapPortraitWithAi: { flex: 0.42 },
@@ -3661,6 +3703,7 @@ function createStyles(theme: AppTheme) {
       borderTopLeftRadius: 16,
       borderTopRightRadius: 16,
       paddingTop: 12,
+      paddingHorizontal: 12,
     },
     aiBuddyLandscapePanel: {
       width: 360,

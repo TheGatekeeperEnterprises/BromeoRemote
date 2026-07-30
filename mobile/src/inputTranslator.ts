@@ -1,6 +1,6 @@
 import type { InputEvent } from "./shared/protocol";
 import { dispatchTap, dispatchLongPress, dispatchSwipePath, dispatchScroll } from "./remoteControl";
-import { commitText, sendKeyEvent, deleteSurroundingText } from "./virtualKeyboard";
+import { commitText, sendKeyEvent } from "./virtualKeyboard";
 
 // Translates the WebRTC control channel's discrete mouse-style events (built
 // for a cursor-based desktop) into the single gesture Android's
