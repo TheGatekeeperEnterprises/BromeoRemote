@@ -57,7 +57,12 @@
       align-items: center;
       margin-bottom: 2rem;
     }
-    .logo img { height: 50px; object-fit: contain; }
+    .logo img {
+      max-width: 100%;
+      height: auto;
+      max-height: 44px;
+      object-fit: contain;
+    }
     h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
     p { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
     label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 0.4rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
