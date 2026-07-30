@@ -15,13 +15,14 @@ import { setMonitorPower } from "./display";
 import { generateSecret, buildOtpauthUri, verifyTotp } from "./totp";
 import QRCode from "qrcode";
 import { autoUpdater } from "electron-updater";
-import type { InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
+import type { AnnotationShape, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
 
 let mainWindow: BrowserWindow | null = null;
 let miniControllerWindow: BrowserWindow | null = null;
 let miniControllerCollapsed = false;
 let hostAnnotationWindow: BrowserWindow | null = null;
 let hostAnnotationOverlayActive = false;
+let hostChatWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let activeMonitorId: string | null = null;
 // "control a program" mobile feature: when set, setDisplayMediaRequestHandler
@@ -263,7 +264,10 @@ function restoreMainWindow(): void {
 // toggleMiniControllerCollapse. Kept as constants (rather than reading
 // win.getSize()) so the y-position math below always anchors to the
 // expanded panel's height, avoiding a vertical jump between the two sizes.
-const MINI_EXPANDED_SIZE = { width: 360, height: 230 };
+// 356 fits the header + viewer list + meta box + all 4 action rows (Klembord/
+// Chat, Scherm/Whiteboard, End-all, Panic) without clipping — the panel used
+// to be 230, which was too short to reach the red end-session button at all.
+const MINI_EXPANDED_SIZE = { width: 360, height: 356 };
 const MINI_COLLAPSED_SIZE = { width: 26, height: 64 };
 
 function miniControllerY(): number {
@@ -304,6 +308,11 @@ function createMiniControllerWindow(): BrowserWindow {
   win.loadFile(join(__dirname, "../renderer/mini.html"));
   win.on("closed", () => {
     miniControllerWindow = null;
+  });
+  // Keeps the docked chat window glued underneath if the user drags the
+  // panel around (it's movable: true above).
+  win.on("moved", () => {
+    if (hostChatWindow?.isVisible()) hostChatWindow.setBounds(hostChatWindowBounds());
   });
   return win;
 }
@@ -355,6 +364,10 @@ function toggleMiniControllerCollapse(): void {
   const startBounds = win.getBounds();
   const target = positionMiniController(targetSize.width, false);
   sendMiniControllerCollapsed();
+  // A docked chat window floating next to a collapsed tiny tab would look
+  // disconnected — hide it; expanding the panel again doesn't auto-reopen
+  // it, same as it wasn't open before collapsing.
+  if (miniControllerCollapsed) hideHostChatWindow();
 
   let step = 0;
   const totalSteps = 10;
@@ -386,6 +399,77 @@ function hideMiniController(): void {
   // the session that could show it ends — that would lock the host out of
   // their own desktop with no way back in.
   if (hostAnnotationOverlayActive) setHostAnnotationOverlayActive(false);
+  hideHostChatWindow();
+}
+
+// --- Docked host chat window — floats directly under the mini controller
+// panel (not the main window) so replying doesn't interrupt whatever the
+// viewer is currently looking at. Mirrors app.ts's chatLog 1:1: app.ts still
+// owns all chat state/sending, this is purely a second display surface for
+// it plus a text box that round-trips a typed message back through main.ts.
+const HOST_CHAT_SIZE = { width: 360, height: 300 };
+
+interface HostChatMessage {
+  text: string;
+  timestamp: number;
+  mine: boolean;
+}
+
+function hostChatWindowBounds(): { x: number; y: number; width: number; height: number } {
+  const miniBounds = miniControllerWindow?.getBounds() ?? {
+    x: 0,
+    y: 0,
+    width: MINI_EXPANDED_SIZE.width,
+    height: MINI_EXPANDED_SIZE.height,
+  };
+  return {
+    x: miniBounds.x + miniBounds.width - HOST_CHAT_SIZE.width,
+    y: miniBounds.y + miniBounds.height + 8,
+    width: HOST_CHAT_SIZE.width,
+    height: HOST_CHAT_SIZE.height,
+  };
+}
+
+function createHostChatWindow(): BrowserWindow {
+  const win = new BrowserWindow({
+    ...hostChatWindowBounds(),
+    frame: false,
+    resizable: false,
+    movable: false,
+    show: false,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    transparent: true,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: join(__dirname, "preload.js"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+  win.setMenuBarVisibility(false);
+  win.loadFile(join(__dirname, "../renderer/host-chat.html"));
+  win.on("closed", () => {
+    hostChatWindow = null;
+  });
+  return win;
+}
+
+function showHostChatWindow(): void {
+  if (!miniControllerWindow || miniControllerCollapsed) return;
+  if (!hostChatWindow) hostChatWindow = createHostChatWindow();
+  hostChatWindow.setBounds(hostChatWindowBounds());
+  hostChatWindow.setAlwaysOnTop(true, "screen-saver");
+  hostChatWindow.showInactive();
+}
+
+function hideHostChatWindow(): void {
+  hostChatWindow?.hide();
+}
+
+function sendHostChatMessages(messages: HostChatMessage[]): void {
+  hostChatWindow?.webContents.send("host-chat-messages", messages);
 }
 
 function primaryDisplayBounds(): { x: number; y: number; width: number; height: number } {
@@ -536,13 +620,50 @@ ipcMain.handle("bromeo:close-host-annotation-overlay", () => {
   return true;
 });
 
-ipcMain.handle("bromeo:host-annotation-stroke", (_e, id: string, points: { x: number; y: number }[], color: string) => {
-  mainWindow?.webContents.send("host-annotation-stroke", id, points, color);
+ipcMain.handle("bromeo:host-annotation-shape", (_e, shape: AnnotationShape) => {
+  mainWindow?.webContents.send("host-annotation-shape", shape);
+  return true;
+});
+
+ipcMain.handle("bromeo:host-annotation-erase", (_e, id: string) => {
+  mainWindow?.webContents.send("host-annotation-erase", id);
   return true;
 });
 
 ipcMain.handle("bromeo:host-annotation-clear", () => {
   mainWindow?.webContents.send("host-annotation-clear");
+  return true;
+});
+
+ipcMain.handle("bromeo:save-host-annotation-image", async (_e, dataUrl: string, suggestedName: string) => {
+  if (!hostAnnotationWindow) return { ok: false };
+  const { canceled, filePath } = await dialog.showSaveDialog(hostAnnotationWindow, {
+    defaultPath: suggestedName,
+    filters: [{ name: "PNG-afbeelding", extensions: ["png"] }],
+  });
+  if (canceled || !filePath) return { ok: false };
+  const base64 = dataUrl.replace(/^data:image\/png;base64,/, "");
+  await writeFile(filePath, Buffer.from(base64, "base64"));
+  return { ok: true, path: filePath };
+});
+
+ipcMain.handle("bromeo:show-host-chat", () => {
+  showHostChatWindow();
+  return true;
+});
+
+ipcMain.handle("bromeo:update-host-chat", (_e, messages: HostChatMessage[]) => {
+  sendHostChatMessages(messages);
+  return true;
+});
+
+ipcMain.handle("bromeo:hide-host-chat", () => {
+  hideHostChatWindow();
+  return true;
+});
+
+ipcMain.handle("bromeo:host-chat-send", (_e, text: string) => {
+  mainWindow?.webContents.send("host-chat-send", text);
   return true;
 });
 

@@ -198,7 +198,7 @@ function createWebcamOverlayStream(screenStream: MediaStream, webcamStream: Medi
 
 import { DEFAULT_SIGNALING_URL, DEFAULT_ICE_SERVERS } from "../shared/config.js";
 import type { ServerMessage } from "../shared/protocol.js";
-import type { CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, SessionPermissions, SystemCommand, UpdateStatus } from "../shared/protocol.js";
+import type { AnnotationShape, CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, QualityLevel, ResolutionMode, SavedDevice, SessionPermissions, SystemCommand, UpdateStatus } from "../shared/protocol.js";
 import type { MiniControllerState } from "./global";
 import { sha256Hex } from "./crypto.js";
 import { Signaling } from "./signaling.js";
@@ -481,7 +481,7 @@ let chatLog: { text: string; timestamp: number; mine: boolean }[] = [];
 const ANNOTATION_COLOR = "#ff3b3b";
 const ANNOTATION_STROKE_TTL_MS = 6000;
 let annotateModeActive = false;
-let annotationStrokes: { id: string; points: { x: number; y: number }[]; color: string; createdAt: number }[] = [];
+let annotationShapes: (AnnotationShape & { createdAt: number })[] = [];
 let annotationDrawTimer: ReturnType<typeof setInterval> | null = null;
 let currentStrokeId: string | null = null;
 let currentStrokePoints: { x: number; y: number }[] = [];
@@ -1160,10 +1160,13 @@ async function endSessionAndRotatePassword(): Promise<void> {
   toast(BromeoI18n.t("msg.sessionEndedPasswordChanged"));
 }
 
+// Shows the docked chat window under the mini controller instead of
+// restoring the main window — the host's screen is being shared/controlled
+// during a session, so popping the full app window to the foreground would
+// interrupt whatever the viewer is looking at.
 function openHostChatPanel(): void {
-  window.bromeo.restoreMainWindow();
-  el.hostChatPanel.classList.remove("hidden");
-  el.hostChatInput.focus();
+  void window.bromeo.showHostChat();
+  void window.bromeo.updateHostChat(chatLog);
 }
 
 function handleMiniControllerAction(action: string, peerId?: string): void {
@@ -1448,12 +1451,16 @@ function wireUi(): void {
     hostWhiteboardActive = active;
     updateMiniController();
   });
-  window.bromeo.onHostAnnotationStroke((id, points, color) => {
-    broadcastSystemCommand({ kind: "annotation-stroke", id, points, color });
+  window.bromeo.onHostAnnotationShape((shape) => {
+    broadcastSystemCommand({ kind: "annotation-shape", shape });
+  });
+  window.bromeo.onHostAnnotationErase((id) => {
+    broadcastSystemCommand({ kind: "annotation-erase", id });
   });
   window.bromeo.onHostAnnotationClear(() => {
     broadcastSystemCommand({ kind: "annotation-clear" });
   });
+  window.bromeo.onHostChatSend((text) => sendChatText(text));
 
   el.incomingAccept.onclick = () => respondToIncoming(true);
   el.incomingDecline.onclick = () => respondToIncoming(false);
@@ -2830,11 +2837,12 @@ async function handleHostSystemCommand(peerId: string, cmd: SystemCommand): Prom
     entry.session.sendSystemCommand({ kind: "window-list", windows });
   } else if (cmd.kind === "resize-active-window") {
     if (control) await window.bromeo.resizeActiveWindow(cmd.aspect);
-  } else if (cmd.kind === "annotation-stroke" || cmd.kind === "annotation-clear") {
-    // The host doesn't render annotations itself (it isn't looking at the
-    // shared video) — just relay to every other connected viewer. Any
-    // viewer can draw regardless of control, so this is deliberately not
-    // gated on `control`.
+  } else if (cmd.kind === "annotation-shape" || cmd.kind === "annotation-erase" || cmd.kind === "annotation-clear") {
+    // This relays a *viewer*-originated shape to every other connected
+    // viewer (the host's own shapes go out via broadcastSystemCommand
+    // directly from onHostAnnotationShape, never through here). Any viewer
+    // can draw regardless of control, so this is deliberately not gated on
+    // `control`.
     broadcastSystemCommand(cmd, peerId);
   }
 }
@@ -3021,8 +3029,10 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
         sessionViewOnly = !sessionPermissions.control;
         applyViewerPermissionsUi(sessionPermissions, sessionViewOnly);
         toast(sessionPermissions.control ? BromeoI18n.t("msg.viewerNowControlling") : BromeoI18n.t("msg.viewerNowReadOnly"));
-      } else if (cmd.kind === "annotation-stroke") {
-        receiveAnnotationStroke(cmd.id, cmd.points, cmd.color);
+      } else if (cmd.kind === "annotation-shape") {
+        receiveAnnotationShape(cmd.shape);
+      } else if (cmd.kind === "annotation-erase") {
+        eraseAnnotationShapeLocally(cmd.id);
       } else if (cmd.kind === "annotation-clear") {
         clearAnnotationsLocally();
       }
@@ -3314,11 +3324,19 @@ function updateRecordingTimer(): void {
 
 function sendChatMessage(inputEl: HTMLInputElement): void {
   const text = inputEl.value.trim();
+  if (!text) return;
+  sendChatText(text);
+  inputEl.value = "";
+}
+
+// Shared by the main window's chat inputs and the docked host-chat window's
+// own input (see onHostChatSend below) — the latter has no <input> element
+// living in this document to read from, just a string over IPC.
+function sendChatText(text: string): void {
   if (!text || !currentSession) return;
   currentSession.sendChat(text);
   chatLog.push({ text, timestamp: Date.now(), mine: true });
   renderChat();
-  inputEl.value = "";
 }
 
 function receiveChatMessage(text: string, timestamp: number): void {
@@ -3346,6 +3364,7 @@ function renderChat(): void {
     })
     .join("");
   container.scrollTop = container.scrollHeight;
+  if (currentRole === "host") void window.bromeo.updateHostChat(chatLog);
 }
 
 // --- AI Buddy (local-only — the user's own OpenAI key, never touches the
@@ -3530,39 +3549,88 @@ function resizeAnnotationCanvas(): void {
   canvas.height = Math.max(1, Math.round(rect.height));
 }
 
+// Renders any shape kind the host's richer whiteboard toolbox can send
+// (pen/highlighter/rect/ellipse/text/comment) — this viewer-side canvas only
+// ever *originates* "pen" shapes itself (see wireAnnotationCapture below),
+// but has to be able to display whatever the host draws.
+function drawAnnotationShape(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, shape: AnnotationShape, opacity: number): void {
+  ctx.globalAlpha = opacity;
+  ctx.strokeStyle = shape.color;
+  ctx.fillStyle = shape.color;
+  const px = (v: number) => v * canvas.width;
+  const py = (v: number) => v * canvas.height;
+  if (shape.kind === "pen" || shape.kind === "highlighter") {
+    const points = shape.points ?? [];
+    if (points.length < 2) return;
+    ctx.lineWidth = shape.kind === "highlighter" ? 14 : 3;
+    ctx.globalAlpha = (shape.kind === "highlighter" ? 0.35 : 1) * opacity;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    points.forEach((p, i) => {
+      if (i === 0) ctx.moveTo(px(p.x), py(p.y));
+      else ctx.lineTo(px(p.x), py(p.y));
+    });
+    ctx.stroke();
+  } else if (shape.kind === "rect") {
+    ctx.lineWidth = 3;
+    ctx.strokeRect(px(shape.x ?? 0), py(shape.y ?? 0), px(shape.w ?? 0), py(shape.h ?? 0));
+  } else if (shape.kind === "ellipse") {
+    ctx.lineWidth = 3;
+    const cx = px((shape.x ?? 0) + (shape.w ?? 0) / 2);
+    const cy = py((shape.y ?? 0) + (shape.h ?? 0) / 2);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, Math.abs(px(shape.w ?? 0) / 2), Math.abs(py(shape.h ?? 0) / 2), 0, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (shape.kind === "text") {
+    ctx.font = "600 16px 'Segoe UI', Arial, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillText(shape.text ?? "", px(shape.x ?? 0), py(shape.y ?? 0));
+  } else if (shape.kind === "comment") {
+    const x = px(shape.x ?? 0);
+    const y = py(shape.y ?? 0);
+    const text = shape.text ?? "";
+    ctx.font = "600 13px 'Segoe UI', Arial, sans-serif";
+    const padding = 8;
+    const textWidth = ctx.measureText(text).width;
+    const boxWidth = textWidth + padding * 2;
+    const boxHeight = 28;
+    ctx.globalAlpha = 0.92 * opacity;
+    ctx.beginPath();
+    const r = 6;
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + boxWidth, y, x + boxWidth, y + boxHeight, r);
+    ctx.arcTo(x + boxWidth, y + boxHeight, x, y + boxHeight, r);
+    ctx.arcTo(x, y + boxHeight, x, y, r);
+    ctx.arcTo(x, y, x + boxWidth, y, r);
+    ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = "#fff";
+    ctx.textBaseline = "middle";
+    ctx.fillText(text, x + padding, y + boxHeight / 2 + 1);
+  }
+}
+
 function redrawAnnotations(): void {
   const canvas = el.annotationCanvas;
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const now = Date.now();
-  annotationStrokes = annotationStrokes.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS);
+  annotationShapes = annotationShapes.filter((s) => now - s.createdAt < ANNOTATION_STROKE_TTL_MS);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const drawPath = (points: { x: number; y: number }[], color: string, opacity: number) => {
-    if (points.length < 2) return;
-    ctx.globalAlpha = opacity;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-    points.forEach((p, i) => {
-      const x = p.x * canvas.width;
-      const y = p.y * canvas.height;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-  };
   const fadeStart = ANNOTATION_STROKE_TTL_MS * 0.7;
-  for (const stroke of annotationStrokes) {
-    const age = now - stroke.createdAt;
+  for (const shape of annotationShapes) {
+    const age = now - shape.createdAt;
     const opacity = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / (ANNOTATION_STROKE_TTL_MS - fadeStart)) : 1;
-    drawPath(stroke.points, stroke.color, opacity);
+    drawAnnotationShape(ctx, canvas, shape, opacity);
   }
   // The in-progress local stroke, drawn live even before it's finalized/sent.
-  drawPath(currentStrokePoints, ANNOTATION_COLOR, 1);
+  if (currentStrokePoints.length >= 2) {
+    drawAnnotationShape(ctx, canvas, { id: "", kind: "pen", color: ANNOTATION_COLOR, points: currentStrokePoints }, 1);
+  }
   ctx.globalAlpha = 1;
-  if (annotationStrokes.length === 0 && currentStrokePoints.length === 0 && !annotateModeActive) {
+  if (annotationShapes.length === 0 && currentStrokePoints.length === 0 && !annotateModeActive) {
     stopAnnotationRedrawLoop();
   }
 }
@@ -3587,20 +3655,25 @@ function toggleAnnotateMode(): void {
     el.annotationCanvas.classList.remove("hidden");
     resizeAnnotationCanvas();
     startAnnotationRedrawLoop();
-  } else if (annotationStrokes.length === 0) {
+  } else if (annotationShapes.length === 0) {
     el.annotationCanvas.classList.add("hidden");
   }
 }
 
-function receiveAnnotationStroke(id: string, points: { x: number; y: number }[], color: string): void {
-  annotationStrokes.push({ id, points, color, createdAt: Date.now() });
+function receiveAnnotationShape(shape: AnnotationShape): void {
+  annotationShapes.push({ ...shape, createdAt: Date.now() });
   el.annotationCanvas.classList.remove("hidden");
   resizeAnnotationCanvas();
   startAnnotationRedrawLoop();
 }
 
+function eraseAnnotationShapeLocally(id: string): void {
+  annotationShapes = annotationShapes.filter((s) => s.id !== id);
+  redrawAnnotations();
+}
+
 function clearAnnotationsLocally(): void {
-  annotationStrokes = [];
+  annotationShapes = [];
   currentStrokePoints = [];
   currentStrokeId = null;
   redrawAnnotations();
@@ -3646,8 +3719,9 @@ function wireAnnotationCapture(): void {
     }
     const id = currentStrokeId;
     const points = currentStrokePoints;
-    annotationStrokes.push({ id, points, color: ANNOTATION_COLOR, createdAt: Date.now() });
-    currentSession?.sendSystemCommand({ kind: "annotation-stroke", id, points, color: ANNOTATION_COLOR });
+    const shape: AnnotationShape = { id, kind: "pen", color: ANNOTATION_COLOR, points };
+    annotationShapes.push({ ...shape, createdAt: Date.now() });
+    currentSession?.sendSystemCommand({ kind: "annotation-shape", shape });
     currentStrokeId = null;
     currentStrokePoints = [];
   });
@@ -3659,7 +3733,7 @@ function wireAnnotationCapture(): void {
   };
 
   window.addEventListener("resize", () => {
-    if (annotateModeActive || annotationStrokes.length > 0) resizeAnnotationCanvas();
+    if (annotateModeActive || annotationShapes.length > 0) resizeAnnotationCanvas();
   });
 }
 

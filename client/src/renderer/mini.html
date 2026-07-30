@@ -101,7 +101,7 @@
       place-items: center;
       font-size: 13px;
     }
-    .body { padding: 12px; overflow: hidden; }
+    .body { padding: 12px; overflow-y: auto; overflow-x: hidden; }
     .meta {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -214,15 +214,32 @@
       display: none;
       width: 100%;
       height: 100%;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
+      gap: 5px;
       border-radius: 12px 0 0 12px;
       background: linear-gradient(135deg, #1f5eea 0%, #2144c9 100%);
       color: #fff;
       box-shadow: 0 12px 30px rgba(15, 23, 42, 0.32);
       cursor: pointer;
-      font-size: 15px;
+    }
+    .tab-mark {
+      display: grid;
+      place-items: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 5px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.3);
+      font-size: 8.5px;
       font-weight: 900;
+      letter-spacing: 0.2px;
+    }
+    .tab-arrow {
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
     }
     body.collapsed .panel { display: none; }
     body.collapsed .tab { display: flex; }
@@ -255,7 +272,10 @@
         </div>
       </div>
     </section>
-    <div id="mini-tab" class="tab" title="Uitklappen">›</div>
+    <div id="mini-tab" class="tab" title="Uitklappen">
+      <span class="tab-mark">BR</span>
+      <span class="tab-arrow">›</span>
+    </div>
   </div>
   <script type="module" src="./mini.js"></script>
 </body>

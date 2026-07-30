@@ -1,4 +1,4 @@
-import type { AiBuddyMessage, AiBuddyResult, CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
+import type { AiBuddyMessage, AiBuddyResult, AnnotationShape, CursorShapeName, InputEvent, MonitorInfo, NotificationPayload, SavedDevice, UpdateStatus, WindowInfo } from "../shared/protocol";
 
 export interface BromeoConfig {
   deviceId: string;
@@ -118,11 +118,21 @@ export interface BromeoBridge {
 
   toggleHostAnnotationOverlay(): Promise<boolean>;
   closeHostAnnotationOverlay(): Promise<boolean>;
-  sendHostAnnotationStroke(id: string, points: { x: number; y: number }[], color: string): Promise<boolean>;
+  sendHostAnnotationShape(shape: AnnotationShape): Promise<boolean>;
+  sendHostAnnotationErase(id: string): Promise<boolean>;
   sendHostAnnotationClear(): Promise<boolean>;
+  saveHostAnnotationImage(dataUrl: string, suggestedName: string): Promise<{ ok: boolean; path?: string }>;
   onHostAnnotationOverlayState(cb: (active: boolean) => void): () => void;
-  onHostAnnotationStroke(cb: (id: string, points: { x: number; y: number }[], color: string) => void): () => void;
+  onHostAnnotationShape(cb: (shape: AnnotationShape) => void): () => void;
+  onHostAnnotationErase(cb: (id: string) => void): () => void;
   onHostAnnotationClear(cb: () => void): () => void;
+
+  showHostChat(): Promise<boolean>;
+  hideHostChat(): Promise<boolean>;
+  updateHostChat(messages: { text: string; timestamp: number; mine: boolean }[]): Promise<boolean>;
+  sendHostChatMessage(text: string): Promise<boolean>;
+  onHostChatMessages(cb: (messages: { text: string; timestamp: number; mine: boolean }[]) => void): () => void;
+  onHostChatSend(cb: (text: string) => void): () => void;
 }
 
 declare global {

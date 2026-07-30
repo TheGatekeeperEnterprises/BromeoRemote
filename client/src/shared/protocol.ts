@@ -232,17 +232,40 @@ export type SystemCommand =
   | { kind: "permissions-update"; permissions: SessionPermissions }
   // Lightweight annotation/whiteboard overlay drawn on top of the shared
   // video, e.g. circling a button to explain what to click — not
-  // persistent markup, just temporary on-screen pointing. Points are
-  // normalized [0,1] coordinates relative to the video frame (same
-  // convention as InputEvent's xPct/yPct) so they translate correctly
-  // regardless of each client's own video render size. Sent whole-stroke
-  // (not per-point) once a drag gesture completes, viewer->host->other
-  // viewers (the host just relays, it doesn't render — see
-  // broadcastSystemCommand's excludePeerId in renderer/app.ts). Any
-  // connected viewer can draw, controlling or not — purely a
-  // communication aid, no security implication.
-  | { kind: "annotation-stroke"; id: string; points: { x: number; y: number }[]; color: string }
+  // persistent markup, just temporary on-screen pointing. Coordinates are
+  // normalized [0,1] relative to the video frame (same convention as
+  // InputEvent's xPct/yPct) so they translate correctly regardless of each
+  // client's own render size. Sent whole-shape (not per-point) once a
+  // gesture completes. Two independent sources feed this same channel:
+  // a viewer drawing over the video they see (session-view's pencil tool,
+  // app.ts's wireAnnotationCapture — always just "pen" shapes), and the
+  // host drawing directly on their own screen (host-annotate.ts's full
+  // toolbox). Either way it's viewer<->host<->other-viewers, the host only
+  // relays what it didn't originate itself (see broadcastSystemCommand's
+  // excludePeerId in renderer/app.ts). No security implication — purely a
+  // communication aid, available regardless of control permission.
+  | { kind: "annotation-shape"; shape: AnnotationShape }
+  // Removes one shape by id — the eraser tool, or a text/comment box the
+  // author deleted before it faded out on its own.
+  | { kind: "annotation-erase"; id: string }
   | { kind: "annotation-clear" };
+
+export type AnnotationShapeKind = "pen" | "highlighter" | "rect" | "ellipse" | "text" | "comment";
+
+export interface AnnotationShape {
+  id: string;
+  kind: AnnotationShapeKind;
+  color: string;
+  // pen / highlighter (freehand)
+  points?: { x: number; y: number }[];
+  // rect / ellipse — normalized bounding box
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  // text / comment
+  text?: string;
+}
 
 export type FileMessage =
   | { kind: "file-offer"; id: string; name: string; size: number }

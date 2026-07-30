@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AiBuddyMessage, InputEvent, NotificationPayload, SavedDevice, UpdateStatus } from "../shared/protocol";
+import type { AiBuddyMessage, AnnotationShape, InputEvent, NotificationPayload, SavedDevice, UpdateStatus } from "../shared/protocol";
 
 interface MiniControllerViewer {
   peerId: string;
@@ -117,22 +117,45 @@ contextBridge.exposeInMainWorld("bromeo", {
 
   toggleHostAnnotationOverlay: () => ipcRenderer.invoke("bromeo:toggle-host-annotation-overlay"),
   closeHostAnnotationOverlay: () => ipcRenderer.invoke("bromeo:close-host-annotation-overlay"),
-  sendHostAnnotationStroke: (id: string, points: { x: number; y: number }[], color: string) =>
-    ipcRenderer.invoke("bromeo:host-annotation-stroke", id, points, color),
+  sendHostAnnotationShape: (shape: AnnotationShape) => ipcRenderer.invoke("bromeo:host-annotation-shape", shape),
+  sendHostAnnotationErase: (id: string) => ipcRenderer.invoke("bromeo:host-annotation-erase", id),
   sendHostAnnotationClear: () => ipcRenderer.invoke("bromeo:host-annotation-clear"),
+  saveHostAnnotationImage: (dataUrl: string, suggestedName: string) =>
+    ipcRenderer.invoke("bromeo:save-host-annotation-image", dataUrl, suggestedName),
   onHostAnnotationOverlayState: (cb: (active: boolean) => void) => {
     const listener = (_e: unknown, active: boolean) => cb(active);
     ipcRenderer.on("host-annotation-overlay-state", listener);
     return () => ipcRenderer.removeListener("host-annotation-overlay-state", listener);
   },
-  onHostAnnotationStroke: (cb: (id: string, points: { x: number; y: number }[], color: string) => void) => {
-    const listener = (_e: unknown, id: string, points: { x: number; y: number }[], color: string) => cb(id, points, color);
-    ipcRenderer.on("host-annotation-stroke", listener);
-    return () => ipcRenderer.removeListener("host-annotation-stroke", listener);
+  onHostAnnotationShape: (cb: (shape: AnnotationShape) => void) => {
+    const listener = (_e: unknown, shape: AnnotationShape) => cb(shape);
+    ipcRenderer.on("host-annotation-shape", listener);
+    return () => ipcRenderer.removeListener("host-annotation-shape", listener);
+  },
+  onHostAnnotationErase: (cb: (id: string) => void) => {
+    const listener = (_e: unknown, id: string) => cb(id);
+    ipcRenderer.on("host-annotation-erase", listener);
+    return () => ipcRenderer.removeListener("host-annotation-erase", listener);
   },
   onHostAnnotationClear: (cb: () => void) => {
     const listener = () => cb();
     ipcRenderer.on("host-annotation-clear", listener);
     return () => ipcRenderer.removeListener("host-annotation-clear", listener);
+  },
+
+  showHostChat: () => ipcRenderer.invoke("bromeo:show-host-chat"),
+  hideHostChat: () => ipcRenderer.invoke("bromeo:hide-host-chat"),
+  updateHostChat: (messages: { text: string; timestamp: number; mine: boolean }[]) =>
+    ipcRenderer.invoke("bromeo:update-host-chat", messages),
+  sendHostChatMessage: (text: string) => ipcRenderer.invoke("bromeo:host-chat-send", text),
+  onHostChatMessages: (cb: (messages: { text: string; timestamp: number; mine: boolean }[]) => void) => {
+    const listener = (_e: unknown, messages: { text: string; timestamp: number; mine: boolean }[]) => cb(messages);
+    ipcRenderer.on("host-chat-messages", listener);
+    return () => ipcRenderer.removeListener("host-chat-messages", listener);
+  },
+  onHostChatSend: (cb: (text: string) => void) => {
+    const listener = (_e: unknown, text: string) => cb(text);
+    ipcRenderer.on("host-chat-send", listener);
+    return () => ipcRenderer.removeListener("host-chat-send", listener);
   },
 });
