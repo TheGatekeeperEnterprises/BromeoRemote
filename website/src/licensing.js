@@ -145,7 +145,8 @@ async function handleMollieWebhook(paymentId) {
   }
 
   // Recurring payment succeeded (or a retried webhook for the first payment
-  // that already created the subscription) — just make sure the license is
+  // that already created the subscription) — extends expires_at by another
+  // month from this payment's timestamp and makes sure the license is
   // active, in case it had lapsed after a prior failed charge. Passing null
   // leaves the license's existing mollie_subscription_id as-is.
   await upgradeUserLicense({ userId, plan, mollieSubscriptionId: null });

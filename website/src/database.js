@@ -1265,15 +1265,20 @@ async function updateLicenseTransactionStatus(molliePaymentId, status, failureRe
 // license's existing subscription ID untouched, e.g. for a recurring
 // payment where the subscription already exists and only the license's
 // active/expired status needs refreshing.
+// Only ever called from handleMollieWebhook, for a payment Mollie has just
+// confirmed as 'paid' (first payment or a recurring renewal) — so "now" here
+// is always a real purchase timestamp, never an admin/manual action.
 async function upgradeUserLicense({ userId, plan, mollieSubscriptionId = null }) {
-  // expires_at is cleared here — a paid plan tied to an active Mollie
-  // subscription has no fixed expiry date of its own (billing status is
-  // governed by mollie_subscription_id / the recurring payments, not a
-  // date), so any stale trial/previous expiry must not carry over onto the
-  // now-paid license.
+  // expires_at is set to exactly one month from *this* payment's timestamp,
+  // both for the first payment and every recurring renewal — the admin panel
+  // then always shows "current paid period ends X" instead of a permanent
+  // "-", and if a renewal ever silently fails (declined card, a missed
+  // webhook, ...) the license naturally lapses via verifyLicenseInDb's own
+  // expiry check instead of staying "Active" forever with nothing enforcing
+  // that the subscription is still actually being paid for.
   const result = await query(
     `UPDATE licenses SET plan = $1, status = 'Active', is_trial = false, source = 'Checkout',
-       expires_at = NULL, mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
+       expires_at = now() + interval '1 month', mollie_subscription_id = COALESCE($2, mollie_subscription_id), updated_at = now()
      WHERE id = (SELECT id FROM licenses WHERE user_id = $3 ORDER BY created_at DESC LIMIT 1)
      RETURNING *`,
     [plan, mollieSubscriptionId, userId]
