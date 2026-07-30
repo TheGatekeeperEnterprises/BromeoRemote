@@ -1449,14 +1449,16 @@ function wireUi(): void {
     hostWhiteboardActive = active;
     updateMiniController();
   });
-  window.bromeo.onHostAnnotationShape((shape) => {
-    broadcastSystemCommand({ kind: "annotation-shape", shape });
+  window.bromeo.onHostAnnotationShape((_shape) => {
+    // Host whiteboard shapes are drawn directly on the host's physical screen (host-annotate.html),
+    // which is already captured in the WebRTC video stream. Broadcasting them over DataChannel
+    // causes viewers to draw them a second time on their overlay canvas (double-drawing bug).
   });
-  window.bromeo.onHostAnnotationErase((id) => {
-    broadcastSystemCommand({ kind: "annotation-erase", id });
+  window.bromeo.onHostAnnotationErase((_id) => {
+    // Handled visually via host screen capture
   });
   window.bromeo.onHostAnnotationClear(() => {
-    broadcastSystemCommand({ kind: "annotation-clear" });
+    // Handled visually via host screen capture
   });
   window.bromeo.onHostChatSend((text) => sendChatText(text));
 
