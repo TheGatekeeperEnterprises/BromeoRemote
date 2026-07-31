@@ -110,25 +110,42 @@ async function createSubscriptionCheckout(email, userId, plan = 'Pro') {
  * already-paid payment (Mollie retries webhooks that don't 200 fast enough,
  * and can also just call it more than once), the subscription-creation step
  * is skipped the second time since the transaction row is already 'paid'.
+ *
+ * Handles two distinct payment origins: the first payment always has an
+ * existing 'pending' transaction row (created by createSubscriptionCheckout
+ * right before redirecting to Mollie's checkout); every subsequent monthly
+ * renewal is charged directly by Mollie's subscription engine and has no
+ * such row yet, so one is created here on first sight of that payment ID.
  */
 async function handleMollieWebhook(paymentId) {
   if (!mollieClient) return;
   const {
     getLicenseTransactionByPaymentId,
     updateLicenseTransactionStatus,
+    createLicenseTransaction,
     upgradeUserLicense,
   } = require('./database');
 
   const payment = await mollieClient.payments.get(paymentId);
   const previousTransaction = await getLicenseTransactionByPaymentId(paymentId);
   const alreadyProcessed = previousTransaction?.status === 'paid';
-
-  await updateLicenseTransactionStatus(paymentId, payment.status, payment.status === 'paid' ? null : payment.status);
-
-  if (payment.status !== 'paid') return;
-
   const userId = payment.metadata?.userId;
   const plan = payment.metadata?.plan;
+
+  if (previousTransaction) {
+    await updateLicenseTransactionStatus(paymentId, payment.status, payment.status === 'paid' ? null : payment.status);
+  } else if (userId) {
+    // Recurring/renewal payments are charged directly by Mollie's
+    // subscription engine, never through createSubscriptionCheckout — so
+    // (unlike the first payment) no transaction row exists for them yet.
+    // Create one now, the same 'pending'-then-updated two-step the first
+    // payment goes through, so renewals show up in the admin transaction
+    // history instead of silently updating a row that was never there.
+    await createLicenseTransaction({ userId, molliePaymentId: paymentId, amount: payment.amount.value, currency: payment.amount.currency });
+    await updateLicenseTransactionStatus(paymentId, payment.status, payment.status === 'paid' ? null : payment.status);
+  }
+
+  if (payment.status !== 'paid') return;
   if (!userId || !plan) return; // not one of our checkout payments (shouldn't happen, but don't crash on it)
 
   if (!alreadyProcessed && payment.sequenceType === 'first' && payment.mandateId && payment.customerId) {
