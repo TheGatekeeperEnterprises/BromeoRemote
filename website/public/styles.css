@@ -69,6 +69,9 @@ textarea {
   letter-spacing: 0.04em;
   padding: 6px 12px;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: background 0.15s, color 0.15s;
 }
 .lang-switch button.active {
@@ -1704,7 +1707,40 @@ button:focus-visible {
    <style> block before it got folded into a homepage popup. Everything
    below is scoped under #accountModal so none of it leaks onto the rest
    of the homepage (dashboard.html previously styled `body` directly,
-   which only worked because it was the only thing on that page). */
+   which only worked because it was the only thing on that page).
+
+   This modal shares .download-modal-card/-close/-title/-subtitle with the
+   platform-download picker modal, which is deliberately dark — the rules
+   right below override just those shared classes back to the site's light
+   theme when they're inside #accountModal specifically, then everything
+   after that is #accountModal's own classes, styled light from scratch
+   (this used to just inherit dashboard.html's old dark theme wholesale). */
+
+#accountModal .download-modal-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+#accountModal .download-modal-close {
+  border: 1px solid var(--line);
+  background: var(--soft);
+  color: var(--muted);
+}
+
+#accountModal .download-modal-close:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+
+#accountModal .download-modal-title {
+  color: var(--ink);
+}
+
+#accountModal .download-modal-subtitle {
+  color: var(--muted);
+}
 
 .account-modal-card {
   max-width: 880px;
@@ -1725,13 +1761,13 @@ button:focus-visible {
   display: flex;
   gap: 1rem;
   margin-bottom: 2rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--line);
 }
 
 #accountModal .tab-btn {
   background: none;
   border: none;
-  color: #8898aa;
+  color: var(--muted);
   padding: 0.75rem 1.25rem;
   font-size: 1rem;
   font-weight: 600;
@@ -1741,8 +1777,8 @@ button:focus-visible {
 }
 
 #accountModal .tab-btn.active {
-  color: #0be881;
-  border-bottom-color: #0be881;
+  color: var(--blue);
+  border-bottom-color: var(--blue);
 }
 
 #accountModal .form-group {
@@ -1753,7 +1789,7 @@ button:focus-visible {
 #accountModal .form-group label {
   display: block;
   font-size: 0.8rem;
-  color: #8898aa;
+  color: var(--muted);
   margin-bottom: 0.4rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1762,23 +1798,23 @@ button:focus-visible {
 
 #accountModal .form-group input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0.8rem 1rem;
-  color: #e8edf5;
+  color: var(--ink);
   font-size: 0.95rem;
   outline: none;
 }
 
 #accountModal .form-group input:focus {
-  border-color: #0be881;
+  border-color: var(--blue);
 }
 
 #accountModal .btn-submit {
   width: 100%;
-  background: #0be881;
-  color: #0b1425;
+  background: var(--blue);
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   padding: 0.9rem;
@@ -1798,8 +1834,8 @@ button:focus-visible {
 }
 
 #accountModal .license-box {
-  background: rgba(11, 232, 129, 0.08);
-  border: 1px solid rgba(11, 232, 129, 0.3);
+  background: rgba(20, 151, 106, 0.08);
+  border: 1px solid rgba(20, 151, 106, 0.3);
   border-radius: 14px;
   padding: 1.5rem;
   margin-bottom: 1.75rem;
@@ -1809,7 +1845,7 @@ button:focus-visible {
 
 #accountModal .license-key-label {
   font-size: 0.75rem;
-  color: #8898aa;
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 1px;
   font-weight: 700;
@@ -1822,7 +1858,7 @@ button:focus-visible {
   font-family: monospace;
   font-size: 1.05rem;
   font-weight: 700;
-  color: #0be881;
+  color: var(--green);
   letter-spacing: 0.5px;
   word-break: break-all;
   margin: 0.4rem 0 0.85rem;
@@ -1835,8 +1871,8 @@ button:focus-visible {
 }
 
 #accountModal .copy-btn {
-  background: #0be881;
-  color: #0b1425;
+  background: var(--green);
+  color: #ffffff;
   border: none;
   border-radius: 8px;
   padding: 0.5rem 0.9rem;
@@ -1847,14 +1883,14 @@ button:focus-visible {
 }
 
 #accountModal .copy-btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  color: #e8edf5;
+  background: var(--soft);
+  color: var(--ink);
 }
 
 #accountModal .license-meta {
   margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(11, 232, 129, 0.15);
+  border-top: 1px solid rgba(20, 151, 106, 0.2);
   display: flex;
   gap: 0.5rem;
   align-items: center;
@@ -1863,7 +1899,7 @@ button:focus-visible {
 
 #accountModal .license-expires {
   font-size: 0.85rem;
-  color: #8898aa;
+  color: var(--muted);
 }
 
 #accountModal .plans-grid {
@@ -1880,8 +1916,8 @@ button:focus-visible {
 }
 
 #accountModal .plan-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 1.4rem;
   text-align: left;
@@ -1894,20 +1930,20 @@ button:focus-visible {
 }
 
 #accountModal .plan-card.active-plan {
-  border-color: #0be881;
-  background: rgba(11, 232, 129, 0.05);
+  border-color: var(--green);
+  background: rgba(20, 151, 106, 0.06);
 }
 
 #accountModal .plan-price {
   font-size: 1.75rem;
   font-weight: 700;
-  color: #e8edf5;
+  color: var(--ink);
   margin: 0.5rem 0;
 }
 
 #accountModal .plan-price span {
   font-size: 0.9rem;
-  color: #8898aa;
+  color: var(--muted);
   font-weight: 400;
 }
 
@@ -1921,23 +1957,23 @@ button:focus-visible {
 }
 
 #accountModal .badge-green {
-  background: rgba(11, 232, 129, 0.2);
-  color: #0be881;
+  background: rgba(20, 151, 106, 0.14);
+  color: var(--green);
 }
 
 #accountModal .badge-cyan {
-  background: rgba(14, 165, 183, 0.2);
-  color: #0ea5b7;
+  background: rgba(14, 165, 183, 0.14);
+  color: var(--cyan);
 }
 
 #accountModal .badge-gray {
-  background: rgba(255, 255, 255, 0.1);
-  color: #8898aa;
+  background: var(--soft);
+  color: var(--muted);
 }
 
 #accountModal .instructions-box {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 1.25rem;
   margin-top: 2rem;
@@ -1947,13 +1983,13 @@ button:focus-visible {
 #accountModal .instructions-box h3 {
   font-size: 1rem;
   margin-bottom: 0.5rem;
-  color: #0be881;
+  color: var(--blue);
 }
 
 #accountModal .instructions-box ol {
   margin-left: 1.25rem;
   font-size: 0.9rem;
-  color: #8898aa;
+  color: var(--muted);
 }
 
 #accountModal .instructions-box li {
@@ -1961,7 +1997,7 @@ button:focus-visible {
 }
 
 #accountModal .error-msg {
-  color: #ff4d6d;
+  color: var(--red);
   font-size: 0.85rem;
   margin-top: 0.75rem;
   text-align: center;
@@ -1971,13 +2007,13 @@ button:focus-visible {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--line);
   padding-bottom: 1rem;
   margin-bottom: 1.5rem;
 }
 
 #accountModal .logout-link {
-  color: #ff4d6d;
+  color: var(--red);
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;

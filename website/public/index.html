@@ -29,12 +29,12 @@
         <a href="#contact" data-i18n="nav.contact">Contact</a>
       </nav>
         <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
-          <div class="lang-switch" role="group" aria-label="Language">
-            <button type="button" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">EN</button>
-            <button type="button" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">NL</button>
-          </div>
-          <button type="button" class="header-cta" id="accountModalTrigger" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">My Dashboard / License</button>
+          <button type="button" class="header-cta" id="accountModalTrigger" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Dashboard</button>
           <a class="header-cta" href="#downloads" data-i18n="header.downloadFree">Download free</a>
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang-switch="en" onclick="BromeoI18n.setLang('en')"><svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg><span>EN</span></button>
+            <button type="button" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')"><svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg><span>NL</span></button>
+          </div>
         </div>
       </header>
 

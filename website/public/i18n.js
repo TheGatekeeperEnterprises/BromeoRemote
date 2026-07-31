@@ -19,7 +19,7 @@
       "nav.security": "Security",
       "nav.pricing": "Pricing",
       "nav.contact": "Contact",
-      "header.dashboard": "My Dashboard / License",
+      "header.dashboard": "Dashboard",
       "header.myAccount": "My Account",
       "header.downloadFree": "Download free",
 
@@ -249,7 +249,7 @@
       "nav.security": "Beveiliging",
       "nav.pricing": "Prijzen",
       "nav.contact": "Contact",
-      "header.dashboard": "Mijn Dashboard / Licentie",
+      "header.dashboard": "Dashboard",
       "header.myAccount": "Mijn Account",
       "header.downloadFree": "Download gratis",
 
