@@ -137,7 +137,7 @@
       "newsletter.success": "You're on the release list.",
 
       "footer.tagline": "Professional remote desktop software for Windows & Android. Secured with HWID licensing and End-to-End encryption.",
-      "footer.company": "A product of The Gatekeeper Enterprises.",
+      "footer.company": 'A product of <a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>.',
       "footer.chip1": "🔒 End-to-End Encrypted",
       "footer.chip2": "🇪🇺 EU Datacenters & AVG",
       "footer.colProduct": "Product",
@@ -153,7 +153,7 @@
       "footer.colSupport": "Support",
       "footer.contact": "Contact",
       "footer.linkFaq": "Frequently Asked Questions",
-      "footer.copyright": "© 2026 BromeoRemote (The Gatekeeper Enterprises). All rights reserved.",
+      "footer.copyright": '© 2026 BromeoRemote (<a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>). All rights reserved.',
 
       "downloadModal.close": "Close window",
       "downloadModal.chip": "Start free instantly",
@@ -382,7 +382,7 @@
       "newsletter.success": "Je staat op de release-lijst.",
 
       "footer.tagline": "Professionele remote desktop software voor Windows & Android. Beveiligd met HWID licenties en End-to-End versleuteling.",
-      "footer.company": "Een product van The Gatekeeper Enterprises.",
+      "footer.company": 'Een product van <a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>.',
       "footer.chip1": "🔒 End-to-End Versleuteld",
       "footer.chip2": "🇪🇺 EU Datacenters & AVG",
       "footer.colProduct": "Product",
@@ -398,7 +398,7 @@
       "footer.colSupport": "Ondersteuning",
       "footer.contact": "Contact opnemen",
       "footer.linkFaq": "Veelgestelde Vragen",
-      "footer.copyright": "© 2026 BromeoRemote (The Gatekeeper Enterprises). Alle rechten voorbehouden.",
+      "footer.copyright": '© 2026 BromeoRemote (<a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>). Alle rechten voorbehouden.',
 
       "downloadModal.close": "Sluit venster",
       "downloadModal.chip": "Direct gratis starten",
