@@ -14,8 +14,8 @@
     <title>BromeoRemote | Professional Remote Desktop Software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="/styles.css?v=20260726-1">
-    <script src="/i18n.js?v=20260730-1"></script>
+    <link rel="stylesheet" href="/styles.css?v=20260801-4">
+    <script src="/i18n.js?v=20260801-4"></script>
   </head>
   <body>
     <header class="site-header">
@@ -31,9 +31,23 @@
         <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
           <button type="button" class="header-cta" id="accountModalTrigger" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Dashboard</button>
           <a class="header-cta" href="#downloads" data-i18n="header.downloadFree">Download free</a>
-          <div class="lang-switch" role="group" aria-label="Language">
-            <button type="button" data-lang-switch="en" onclick="BromeoI18n.setLang('en')"><svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg><span>EN</span></button>
-            <button type="button" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')"><svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg><span>NL</span></button>
+          <div class="lang-dropdown">
+            <button type="button" class="lang-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
+              <span class="lang-current"></span>
+              <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+            <div class="lang-dropdown-menu">
+              <button type="button" class="lang-dropdown-item" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">
+                <svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_d"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_d"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_d)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_d)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
+                <span>EN</span>
+              </button>
+              <button type="button" class="lang-dropdown-item" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">
+                <svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>
+                <span>NL</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -180,7 +194,7 @@
         <div class="section-heading" style="text-align: center; margin: 0 auto;">
           <p class="eyebrow" data-i18n="pricing.eyebrow">Licenses &amp; Pricing</p>
           <h2 id="pricing-title" data-i18n="pricing.title">Choose the plan that fits you.</h2>
-          <p data-i18n="pricing.subtitle">Pay securely via Mollie (iDEAL, Bancontact, Credit card). Your license is active immediately after payment.</p>
+          <p data-i18n="pricing.subtitle">Pay securely via Mollie (iDEAL, Credit card, PayPal, Apple Pay, Google Pay, SEPA). Your license is active immediately after payment.</p>
         </div>
 
         <div class="pricing-grid-container">
@@ -250,6 +264,41 @@
               </button>
             </article>
           </div>
+
+          <!-- Accepted Payment Methods Banner -->
+          <div class="payment-methods-banner">
+            <p class="payment-methods-title" data-i18n="pricing.acceptedMethods">Accepted payment methods:</p>
+            <div class="payment-methods-grid">
+              <div class="payment-badge" title="iDEAL / Wero">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#002D62"/><path d="M5 8h4v8H5V8zm6 0h7v2.2h-4.3v1.6h4.3v2.2h-4.3v2H18V16h-7V8z" fill="#fff"/></svg>
+                <span>iDEAL</span>
+              </div>
+              <div class="payment-badge" title="Krediet- en debetkaarten (Visa / Mastercard)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f63e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                <span>Creditcard</span>
+              </div>
+              <div class="payment-badge" title="PayPal">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#003087"><path d="M20.067 8.478c.492.315.844.825.962 1.442.428 2.266-1.047 4.965-4.148 4.965h-2.613c-.347 0-.645.247-.704.588l-.758 4.307c-.035.197-.206.341-.406.341h-2.91c-.266 0-.465-.236-.423-.498l2.67-15.176c.047-.267.279-.462.551-.462h5.187c2.317 0 4.125 1.134 3.595 4.493zm-4.706 1.488c-.067.382-.397.663-.786.663h-1.95l.764-4.341h1.95c1.077 0 1.636.568 1.408 1.863-.105.597-.478 1.428-1.386 1.815z"/></svg>
+                <span>PayPal</span>
+              </div>
+              <div class="payment-badge" title="Apple Pay">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#0f172a"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.66-.8 1.11-1.92.99-3.04-.96.04-2.12.64-2.81 1.44-.61.71-1.15 1.85-1.01 2.96 1.07.08 2.17-.55 2.83-1.36z"/></svg>
+                <span>Apple Pay</span>
+              </div>
+              <div class="payment-badge" title="Google Pay">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#4285F4"><path d="M12.24 10.285V13.7h5.83c-.23 1.505-1.75 4.415-5.83 4.415-3.51 0-6.38-2.91-6.38-6.5s2.87-6.5 6.38-6.5c2 0 3.34.85 4.1 1.585l2.7-2.615C17.38 2.48 15.02 1.5 12.24 1.5 6.46 1.5 1.77 6.19 1.77 11.97s4.69 10.47 10.47 10.47c5.96 0 9.93-4.19 9.93-10.11 0-.68-.07-1.2-.16-1.715H12.24z"/></svg>
+                <span>Google Pay</span>
+              </div>
+              <div class="payment-badge" title="Overboeking (SEPA-zone)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1f63e9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>
+                <span>Overboeking</span>
+              </div>
+              <div class="payment-badge" title="SEPA-incasso">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/><path d="M7 15h2"/></svg>
+                <span>SEPA-incasso</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -270,7 +319,7 @@
           </details>
           <details>
             <summary data-i18n="faq.q3">How do I pay and when is my license active?</summary>
-            <p data-i18n="faq.a3">You pay securely via Mollie (iDEAL, Bancontact or Credit card). Your license is activated automatically as soon as payment is confirmed — no manual step needed.</p>
+            <p data-i18n="faq.a3">You pay securely via Mollie (iDEAL, Credit card, PayPal, Apple Pay, Google Pay or SEPA). Your license is activated automatically as soon as payment is confirmed — no manual step needed.</p>
           </details>
           <details>
             <summary data-i18n="faq.q4">Does BromeoRemote work on all Windows versions?</summary>
@@ -330,18 +379,65 @@
     </main>
 
     <footer class="site-footer">
-      <div>
-        <strong>BromeoRemote</strong>
-        <span>&copy; <span id="year"></span> <span data-i18n="footer.tagline">Professional remote desktop software</span></span>
+      <div class="footer-container">
+        <div class="footer-top-grid">
+          <!-- BRAND COLUMN -->
+          <div class="footer-brand-col">
+            <a href="/" aria-label="BromeoRemote home">
+              <img class="footer-logo" src="/assets/logo2.png" alt="BromeoRemote Logo">
+            </a>
+            <p class="footer-tagline" data-i18n="footer.tagline">Professional remote desktop software for Windows &amp; Android. Secured with HWID licensing and End-to-End encryption.</p>
+            <span class="footer-company" data-i18n="footer.company">A product of The Gatekeeper Enterprises.</span>
+            <div class="footer-chips">
+              <span class="footer-chip" data-i18n="footer.chip1">🔒 End-to-End Encrypted</span>
+              <span class="footer-chip" data-i18n="footer.chip2">🇪🇺 EU Datacenters &amp; AVG</span>
+            </div>
+          </div>
+
+          <!-- PRODUCT COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colProduct">Product</h4>
+            <a href="/#werkwijze" data-i18n="footer.linkWorkflow">How it works</a>
+            <a href="/#beveiliging" data-i18n="footer.linkSecurity">Security &amp; HWID</a>
+            <a href="/#licenties" data-i18n="footer.linkPricing">Pricing &amp; Licenses</a>
+            <a href="/#downloads" data-i18n="footer.linkDownloads">Downloads</a>
+            <a href="/?account=1" data-i18n="footer.linkDashboard">My Account / Dashboard</a>
+          </div>
+
+          <!-- LEGAL COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colLegal">Legal &amp; Privacy</h4>
+            <a href="/voorwaarden/" data-i18n="footer.terms">Terms of Service</a>
+            <a href="/privacy/" data-i18n="footer.privacy">Privacy Policy</a>
+            <a href="/privacy/#cookies" data-i18n="footer.linkCookies">Cookie Policy</a>
+          </div>
+
+          <!-- SUPPORT COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colSupport">Support</h4>
+            <a href="/#contact" data-i18n="footer.contact">Contact Form</a>
+            <a href="/#faq" data-i18n="footer.linkFaq">Frequently Asked Questions</a>
+            <a href="mailto:info@bromeoremote.com" style="margin-top: 4px; color: var(--blue);">info@bromeoremote.com</a>
+          </div>
+        </div>
+
+        <div class="footer-divider"></div>
+
+        <div class="footer-bottom-bar">
+          <span data-i18n="footer.copyright">&copy; 2026 BromeoRemote (The Gatekeeper Enterprises). All rights reserved.</span>
+          <div class="footer-payments">
+            <span class="footer-payment-badge">iDEAL</span>
+            <span class="footer-payment-badge">Creditcard</span>
+            <span class="footer-payment-badge">PayPal</span>
+            <span class="footer-payment-badge">Apple Pay</span>
+            <span class="footer-payment-badge">Google Pay</span>
+            <span class="footer-payment-badge">SEPA</span>
+          </div>
+        </div>
       </div>
-      <nav aria-label="Footer links">
-        <a href="/privacy/" data-i18n="footer.privacy">Privacy</a>
-        <a href="/voorwaarden/" data-i18n="footer.terms">Terms</a>
-        <a href="#contact" data-i18n="footer.contact">Contact</a>
-      </nav>
     </footer>
 
-    <script src="/app.js?v=20260726-1" defer></script>
+    <script src="/app.js?v=20260801-4" defer></script>
   
     <!-- DOWNLOAD MODAL POPUP -->
     <div id="downloadModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">

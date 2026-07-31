@@ -80,7 +80,8 @@
 
       "pricing.eyebrow": "Licenses & Pricing",
       "pricing.title": "Choose the plan that fits you.",
-      "pricing.subtitle": "Pay securely via Mollie (iDEAL, Bancontact, Credit card). Your license is active immediately after payment.",
+      "pricing.subtitle": "Pay securely via Mollie (iDEAL, Credit card, PayPal, Apple Pay, Google Pay, SEPA). Your license is active immediately after payment.",
+      "pricing.acceptedMethods": "Accepted payment methods:",
       "pricing.illustrationAlt": "Secure license key",
       "pricing.free.title": "Free",
       "pricing.free.desc": "Download for free with basic functionality.",
@@ -111,7 +112,7 @@
       "faq.q2": "What is HWID and why is it more secure?",
       "faq.a2": "HWID (Hardware ID) binds your license to a unique, irreversible fingerprint of your admin computer. Even if someone got hold of your login details, the license couldn't be used on another PC.",
       "faq.q3": "How do I pay and when is my license active?",
-      "faq.a3": "You pay securely via Mollie (iDEAL, Bancontact or Credit card). Your license is activated automatically as soon as payment is confirmed — no manual step needed.",
+      "faq.a3": "You pay securely via Mollie (iDEAL, Credit card, PayPal, Apple Pay, Google Pay or SEPA). Your license is activated automatically as soon as payment is confirmed — no manual step needed.",
       "faq.q4": "Does BromeoRemote work on all Windows versions?",
       "faq.a4": "BromeoRemote supports Windows 10 and newer. The Android app requires Android 8.0 or higher. A stable internet connection is required for remote sessions.",
 
@@ -135,10 +136,24 @@
       "newsletter.sending": "Saving subscription...",
       "newsletter.success": "You're on the release list.",
 
-      "footer.tagline": "Professional remote desktop software",
-      "footer.privacy": "Privacy",
-      "footer.terms": "Terms",
+      "footer.tagline": "Professional remote desktop software for Windows & Android. Secured with HWID licensing and End-to-End encryption.",
+      "footer.company": "A product of The Gatekeeper Enterprises.",
+      "footer.chip1": "🔒 End-to-End Encrypted",
+      "footer.chip2": "🇪🇺 EU Datacenters & AVG",
+      "footer.colProduct": "Product",
+      "footer.linkWorkflow": "How it works",
+      "footer.linkSecurity": "Security & HWID",
+      "footer.linkPricing": "Pricing & Licenses",
+      "footer.linkDownloads": "Downloads",
+      "footer.linkDashboard": "My Account / Dashboard",
+      "footer.colLegal": "Legal & Privacy",
+      "footer.privacy": "Privacy Policy",
+      "footer.terms": "Terms of Service",
+      "footer.linkCookies": "Cookie Policy",
+      "footer.colSupport": "Support",
       "footer.contact": "Contact",
+      "footer.linkFaq": "Frequently Asked Questions",
+      "footer.copyright": "© 2026 BromeoRemote (The Gatekeeper Enterprises). All rights reserved.",
 
       "downloadModal.close": "Close window",
       "downloadModal.chip": "Start free instantly",
@@ -310,7 +325,8 @@
 
       "pricing.eyebrow": "Licenties & Prijzen",
       "pricing.title": "Kies het plan dat bij jou past.",
-      "pricing.subtitle": "Veilig betalen via Mollie (iDEAL, Bancontact, Creditcard). Je licentie is direct actief na betaling.",
+      "pricing.subtitle": "Veilig betalen via Mollie (iDEAL, Creditcard, PayPal, Apple Pay, Google Pay, SEPA). Je licentie is direct actief na betaling.",
+      "pricing.acceptedMethods": "Geaccepteerde betaalmethodes:",
       "pricing.illustrationAlt": "Beveiligde licentiesleutel",
       "pricing.free.title": "Gratis",
       "pricing.free.desc": "Download gratis met basis functionaliteit.",
@@ -341,7 +357,7 @@
       "faq.q2": "Wat is HWID en waarom is het veiliger?",
       "faq.a2": "HWID (Hardware ID) koppelt jouw licentie aan een unieke, onomkeerbare vingerafdruk van jouw beheercomputer. Zelfs als iemand je inloggegevens zou bemachtigen, kan de licentie niet op een andere pc worden gebruikt.",
       "faq.q3": "Hoe betaal ik en wanneer is mijn licentie actief?",
-      "faq.a3": "Je betaalt veilig via Mollie (iDEAL, Bancontact of Creditcard). Je licentie wordt automatisch geactiveerd zodra de betaling is bevestigd — geen handmatige stap nodig.",
+      "faq.a3": "Je betaalt veilig via Mollie (iDEAL, Creditcard, PayPal, Apple Pay, Google Pay of SEPA). Je licentie wordt automatisch geactiveerd zodra de betaling is bevestigd — geen handmatige stap nodig.",
       "faq.q4": "Werkt BromeoRemote op alle Windows-versies?",
       "faq.a4": "BromeoRemote ondersteunt Windows 10 en nieuwer. De Android app vereist Android 8.0 of hoger. Een stabiele internetverbinding is vereist voor externe sessies.",
 
@@ -365,10 +381,24 @@
       "newsletter.sending": "Aanmelding wordt opgeslagen...",
       "newsletter.success": "Je staat op de release-lijst.",
 
-      "footer.tagline": "Professionele remote desktop software",
-      "footer.privacy": "Privacy",
-      "footer.terms": "Voorwaarden",
-      "footer.contact": "Contact",
+      "footer.tagline": "Professionele remote desktop software voor Windows & Android. Beveiligd met HWID licenties en End-to-End versleuteling.",
+      "footer.company": "Een product van The Gatekeeper Enterprises.",
+      "footer.chip1": "🔒 End-to-End Versleuteld",
+      "footer.chip2": "🇪🇺 EU Datacenters & AVG",
+      "footer.colProduct": "Product",
+      "footer.linkWorkflow": "Werkwijze",
+      "footer.linkSecurity": "Beveiliging & HWID",
+      "footer.linkPricing": "Prijzen & Licenties",
+      "footer.linkDownloads": "Downloads",
+      "footer.linkDashboard": "Mijn Account / Dashboard",
+      "footer.colLegal": "Juridisch & Privacy",
+      "footer.privacy": "Privacyverklaring",
+      "footer.terms": "Gebruiksvoorwaarden",
+      "footer.linkCookies": "Cookiebeleid",
+      "footer.colSupport": "Ondersteuning",
+      "footer.contact": "Contact opnemen",
+      "footer.linkFaq": "Veelgestelde Vragen",
+      "footer.copyright": "© 2026 BromeoRemote (The Gatekeeper Enterprises). Alle rechten voorbehouden.",
 
       "downloadModal.close": "Sluit venster",
       "downloadModal.chip": "Direct gratis starten",
@@ -513,17 +543,44 @@
     if (ogTitle) ogTitle.setAttribute("content", t("meta.ogTitle"));
     const ogDesc = document.querySelector('meta[property="og:description"]');
     if (ogDesc) ogDesc.setAttribute("content", t("meta.ogDescription"));
-    document.documentElement.lang = getLang();
+    const activeLang = getLang();
+    document.documentElement.lang = activeLang;
+    const FLAGS = {
+      en: '<svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_c"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_c"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_c)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_c)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg><span>EN</span>',
+      nl: '<svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg><span>NL</span>'
+    };
+    document.querySelectorAll(".lang-current").forEach((el) => {
+      el.innerHTML = FLAGS[activeLang] || FLAGS.en;
+    });
     document.querySelectorAll("[data-lang-switch]").forEach((btn) => {
-      btn.classList.toggle("active", btn.getAttribute("data-lang-switch") === getLang());
+      btn.classList.toggle("active", btn.getAttribute("data-lang-switch") === activeLang);
     });
   }
 
   function setLang(lang) {
     global.localStorage.setItem(STORAGE_KEY, lang === "nl" ? "nl" : "en");
     applyTranslations();
+    document.querySelectorAll(".lang-dropdown.is-open").forEach((d) => d.classList.remove("is-open"));
     if (global.onLangChange) global.onLangChange();
   }
+
+  document.addEventListener("click", (e) => {
+    const trigger = e.target.closest(".lang-dropdown-trigger");
+    const dropdown = e.target.closest(".lang-dropdown");
+
+    if (trigger && dropdown) {
+      e.stopPropagation();
+      dropdown.classList.toggle("is-open");
+      const isOpen = dropdown.classList.contains("is-open");
+      trigger.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    } else {
+      document.querySelectorAll(".lang-dropdown.is-open").forEach((d) => {
+        d.classList.remove("is-open");
+        const trig = d.querySelector(".lang-dropdown-trigger");
+        if (trig) trig.setAttribute("aria-expanded", "false");
+      });
+    }
+  });
 
   global.BromeoI18n = { getLang, setLang, t, applyTranslations };
   document.addEventListener("DOMContentLoaded", applyTranslations);

@@ -53,30 +53,130 @@ textarea {
   font: inherit;
 }
 
-.lang-switch {
-  display: flex;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  overflow: hidden;
-  background: var(--soft);
+/* Language Dropdown (Compact & Sleek) */
+.lang-dropdown {
+  position: relative;
+  display: inline-block;
 }
-.lang-switch button {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  padding: 6px 12px;
-  cursor: pointer;
+
+.lang-dropdown-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  transition: background 0.15s, color 0.15s;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
 }
-.lang-switch button.active {
-  background: var(--blue);
-  color: #fff;
+
+.lang-dropdown-trigger:hover,
+.lang-dropdown.is-open .lang-dropdown-trigger {
+  border-color: var(--blue);
+  color: var(--blue);
+  background: rgba(31, 99, 233, 0.08);
+}
+
+.lang-current {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.lang-current svg {
+  width: 15px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lang-chevron {
+  width: 8px;
+  height: 5px;
+  transition: transform 0.2s ease;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.lang-dropdown-trigger:hover .lang-chevron,
+.lang-dropdown.is-open .lang-chevron {
+  color: var(--blue);
+}
+
+.lang-dropdown.is-open .lang-chevron {
+  transform: rotate(180deg);
+}
+
+.lang-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  min-width: 86px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 8px 20px -4px rgba(11, 20, 37, 0.12);
+  padding: 3px;
+  display: none;
+  z-index: 100;
+}
+
+.lang-dropdown.is-open .lang-dropdown-menu {
+  display: block;
+  animation: dropdownFadeIn 0.12s ease;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.lang-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  text-align: left;
+}
+
+.lang-dropdown-item svg {
+  width: 15px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.lang-dropdown-item:hover {
+  background: rgba(31, 99, 233, 0.08);
+  color: var(--blue);
+}
+
+.lang-dropdown-item.active {
+  background: rgba(31, 99, 233, 0.12);
+  color: var(--blue);
+  font-weight: 800;
 }
 
 .site-header {
@@ -143,6 +243,57 @@ textarea {
   background: var(--blue);
   color: #ffffff;
   box-shadow: 0 14px 30px rgba(31, 99, 233, 0.24);
+}
+
+/* Payment Methods Banner */
+.payment-methods-banner {
+  margin-top: 2.5rem;
+  text-align: center;
+}
+
+.payment-methods-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 1rem;
+}
+
+.payment-methods-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.payment-badge:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(31, 99, 233, 0.1);
+}
+
+.payment-badge svg {
+  flex-shrink: 0;
 }
 
 .secondary-action {
@@ -2017,4 +2168,149 @@ button:focus-visible {
   font-size: 0.9rem;
   cursor: pointer;
   text-decoration: underline;
+}
+
+/* Professional Modern Footer */
+.site-footer {
+  background: #0b1425;
+  color: #94a3b8;
+  padding: 4.5rem clamp(20px, 5vw, 64px) 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.9rem;
+}
+
+.footer-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footer-top-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 3.5rem;
+  margin-bottom: 3.5rem;
+}
+
+@media (max-width: 900px) {
+  .footer-top-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem;
+  }
+}
+
+@media (max-width: 550px) {
+  .footer-top-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+}
+
+.footer-brand-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.footer-logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  align-self: flex-start;
+}
+
+.footer-tagline {
+  color: #cbd5e1;
+  line-height: 1.6;
+  font-size: 0.92rem;
+  max-width: 380px;
+}
+
+.footer-company {
+  font-size: 0.82rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.footer-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.footer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: #e2e8f0;
+  font-weight: 700;
+}
+
+.footer-nav-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer-col-title {
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.35rem;
+}
+
+.footer-nav-col a {
+  color: #94a3b8;
+  text-decoration: none;
+  transition: color 0.15s ease, transform 0.15s ease;
+  width: fit-content;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.footer-nav-col a:hover {
+  color: var(--blue);
+  transform: translateX(3px);
+}
+
+.footer-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-bottom: 1.75rem;
+}
+
+.footer-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+.footer-payments {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.footer-payment-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  font-weight: 700;
 }

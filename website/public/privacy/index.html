@@ -9,8 +9,8 @@
     <title>Privacyverklaring | BromeoRemote</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="/styles.css?v=20260730-2">
-    <script src="/i18n.js?v=20260730-1"></script>
+    <link rel="stylesheet" href="/styles.css?v=20260801-4">
+    <script src="/i18n.js?v=20260801-4"></script>
   </head>
   <body>
     <header class="site-header">
@@ -26,9 +26,23 @@
       <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
         <a class="header-cta" href="/?account=1" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Dashboard</a>
         <a class="header-cta" href="/#downloads" data-i18n="header.downloadFree">Download free</a>
-        <div class="lang-switch" role="group" aria-label="Language">
-          <button type="button" data-lang-switch="en" onclick="BromeoI18n.setLang('en')"><svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_p"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_p"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_p)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_p)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg><span>EN</span></button>
-          <button type="button" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')"><svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg><span>NL</span></button>
+        <div class="lang-dropdown">
+          <button type="button" class="lang-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
+            <span class="lang-current"></span>
+            <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu">
+            <button type="button" class="lang-dropdown-item" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">
+              <svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_dp"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_dp"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_dp)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_dp)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
+              <span>EN</span>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">
+              <svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>
+              <span>NL</span>
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -57,7 +71,7 @@
         <p>Wanneer je een account aanmaakt of een licentie registreert, verzamelen en bewaren wij jouw e-mailadres, eventuele bedrijfsnaam, gehasht wachtwoord, licentiesleutels, licentiestatus (Free, Pro of Unlimited), verloopdata en de gekoppelde HWID-hardwarevingerafdruk. Deze gegevens zijn noodzakelijk voor het beheren en valideren van jouw licentie.</p>
 
         <h3>3.2 Transactie- en Betalingsgegevens</h3>
-        <p>Bij het afsluiten van een betaald abonnement worden transactiegegevens opgeslagen, waaronder het transactie-ID, het bedrag, de valutacode, de status en het type betaalmethode (zoals iDEAL, Bancontact, Creditcard of PayPal via Mollie). Wij slaan nooit volledige creditcardnummers of bankrekeningnummers op onze eigen servers op; deze worden uitsluitend door onze gecertificeerde betalingspartner Mollie verwerkt.</p>
+        <p>Bij het afsluiten van een betaald abonnement worden transactiegegevens opgeslagen, waaronder het transactie-ID, het bedrag, de valutacode, de status en het type betaalmethode (zoals iDEAL, Creditcard, PayPal, Apple Pay, Google Pay of SEPA via Mollie). Wij slaan nooit volledige creditcardnummers of bankrekeningnummers op onze eigen servers op; deze worden uitsluitend door onze gecertificeerde betalingspartner Mollie verwerkt.</p>
 
         <h3>3.3 Remote Sessie- &amp; Signaleringsgegevens</h3>
         <p>Wanneer een remote control sessie tot stand wordt gebracht, verwerkt onze signaling server tijdelijke verbindingsgegevens (zoals apparaat-ID's, IP-adressen, sessieduur en platformtype) om apparaten veilig met elkaar te koppelen.</p>
@@ -93,7 +107,7 @@
         <h2>6. Delen van gegevens met derden</h2>
         <p>Wij verkopen, verhuren of verhandelen jouw persoonsgegevens NOOIT aan derden. Gegevens worden alleen gedeeld met vertrouwde verwerkers die noodzakelijk zijn voor de werking van onze dienst:</p>
         <ul>
-          <li><strong>Mollie B.V. (Betalingsverwerker):</strong> Ontvangt transactiegegevens om betalingen via iDEAL, Bancontact, Creditcard etc. veilig af te handelen.</li>
+          <li><strong>Mollie B.V. (Betalingsverwerker):</strong> Ontvangt transactiegegevens om betalingen via iDEAL, Creditcard, PayPal, Apple Pay, Google Pay of SEPA veilig af te handelen.</li>
           <li><strong>Firebase Cloud Messaging (Google):</strong> Wordt gebruikt voor het afleveren van pushnotificaties bij de mobiele Android-app (indien ingeschakeld).</li>
           <li><strong>Hosting- en Serverinfrastructuur:</strong> Onze backend, database en signaling servers draaien in beveiligde datacenteromgevingen binnen de Europese Unie.</li>
         </ul>
@@ -145,17 +159,64 @@
     </main>
 
     <footer class="site-footer">
-      <div>
-        <strong>BromeoRemote</strong>
-        <span>&copy; <span id="year">2026</span> The Gatekeeper Enterprises</span>
+      <div class="footer-container">
+        <div class="footer-top-grid">
+          <!-- BRAND COLUMN -->
+          <div class="footer-brand-col">
+            <a href="/" aria-label="BromeoRemote home">
+              <img class="footer-logo" src="/assets/logo2.png" alt="BromeoRemote Logo">
+            </a>
+            <p class="footer-tagline" data-i18n="footer.tagline">Professional remote desktop software for Windows &amp; Android. Secured with HWID licensing and End-to-End encryption.</p>
+            <span class="footer-company" data-i18n="footer.company">A product of The Gatekeeper Enterprises.</span>
+            <div class="footer-chips">
+              <span class="footer-chip" data-i18n="footer.chip1">🔒 End-to-End Encrypted</span>
+              <span class="footer-chip" data-i18n="footer.chip2">🇪🇺 EU Datacenters &amp; AVG</span>
+            </div>
+          </div>
+
+          <!-- PRODUCT COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colProduct">Product</h4>
+            <a href="/#werkwijze" data-i18n="footer.linkWorkflow">How it works</a>
+            <a href="/#beveiliging" data-i18n="footer.linkSecurity">Security &amp; HWID</a>
+            <a href="/#licenties" data-i18n="footer.linkPricing">Pricing &amp; Licenses</a>
+            <a href="/#downloads" data-i18n="footer.linkDownloads">Downloads</a>
+            <a href="/?account=1" data-i18n="footer.linkDashboard">My Account / Dashboard</a>
+          </div>
+
+          <!-- LEGAL COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colLegal">Legal &amp; Privacy</h4>
+            <a href="/voorwaarden/" data-i18n="footer.terms">Terms of Service</a>
+            <a href="/privacy/" data-i18n="footer.privacy">Privacy Policy</a>
+            <a href="/privacy/#cookies" data-i18n="footer.linkCookies">Cookie Policy</a>
+          </div>
+
+          <!-- SUPPORT COLUMN -->
+          <div class="footer-nav-col">
+            <h4 class="footer-col-title" data-i18n="footer.colSupport">Support</h4>
+            <a href="/#contact" data-i18n="footer.contact">Contact Form</a>
+            <a href="/#faq" data-i18n="footer.linkFaq">Frequently Asked Questions</a>
+            <a href="mailto:info@bromeoremote.com" style="margin-top: 4px; color: var(--blue);">info@bromeoremote.com</a>
+          </div>
+        </div>
+
+        <div class="footer-divider"></div>
+
+        <div class="footer-bottom-bar">
+          <span data-i18n="footer.copyright">&copy; 2026 BromeoRemote (The Gatekeeper Enterprises). All rights reserved.</span>
+          <div class="footer-payments">
+            <span class="footer-payment-badge">iDEAL</span>
+            <span class="footer-payment-badge">Creditcard</span>
+            <span class="footer-payment-badge">PayPal</span>
+            <span class="footer-payment-badge">Apple Pay</span>
+            <span class="footer-payment-badge">Google Pay</span>
+            <span class="footer-payment-badge">SEPA</span>
+          </div>
+        </div>
       </div>
-      <nav aria-label="Footer links">
-        <a href="/privacy/">Privacy</a>
-        <a href="/voorwaarden/">Voorwaarden</a>
-        <a href="/#contact">Contact</a>
-      </nav>
     </footer>
 
-    <script src="/app.js?v=20260730-2" defer></script>
+    <script src="/app.js?v=20260801-4" defer></script>
   </body>
 </html>
