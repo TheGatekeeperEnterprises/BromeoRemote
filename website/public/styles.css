@@ -2295,10 +2295,18 @@ button:focus-visible {
   color: #64748b;
 }
 
+.payment-badge img,
+.payment-logo-img {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
 .footer-payments {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -2309,11 +2317,18 @@ button:focus-visible {
   background: transparent;
   border: none;
   padding: 0;
-  cursor: pointer;
-  transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-.footer-payment-badge:hover {
+.footer-payment-logo-img {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+  transition: transform 0.15s ease, filter 0.15s ease;
+  cursor: pointer;
+}
+
+.footer-payment-logo-img:hover {
   transform: translateY(-2px);
   filter: brightness(1.1);
 }
