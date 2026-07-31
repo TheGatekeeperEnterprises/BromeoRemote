@@ -12,6 +12,12 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function formatFrom(rawFrom) {
+  if (!rawFrom) return '"BromeoRemote" <info@bromeoremote.com>';
+  if (rawFrom.includes("<")) return rawFrom;
+  return `"BromeoRemote" <${rawFrom}>`;
+}
+
 function getTransporter() {
   if (!config.mailEnabled) return null;
   if (!transporter) {
@@ -80,7 +86,7 @@ async function sendContactNotification(contact) {
   `;
 
   await activeTransporter.sendMail({
-    from: config.smtp.from,
+    from: formatFrom(config.smtp.from),
     to: config.smtp.to,
     replyTo: contact.email,
     subject,
@@ -138,21 +144,29 @@ async function sendContactConfirmation(contact) {
 
   try {
     await activeTransporter.sendMail({
-      from: config.smtp.from,
+      from: formatFrom(config.smtp.from),
       to: contact.email,
-      replyTo: config.smtp.to,
+      replyTo: config.smtp.to || config.smtp.from,
       subject,
+      headers: {
+        "Auto-Submitted": "auto-replied",
+        "X-Auto-Response-Suppress": "All",
+        "Precedence": "auto_reply",
+        "X-Report-Abuse-To": config.smtp.from,
+      },
       text: [
         `Bedankt voor je bericht, ${contact.name}!`,
         "",
         "Wij hebben je aanvraag via bromeoremote.com in goede orde ontvangen.",
         "",
+        "SAMENVATTING VAN JE BERICHT:",
         `Onderwerp: ${contact.subject}`,
         `Bericht: ${contact.message}`,
         "",
         "Met vriendelijke groet,",
         "Het BromeoRemote Team",
         "https://bromeoremote.com",
+        "The Gatekeeper Enterprises",
       ].join("\n"),
       html,
     });
