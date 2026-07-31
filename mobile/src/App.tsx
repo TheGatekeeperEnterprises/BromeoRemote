@@ -304,6 +304,13 @@ export default function App(): React.JSX.Element {
   const lastConnectRef = useRef<{ targetId: string; passwordHash: string } | null>(null);
   const restartRequestedForRef = useRef<string | null>(null);
   const sessionStartedAtRef = useRef<number | null>(null);
+  // Guards against a cross-network connection that never actually completes
+  // ICE — ontrack (and so onRemoteStream/inSession below) can fire as soon
+  // as SDP negotiation assigns a receiver, well before ICE connectivity is
+  // confirmed, so "we got a stream" alone isn't proof the session is real.
+  // Without this, a relay-that-never-connects looks like an indefinite
+  // black screen with no feedback (see the July 2026 cross-network report).
+  const viewerConnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const filesTransferredCountRef = useRef(0);
   const [totpRequired, setTotpRequired] = useState<"totp-required" | "bad-totp" | null>(null);
   const [totpCode, setTotpCode] = useState("");
@@ -1487,6 +1494,13 @@ export default function App(): React.JSX.Element {
     setVirtualCursor({ xPct: 0.5, yPct: 0.5 });
     sessionStartedAtRef.current = Date.now();
     filesTransferredCountRef.current = 0;
+    if (viewerConnectTimeoutRef.current) clearTimeout(viewerConnectTimeoutRef.current);
+    viewerConnectTimeoutRef.current = setTimeout(() => {
+      viewerConnectTimeoutRef.current = null;
+      console.log("[viewer] connect timeout — never reached connected, peerId=", peerId);
+      endSession();
+      Alert.alert(t("connect.timeoutTitle"), t("connect.timeoutMsg"));
+    }, 20000);
     const session = new MobileSession(DEFAULT_ICE_SERVERS, signaling, peerId, {
       onRemoteStream: (stream) => {
         setRemoteStream(stream);
@@ -1494,7 +1508,14 @@ export default function App(): React.JSX.Element {
         setInSession(true);
       },
       onConnectionState: (state) => {
-        if (state === "closed") {
+        if (state === "connected" && viewerConnectTimeoutRef.current) {
+          clearTimeout(viewerConnectTimeoutRef.current);
+          viewerConnectTimeoutRef.current = null;
+        } else if (state === "closed") {
+          if (viewerConnectTimeoutRef.current) {
+            clearTimeout(viewerConnectTimeoutRef.current);
+            viewerConnectTimeoutRef.current = null;
+          }
           console.log("[viewer] connection ended, state=", state, "restartRequestedFor=", restartRequestedForRef.current, "peerId=", peerId);
           // Auto-reconnect only ever fires for the *explicit* "Herstart
           // verbinding" action (restartRequestedFor), never for an
@@ -1651,6 +1672,10 @@ export default function App(): React.JSX.Element {
   }
 
   function endSession(): void {
+    if (viewerConnectTimeoutRef.current) {
+      clearTimeout(viewerConnectTimeoutRef.current);
+      viewerConnectTimeoutRef.current = null;
+    }
     setAnnotateModeActive(false);
     setAnnotationShapes([]);
     currentStrokeRef.current = null;

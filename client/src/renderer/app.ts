@@ -475,6 +475,12 @@ let recordingTimerHandle: ReturnType<typeof setInterval> | null = null;
 let recordingStartedAt = 0;
 let sessionStartedAt: number | null = null;
 let sessionDurationHandle: ReturnType<typeof setInterval> | null = null;
+// Guards against a cross-network connection that never actually completes
+// ICE — ontrack (and so onRemoteStream) can fire as soon as SDP negotiation
+// assigns a receiver, well before ICE connectivity is confirmed, so "we got
+// a stream" alone isn't proof the session is real. Mirrors
+// mobile/src/App.tsx's viewerConnectTimeoutRef.
+let viewerConnectTimeout: ReturnType<typeof setTimeout> | null = null;
 let filesTransferredCount = 0;
 let chatLog: { text: string; timestamp: number; mine: boolean }[] = [];
 // --- Annotation/whiteboard overlay (viewer role — see wireAnnotationCapture) ---
@@ -2968,6 +2974,13 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
   setIconButtonState(el.audioToggleBtn, BromeoI18n.t("session.soundOff"), "icon-volume-x");
   el.home.classList.add("hidden");
   el.sessionView.classList.remove("hidden");
+  if (viewerConnectTimeout) clearTimeout(viewerConnectTimeout);
+  viewerConnectTimeout = setTimeout(() => {
+    viewerConnectTimeout = null;
+    console.log("[viewer] connect timeout — never reached connected, peerId=", peerId);
+    endSession();
+    alert(BromeoI18n.t("msg.connectTimeout"));
+  }, 20000);
   currentSession = new PeerSession("viewer", DEFAULT_ICE_SERVERS, signaling, peerId, {
     onRemoteStream: (stream) => {
       el.remoteVideo.srcObject = stream;
@@ -2985,7 +2998,14 @@ function startViewerSession(peerId: string, viewOnly: boolean, permissions = def
     },
     onConnectionState: (state) => {
       updateSessionState(state);
-      if (state === "closed") {
+      if (state === "connected" && viewerConnectTimeout) {
+        clearTimeout(viewerConnectTimeout);
+        viewerConnectTimeout = null;
+      } else if (state === "closed") {
+        if (viewerConnectTimeout) {
+          clearTimeout(viewerConnectTimeout);
+          viewerConnectTimeout = null;
+        }
         // Auto-reconnect only ever fires for the *explicit* "Herstart
         // verbinding" button (restartRequestedFor), never for an unexpected
         // drop — a surprise "closed" just ends the session and leaves it
@@ -3094,6 +3114,10 @@ function handleSignal(fromId: string, payload: unknown): void {
 // behavior (leaving a session you're viewing) is unchanged from before
 // multi-viewer hosting existed.
 function endSession(): void {
+  if (viewerConnectTimeout) {
+    clearTimeout(viewerConnectTimeout);
+    viewerConnectTimeout = null;
+  }
   resetAnnotationState();
   resetMicrophoneState();
   if (currentRole === "host") {
