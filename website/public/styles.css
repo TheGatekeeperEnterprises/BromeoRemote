@@ -412,27 +412,19 @@ h3 {
   list-style: none;
 }
 
-.hero-checks li {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 7px 11px;
-  border: 1px solid rgba(212, 222, 235, 0.9);
-  border-radius: 999px;
-  background: #ffffff;
-  color: #31425f;
-  font-size: 0.9rem;
-  font-weight: 800;
-  box-shadow: 0 8px 18px rgba(25, 44, 82, 0.05);
+.hero-banner-wrap {
+  margin-top: 1.75rem;
+  width: 100%;
+  max-width: 520px;
 }
 
-.hero-checks li::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--green);
+.hero-banner-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  border-radius: 12px;
+  filter: drop-shadow(0 6px 16px rgba(15, 23, 42, 0.08));
 }
 
 .hero-media-wrapper {
