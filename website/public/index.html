@@ -9,8 +9,8 @@
     <title>BromeoRemote | Professional Remote Desktop Software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="/styles.css?v=20260801-16">
-    <script src="/i18n.js?v=20260801-16"></script>
+    <link rel="stylesheet" href="/styles.css?v=20260801-17">
+    <script src="/i18n.js?v=20260801-17"></script>
   </head>
   <body>
     <header class="site-header">
@@ -564,8 +564,18 @@
             </div>
           </div>
 
-          <!-- DANGER ZONE BOX (shown if user has active paid subscription) -->
-          <div id="dangerZoneBox" class="danger-zone-box" style="display:none; margin-top: 1.5rem;">
+          <div class="instructions-box">
+            <h3 data-i18n="dashboard.instructionsTitle">💡 How do you activate the license in the BromeoRemote software?</h3>
+            <ol>
+              <li data-i18n="dashboard.instructions1">Open the BromeoRemote software on your computer.</li>
+              <li><span data-i18n="dashboard.instructions2Pre">Go to the </span><strong data-i18n="dashboard.instructions2Bold">Settings / License</strong><span data-i18n="dashboard.instructions2Post"> page in the menu.</span></li>
+              <li><span data-i18n="dashboard.instructions3Pre">Enter your email address (</span><code><span class="current-user-email">you@email.com</span></code><span data-i18n="dashboard.instructions3Mid">) and your </span><strong data-i18n="dashboard.instructions3Bold">License Key</strong><span data-i18n="dashboard.instructions3Post">.</span></li>
+              <li><span data-i18n="dashboard.instructions4Pre">Click </span><strong data-i18n="dashboard.instructions4Bold">Check &amp; Activate License</strong><span data-i18n="dashboard.instructions4Post">. Features and session duration unlock instantly!</span></li>
+            </ol>
+          </div>
+
+          <!-- DANGER ZONE BOX (shown at the VERY BOTTOM if user has active paid subscription) -->
+          <div id="dangerZoneBox" class="danger-zone-box" style="display:none; margin-top: 2.5rem;">
             <div class="danger-zone-header">
               <span class="danger-badge">⚠️ Danger Zone</span>
               <h4 data-i18n="dangerZone.boxTitle">Abonnement beheren of opzeggen</h4>
@@ -576,60 +586,6 @@
             <button type="button" id="openDangerModalBtn" class="btn-danger-outline" data-i18n="dangerZone.cancelBtn">
               Abonnement opzeggen...
             </button>
-          </div>
-
-          <h3 style="font-size:1.2rem; text-align:left; margin-top:1.75rem; margin-bottom:0.5rem;" data-i18n="dashboard.upgradeTitle">Upgrade License</h3>
-          <p style="color:var(--muted); font-size:0.9rem; text-align:left;" data-i18n="dashboard.upgradeSubtitle">
-            The software is free by default. Upgrade for unlimited session duration or extra features like AI Buddy.
-          </p>
-
-          <div class="plans-grid">
-            <div class="plan-card" id="planCardFree">
-              <span class="badge badge-gray" data-i18n="dashboard.plan.currentBadge">Current / Basic</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.freeName">Free</h4>
-              <div class="plan-price">€0 <span data-i18n="common.perMonth">/mo</span></div>
-              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem;">
-                <li data-i18n="dashboard.plan.f1">Remote desktop control</li>
-                <li data-i18n="dashboard.plan.f2">Max. 15 min per session</li>
-                <li data-i18n="dashboard.plan.f3">Standard picture quality</li>
-              </ul>
-            </div>
-
-            <div class="plan-card" id="planCardPro">
-              <span class="badge badge-green" data-i18n="dashboard.plan.popularBadge">Most Chosen</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.proName">Pro</h4>
-              <div class="plan-price"><span class="price-original" id="dash-price-original-Pro" hidden></span><span class="price-amount" id="dash-price-amount-Pro">€7.95</span> <span data-i18n="common.perMonth">/mo</span></div>
-              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
-                <li><strong data-i18n="dashboard.plan.proF1">Unlimited session duration</strong></li>
-                <li data-i18n="dashboard.plan.proF2">File transfer &amp; Chat</li>
-                <li data-i18n="dashboard.plan.proF3">HWID Hardware security</li>
-                <li data-i18n="dashboard.plan.proF4">Multi-monitor &amp; curtain mode</li>
-              </ul>
-              <button type="button" class="btn-submit" style="background:#0be881;" data-start-checkout="Pro"><span data-i18n="dashboard.plan.proCta">Upgrade to Pro</span> (<span id="dash-cta-price-Pro">€7.95/mo</span>)</button>
-            </div>
-
-            <div class="plan-card" id="planCardUnlimited">
-              <span class="badge badge-cyan" data-i18n="dashboard.plan.unlimitedBadge">Unlimited</span>
-              <h4 style="font-size:1.1rem; margin-top:0.5rem;" data-i18n="dashboard.plan.unlimitedName">Unlimited</h4>
-              <div class="plan-price"><span class="price-original" id="dash-price-original-Unlimited" hidden></span><span class="price-amount" id="dash-price-amount-Unlimited">€50</span> <span data-i18n="common.perMonth">/mo</span></div>
-              <ul style="font-size:0.85rem; color:#8898aa; margin-left:1.2rem; margin-top:0.75rem; margin-bottom:1.25rem;">
-                <li><strong data-i18n="dashboard.plan.unlimitedF1">Unlimited devices &amp; sessions</strong></li>
-                <li><strong data-i18n="dashboard.plan.unlimitedF2">AI Buddy assistant built in</strong></li>
-                <li data-i18n="dashboard.plan.unlimitedF3">Unattended access with 2FA</li>
-                <li data-i18n="dashboard.plan.unlimitedF4">Priority support</li>
-              </ul>
-              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited"><span data-i18n="dashboard.plan.unlimitedCta">Upgrade to Unlimited</span> (<span id="dash-cta-price-Unlimited">€50.00/mo</span>)</button>
-            </div>
-          </div>
-
-          <div class="instructions-box">
-            <h3 data-i18n="dashboard.instructionsTitle">💡 How do you activate the license in the BromeoRemote software?</h3>
-            <ol>
-              <li data-i18n="dashboard.instructions1">Open the BromeoRemote software on your computer.</li>
-              <li><span data-i18n="dashboard.instructions2Pre">Go to the </span><strong data-i18n="dashboard.instructions2Bold">Settings / License</strong><span data-i18n="dashboard.instructions2Post"> page in the menu.</span></li>
-              <li><span data-i18n="dashboard.instructions3Pre">Enter your email address (</span><code><span class="current-user-email">you@email.com</span></code><span data-i18n="dashboard.instructions3Mid">) and your </span><strong data-i18n="dashboard.instructions3Bold">License Key</strong><span data-i18n="dashboard.instructions3Post">.</span></li>
-              <li><span data-i18n="dashboard.instructions4Pre">Click </span><strong data-i18n="dashboard.instructions4Bold">Check &amp; Activate License</strong><span data-i18n="dashboard.instructions4Post">. Features and session duration unlock instantly!</span></li>
-            </ol>
           </div>
         </div>
       </div>

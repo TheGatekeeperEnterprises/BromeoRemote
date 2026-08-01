@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="BromeoRemote Dashboard | Beheer je licentiesleutel en abonnement.">
+    <meta name="theme-color" content="#0b1425">
+    <title>Dashboard | BromeoRemote</title>
+    <link rel="icon" href="/assets/icon.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="stylesheet" href="/styles.css?v=20260801-17">
+    <script src="/i18n.js?v=20260801-17"></script>
+  </head>
+  <body class="dashboard-page-body">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="BromeoRemote home">
+        <img src="/assets/logo2.png" alt="BromeoRemote">
+      </a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="/#werkwijze" data-i18n="nav.howItWorks">How it works</a>
+        <a href="/#beveiliging" data-i18n="nav.security">Security</a>
+        <a href="/#licenties" data-i18n="nav.pricing">Pricing</a>
+        <a href="/#contact" data-i18n="nav.contact">Contact</a>
+      </nav>
+      <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
+        <a class="header-cta" href="/dashboard/" id="navDashboardBtn" data-i18n="header.myAccount" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">My Account</a>
+        <a class="header-cta" href="/#downloads" id="navDownloadBtn" data-i18n="header.downloadFree">Download free</a>
+        <div class="lang-dropdown">
+          <button type="button" class="lang-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
+            <span class="lang-current"></span>
+            <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu">
+            <button type="button" class="lang-dropdown-item" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">
+              <svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_d"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_d"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_d)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_d)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
+              <span>EN</span>
+            </button>
+            <button type="button" class="lang-dropdown-item" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">
+              <svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>
+              <span>NL</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="dashboard-page-container">
+      <!-- AUTH VIEW (WHEN NOT LOGGED IN) -->
+      <div id="authView" class="dashboard-auth-card" style="display:none;">
+        <div class="portal-header">
+          <h1 class="dashboard-page-title" data-i18n="accountModal.title">My BromeoRemote Account</h1>
+          <p class="dashboard-page-subtitle" data-i18n="accountModal.subtitle">Sign in or create a free account to view and manage your license key.</p>
+        </div>
+
+        <div class="auth-tabs">
+          <button type="button" class="tab-btn active" id="tabLoginBtn" data-show-tab="login" data-i18n="accountModal.tabLogin">Sign in</button>
+          <button type="button" class="tab-btn" id="tabRegisterBtn" data-show-tab="register" data-i18n="accountModal.tabRegister">Create account (free)</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="loginEmail" data-i18n="login.email">Email address</label>
+            <input type="email" id="loginEmail" required placeholder="you@email.com">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword" data-i18n="login.password">Password</label>
+            <input type="password" id="loginPassword" required placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit" id="btnAuthSubmit" data-i18n="login.submit">Sign in</button>
+          <p class="error-msg" id="authError" hidden></p>
+          <p style="text-align:center; margin-top:1rem;">
+            <span class="logout-link" style="color:var(--muted); cursor:pointer;" id="forgotPasswordLink" data-i18n="login.forgotLink">Forgot password?</span>
+          </p>
+        </form>
+
+        <!-- FORGOT PASSWORD FORM -->
+        <form id="forgotForm" style="display:none;">
+          <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1rem;" data-i18n="forgot.subtitle">Enter your email address and we'll send you a link to reset your password.</p>
+          <div class="form-group">
+            <label for="forgotEmail" data-i18n="forgot.email">Email address</label>
+            <input type="email" id="forgotEmail" required placeholder="you@email.com">
+          </div>
+          <button type="submit" class="btn-submit" data-i18n="forgot.submit">Send reset link</button>
+          <p class="error-msg" id="forgotError" hidden></p>
+          <p class="error-msg" id="forgotSuccess" hidden style="color:var(--green);"></p>
+          <p style="text-align:center; margin-top:1rem;">
+            <span class="logout-link" style="color:var(--muted); cursor:pointer;" id="backToLoginLink" data-i18n="forgot.backLink">Back to sign in</span>
+          </p>
+        </form>
+
+        <!-- RESET PASSWORD FORM -->
+        <form id="resetPasswordForm" style="display:none;">
+          <div class="form-group">
+            <label for="resetNewPassword" data-i18n="reset.label">New password (min. 6 characters)</label>
+            <input type="password" id="resetNewPassword" required minlength="6" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit" data-i18n="reset.submit">Set password</button>
+          <p class="error-msg" id="resetError" hidden></p>
+        </form>
+
+        <!-- REGISTER FORM -->
+        <form id="registerForm" style="display: none;">
+          <div class="form-group">
+            <label for="regEmail" data-i18n="register.email">Email address *</label>
+            <input type="email" id="regEmail" required placeholder="you@email.com">
+          </div>
+          <div class="form-group">
+            <label for="regCompany" data-i18n="register.company">Company name (optional)</label>
+            <input type="text" id="regCompany" placeholder="Company Ltd.">
+          </div>
+          <div class="form-group">
+            <label for="regPassword" data-i18n="register.password">Password (min. 6 characters) *</label>
+            <input type="password" id="regPassword" required minlength="6" placeholder="••••••••">
+          </div>
+          <button type="submit" class="btn-submit" data-i18n="register.submit">Create free account</button>
+          <p class="error-msg" id="regError" hidden></p>
+        </form>
+      </div>
+
+      <!-- DASHBOARD VIEW (AUTHENTICATED) -->
+      <div id="dashboardView" class="dashboard-page-card" style="display:block;">
+        <div class="user-bar">
+          <div class="user-email-chip">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--blue); flex-shrink: 0;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="user-label" data-i18n="dashboard.loggedInAs">Signed in as:</span>
+            <strong id="userEmailDisplay" class="user-email-text">-</strong>
+          </div>
+          <button type="button" class="logout-btn" id="logoutLink" data-i18n="dashboard.logout">Sign out</button>
+        </div>
+
+        <section class="dashboard-section">
+          <h1 class="dashboard-page-title" data-i18n="dashboard.licenseTitle">My License Key</h1>
+          <p class="dashboard-page-subtitle" data-i18n="dashboard.licenseSubtitle">
+            Enter this email address and the license key below into the BromeoRemote software to activate your license and features.
+          </p>
+
+          <div class="license-box">
+            <span class="license-key-label" data-i18n="dashboard.licenseKeyLabel">License key</span>
+            <div class="license-key" id="licenseKeyDisplay" data-i18n="dashboard.licenseKeyLoading">Loading...</div>
+            <div class="license-key-actions">
+              <button type="button" class="copy-btn" id="copyLicenseKeyBtn" data-i18n="dashboard.copyBtn">Copy</button>
+              <button type="button" class="copy-btn copy-btn-secondary" id="regenerateLicenseKeyBtn" data-i18n="dashboard.newKeyBtn">New key</button>
+            </div>
+            <div class="license-meta">
+              <span class="badge badge-green" id="planBadge">FREE</span>
+              <span class="license-expires" id="expiresDisplay" data-i18n="dashboard.expiresPermanent">Permanent free license</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- UPGRADE LICENSE SECTION -->
+        <section class="dashboard-section" style="margin-top: 3rem;">
+          <h2 style="font-size:1.5rem; text-align:left; margin-bottom:0.5rem;" data-i18n="dashboard.upgradeTitle">Upgrade License</h2>
+          <p style="color:var(--muted); font-size:0.95rem; text-align:left; margin-bottom:1.5rem;" data-i18n="dashboard.upgradeSubtitle">
+            The software is free by default. Upgrade for unlimited session duration or extra features like AI Buddy.
+          </p>
+
+          <div class="plans-grid">
+            <div class="plan-card" id="planCardFree">
+              <span class="badge badge-gray" data-i18n="dashboard.plan.currentBadge">Current / Basic</span>
+              <h3 style="font-size:1.2rem; margin-top:0.5rem;" data-i18n="dashboard.plan.freeName">Free</h3>
+              <div class="plan-price">€0 <span data-i18n="common.perMonth">/mo</span></div>
+              <ul class="features-list">
+                <li data-i18n="dashboard.plan.f1">Remote desktop control</li>
+                <li data-i18n="dashboard.plan.f2">Max. 15 min per session</li>
+                <li data-i18n="dashboard.plan.f3">Standard picture quality</li>
+              </ul>
+            </div>
+
+            <div class="plan-card" id="planCardPro">
+              <span class="badge badge-green" data-i18n="dashboard.plan.popularBadge">Most Chosen</span>
+              <h3 style="font-size:1.2rem; margin-top:0.5rem;" data-i18n="dashboard.plan.proName">Pro</h3>
+              <div class="plan-price"><span class="price-original" id="dash-price-original-Pro" hidden></span><span class="price-amount" id="dash-price-amount-Pro">€7.95</span> <span data-i18n="common.perMonth">/mo</span></div>
+              <ul class="features-list">
+                <li><strong data-i18n="dashboard.plan.proF1">Unlimited session duration</strong></li>
+                <li data-i18n="dashboard.plan.proF2">File transfer &amp; Chat</li>
+                <li data-i18n="dashboard.plan.proF3">HWID Hardware security</li>
+                <li data-i18n="dashboard.plan.proF4">Multi-monitor &amp; curtain mode</li>
+              </ul>
+              <button type="button" class="btn-submit" style="background:#0be881; color:#0f172a; font-weight:800;" data-start-checkout="Pro"><span data-i18n="dashboard.plan.proCta">Upgrade to Pro</span> (<span id="dash-cta-price-Pro">€7.95/mo</span>)</button>
+            </div>
+
+            <div class="plan-card" id="planCardUnlimited">
+              <span class="badge badge-cyan" data-i18n="dashboard.plan.unlimitedBadge">Unlimited</span>
+              <h3 style="font-size:1.2rem; margin-top:0.5rem;" data-i18n="dashboard.plan.unlimitedName">Unlimited</h3>
+              <div class="plan-price"><span class="price-original" id="dash-price-original-Unlimited" hidden></span><span class="price-amount" id="dash-price-amount-Unlimited">€50</span> <span data-i18n="common.perMonth">/mo</span></div>
+              <ul class="features-list">
+                <li><strong data-i18n="dashboard.plan.unlimitedF1">Unlimited devices &amp; sessions</strong></li>
+                <li><strong data-i18n="dashboard.plan.unlimitedF2">AI Buddy assistant built in</strong></li>
+                <li data-i18n="dashboard.plan.unlimitedF3">Unattended access with 2FA</li>
+                <li data-i18n="dashboard.plan.unlimitedF4">Priority support</li>
+              </ul>
+              <button type="button" class="btn-submit" style="background:#0ea5b7; color:#fff;" data-start-checkout="Unlimited"><span data-i18n="dashboard.plan.unlimitedCta">Upgrade to Unlimited</span> (<span id="dash-cta-price-Unlimited">€50.00/mo</span>)</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ACTIVATION INSTRUCTIONS SECTION -->
+        <section class="dashboard-section" style="margin-top: 2.5rem;">
+          <div class="instructions-box">
+            <h3 data-i18n="dashboard.instructionsTitle">💡 How do you activate the license in the BromeoRemote software?</h3>
+            <ol>
+              <li data-i18n="dashboard.instructions1">Open the BromeoRemote software on your computer.</li>
+              <li><span data-i18n="dashboard.instructions2Pre">Go to the </span><strong data-i18n="dashboard.instructions2Bold">Settings / License</strong><span data-i18n="dashboard.instructions2Post"> page in the menu.</span></li>
+              <li><span data-i18n="dashboard.instructions3Pre">Enter your email address (</span><code><span class="current-user-email">you@email.com</span></code><span data-i18n="dashboard.instructions3Mid">) and your </span><strong data-i18n="dashboard.instructions3Bold">License Key</strong><span data-i18n="dashboard.instructions3Post">.</span></li>
+              <li><span data-i18n="dashboard.instructions4Pre">Click </span><strong data-i18n="dashboard.instructions4Bold">Check &amp; Activate License</strong><span data-i18n="dashboard.instructions4Post">. Features and session duration unlock instantly!</span></li>
+            </ol>
+          </div>
+        </section>
+
+        <!-- DANGER ZONE BOX (PLACED AT THE VERY BOTTOM OF THE DASHBOARD PAGE) -->
+        <section class="dashboard-section" style="margin-top: 3rem;">
+          <div id="dangerZoneBox" class="danger-zone-box" style="display:none;">
+            <div class="danger-zone-header">
+              <span class="danger-badge">⚠️ Danger Zone</span>
+              <h4 data-i18n="dangerZone.boxTitle">Abonnement beheren of opzeggen</h4>
+            </div>
+            <p class="danger-zone-text" data-i18n="dangerZone.boxDesc">
+              Als je je abonnement opzegt, vervallen je betaalde Pro/Unlimited functies en keert je account direct terug naar de gratis versie (max. 15 min per sessie).
+            </p>
+            <button type="button" id="openDangerModalBtn" class="btn-danger-outline" data-i18n="dangerZone.cancelBtn">
+              Abonnement opzeggen...
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer" style="margin-top: 4rem;">
+      <div class="footer-container">
+        <div class="footer-bottom-bar">
+          <span data-i18n-html="footer.copyright">&copy; 2026 BromeoRemote (<a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>). All rights reserved.</span>
+          <div class="footer-payments">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/iDEAL-Wero/iDEAL-Wero-card.svg" alt="iDEAL" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/Credit-card/Credit-card-card.svg" alt="Creditcard" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/PayPal/PayPal-card.svg" alt="PayPal" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/Apple-pay/Apple-pay-card.svg" alt="Apple Pay" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/Google-Pay/Google-Pay-card.svg" alt="Google Pay" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/Banktransfer/Banktransfer-card.svg" alt="SEPA" class="footer-payment-logo-img">
+            <img src="/assets/Mollie%20-%20Payment%20Methods/Direct-debit/Direct-debit-card.svg" alt="SEPA-incasso" class="footer-payment-logo-img">
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- DANGER ZONE CONFIRMATION MODAL POPUP -->
+    <div id="dangerZoneModal" class="danger-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="danger-modal-title">
+      <div class="danger-modal-backdrop" id="closeDangerModalBackdrop"></div>
+      <div class="danger-modal-card">
+        <button class="download-modal-close" id="closeDangerModalBtn" aria-label="Sluit venster">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+
+        <div class="danger-modal-header">
+          <div class="danger-icon-wrapper">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+          </div>
+          <h3 id="danger-modal-title" class="danger-modal-title" data-i18n="dangerZone.modalTitle">⚠️ Weet je zeker dat je wilt opzeggen?</h3>
+          <p class="danger-modal-subtitle" data-i18n="dangerZone.modalSubtitle">Lees de onderstaande gevolgen zorgvuldig door voordat je bevestigt.</p>
+        </div>
+
+        <div class="danger-consequences-list">
+          <div class="danger-item">
+            <span class="danger-bullet">🛑</span>
+            <span data-i18n="dangerZone.c1">Je licentie (Pro / Unlimited) wordt direct stopgezet.</span>
+          </div>
+          <div class="danger-item">
+            <span class="danger-bullet">⏱️</span>
+            <span data-i18n="dangerZone.c2">Je valt direct terug op de gratis versie (maximaal 15 minuten per sessie).</span>
+          </div>
+          <div class="danger-item">
+            <span class="danger-bullet">🔒</span>
+            <span data-i18n="dangerZone.c3">Functies zoals onbeperkte duur, multi-monitor en bestandsoverdracht worden uitgeschakeld.</span>
+          </div>
+          <div class="danger-item">
+            <span class="danger-bullet">💳</span>
+            <span data-i18n="dangerZone.c4">Er worden geen verdere maandelijkse afschrijvingen meer gedaan via Mollie.</span>
+          </div>
+        </div>
+
+        <div class="danger-modal-actions">
+          <button type="button" id="confirmCancelSubBtn" class="btn-danger-confirm" data-i18n="dangerZone.confirmBtn">
+            Ja, zeg mijn abonnement op
+          </button>
+          <button type="button" id="keepSubBtn" class="btn-keep-sub" data-i18n="dangerZone.keepBtn">
+            Nee, behoud mijn abonnement
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/app.js?v=20260801-17" defer></script>
+  </body>
+</html>
