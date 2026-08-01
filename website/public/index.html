@@ -9,8 +9,8 @@
     <title>BromeoRemote | Professional Remote Desktop Software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="/styles.css?v=20260801-13">
-    <script src="/i18n.js?v=20260801-13"></script>
+    <link rel="stylesheet" href="/styles.css?v=20260801-14">
+    <script src="/i18n.js?v=20260801-14"></script>
   </head>
   <body>
     <header class="site-header">
@@ -136,18 +136,18 @@
           <p data-i18n="pricing.subtitle">Pay securely via Mollie. Your license is active immediately after payment.</p>
         </div>
 
-        <div class="pricing-grid-container" style="margin-top: 2rem;">
-          <div class="pricing-grid" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem;">
+        <div class="pricing-grid-container">
+          <div class="pricing-grid">
             <!-- FREE CARD -->
-            <article class="pricing-card" style="background: var(--surface-strong); border: 1px solid var(--line); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <article class="pricing-card">
               <div>
-                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.free.title">Free</h3>
-                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
-                <div class="price-box" style="margin: 1.5rem 0;">
-                  <span class="price-val" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€0</span>
-                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                <h3 data-i18n="pricing.free.title">Free</h3>
+                <p class="plan-subtitle" data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
+                <div class="price-box">
+                  <span class="price-val">€0</span>
+                  <span class="price-period" data-i18n="common.perMonth">/mo</span>
                 </div>
-                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                <ul class="features-list">
                   <li>✔ <span data-i18n="pricing.free.f1">Remote control &amp; viewing</span></li>
                   <li>✔ <span data-i18n="pricing.free.f2">Max. 15 min per session</span></li>
                   <li>✔ <span data-i18n="pricing.free.f3">Standard picture quality</span></li>
@@ -157,17 +157,17 @@
             </article>
 
             <!-- PRO CARD -->
-            <article class="pricing-card premium-card" style="background: var(--surface-strong); border: 2px solid var(--blue); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
-              <span class="popular-badge" style="position:absolute; top:-12px; right:20px; background:var(--blue); color:#fff; font-size:0.75rem; font-weight:700; padding:0.25rem 0.75rem; border-radius:12px; text-transform:uppercase;" data-i18n="pricing.pro.badge">Popular</span>
+            <article class="pricing-card premium-card">
+              <span class="popular-badge" data-i18n="pricing.pro.badge">Popular</span>
               <div>
-                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.pro.title">Pro</h3>
-                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
-                <div class="price-box" style="margin: 1.5rem 0; display:flex; align-items:baseline; gap:0.4rem; flex-wrap:wrap;">
-                  <span class="price-original" id="price-original-Pro" hidden style="font-size:1.1rem; color:#ef4444; text-decoration:line-through; font-weight:700;"></span>
-                  <span class="price-val" id="price-amount-Pro" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€7.95</span>
-                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                <h3 data-i18n="pricing.pro.title">Pro</h3>
+                <p class="plan-subtitle" data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
+                <div class="price-box">
+                  <span class="price-original" id="price-original-Pro" hidden></span>
+                  <span class="price-val" id="price-amount-Pro">€7.95</span>
+                  <span class="price-period" data-i18n="common.perMonth">/mo</span>
                 </div>
-                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                <ul class="features-list">
                   <li>✔ <strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
                   <li>✔ <span data-i18n="pricing.pro.f2">File transfer &amp; chat</span></li>
                   <li>✔ <strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
@@ -181,16 +181,16 @@
             </article>
 
             <!-- UNLIMITED CARD -->
-            <article class="pricing-card" style="background: var(--surface-strong); border: 1px solid var(--line); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+            <article class="pricing-card">
               <div>
-                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.unlimited.title">Unlimited</h3>
-                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
-                <div class="price-box" style="margin: 1.5rem 0; display:flex; align-items:baseline; gap:0.4rem; flex-wrap:wrap;">
-                  <span class="price-original" id="price-original-Unlimited" hidden style="font-size:1.1rem; color:#ef4444; text-decoration:line-through; font-weight:700;"></span>
-                  <span class="price-val" id="price-amount-Unlimited" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€50.00</span>
-                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
+                <p class="plan-subtitle" data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
+                <div class="price-box">
+                  <span class="price-original" id="price-original-Unlimited" hidden></span>
+                  <span class="price-val" id="price-amount-Unlimited">€50.00</span>
+                  <span class="price-period" data-i18n="common.perMonth">/mo</span>
                 </div>
-                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                <ul class="features-list">
                   <li>✔ <strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
                   <li>✔ <strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
                   <li>✔ <span data-i18n="pricing.unlimited.f3">Unattended access with 2FA</span></li>

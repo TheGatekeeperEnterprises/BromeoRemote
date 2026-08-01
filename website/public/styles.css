@@ -1438,6 +1438,15 @@ button:focus-visible {
   align-items: stretch;
 }
 
+@media (max-width: 900px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+    max-width: 440px;
+    margin: 0 auto;
+    gap: 2rem;
+  }
+}
+
 .pricing-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -2541,26 +2550,45 @@ button:focus-visible {
 
 @media (max-width: 576px) {
   .cookie-banner {
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
-    width: calc(100% - 2rem);
-    padding: 1.1rem;
+    bottom: 0.75rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    width: calc(100% - 1.5rem);
+    max-width: none;
+    padding: 1rem 1.1rem;
+    border-radius: 14px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  .cookie-title {
+    font-size: 0.95rem;
+  }
+  .cookie-desc {
+    font-size: 0.78rem;
+    line-height: 1.35;
   }
   .cookie-banner-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
   }
   .cookie-link {
     margin-right: 0;
     text-align: center;
     order: 3;
+    font-size: 0.78rem;
+    padding-top: 0.2rem;
   }
   .cookie-btn-essential {
     order: 2;
+    padding: 0.5rem;
+    font-size: 0.8rem;
   }
   .cookie-btn-accept {
     order: 1;
+    padding: 0.6rem;
+    font-size: 0.85rem;
   }
 }
 
