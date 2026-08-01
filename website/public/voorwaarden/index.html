@@ -170,7 +170,7 @@
             <h4 class="footer-col-title" data-i18n="footer.colLegal">Legal &amp; Privacy</h4>
             <a href="/voorwaarden/" data-i18n="footer.terms">Terms of Service</a>
             <a href="/privacy/" data-i18n="footer.privacy">Privacy Policy</a>
-            <a href="/privacy/#cookies" data-i18n="footer.linkCookies">Cookie Policy</a>
+            <a href="/cookiebeleid/" data-i18n="footer.linkCookies">Cookie Policy</a>
           </div>
 
           <!-- SUPPORT COLUMN -->
@@ -199,5 +199,22 @@
     </footer>
 
     <script src="/app.js?v=20260801-6" defer></script>
+
+    <!-- COOKIE CONSENT BANNER POPUP -->
+    <div id="cookieBanner" class="cookie-banner" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-desc">
+      <div class="cookie-banner-content">
+        <div class="cookie-banner-text">
+          <h4 id="cookie-title" class="cookie-title" data-i18n="cookieBanner.title">🍪 Cookie &amp; Privacy Instellingen</h4>
+          <p id="cookie-desc" class="cookie-desc" data-i18n="cookieBanner.desc">
+            Wij gebruiken functionele cookies voor sessiebeheer, beveiliging en taalselectie. Er worden geen trackingcookies van derden of advertentietrackers geplaatst.
+          </p>
+        </div>
+        <div class="cookie-banner-actions">
+          <a href="/cookiebeleid/" class="cookie-link" data-i18n="cookieBanner.policyLink">Lees Cookiebeleid</a>
+          <button type="button" id="cookieEssentialBtn" class="btn cookie-btn-essential" data-i18n="cookieBanner.essentialOnly">Alleen noodzakelijk</button>
+          <button type="button" id="cookieAcceptAllBtn" class="btn btn-primary cookie-btn-accept" data-i18n="cookieBanner.acceptAll">Alles accepteren</button>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

@@ -514,4 +514,31 @@
     }
   }
 
+  function initCookieBanner() {
+    const banner = document.getElementById("cookieBanner");
+    if (!banner) return;
+    const consent = localStorage.getItem("bromeo_cookie_consent");
+    if (!consent) {
+      setTimeout(() => {
+        banner.classList.add("show");
+      }, 600);
+    }
+    const acceptBtn = document.getElementById("cookieAcceptAllBtn");
+    const essentialBtn = document.getElementById("cookieEssentialBtn");
+
+    if (acceptBtn) {
+      acceptBtn.addEventListener("click", () => {
+        localStorage.setItem("bromeo_cookie_consent", "all");
+        banner.classList.remove("show");
+      });
+    }
+    if (essentialBtn) {
+      essentialBtn.addEventListener("click", () => {
+        localStorage.setItem("bromeo_cookie_consent", "essential");
+        banner.classList.remove("show");
+      });
+    }
+  }
+
   initAccountModal();
+  initCookieBanner();
