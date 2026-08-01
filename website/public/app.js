@@ -206,7 +206,7 @@
     const modal = document.querySelector("#accountModal");
     if (!modal) return;
 
-    const trigger = document.querySelector("#accountModalTrigger");
+    const trigger = document.querySelector("#navDashboardBtn") || document.querySelector("#accountModalTrigger");
     let activeLicenseKey = "";
     let pendingPlan = null; // set when a pricing button opens the modal while logged out
 
@@ -272,7 +272,11 @@
         activeLicenseKey = activeLic.license_key;
         document.getElementById("licenseKeyDisplay").textContent = activeLic.license_key;
         document.getElementById("planBadge").textContent = (activeLic.plan || "Free").toUpperCase();
-        document.getElementById("cancelSubLink").style.display = activeLic.plan && activeLic.plan !== "Free" ? "inline" : "none";
+        
+        const dangerBox = document.getElementById("dangerZoneBox");
+        if (dangerBox) dangerBox.style.display = activeLic.plan && activeLic.plan !== "Free" ? "block" : "none";
+        const cancelLink = document.getElementById("cancelSubLink");
+        if (cancelLink) cancelLink.style.display = activeLic.plan && activeLic.plan !== "Free" ? "inline" : "none";
 
         if (activeLic.expires_at) {
           const dateLocale = BromeoI18n.getLang() === "nl" ? "nl-NL" : "en-GB";
@@ -426,20 +430,67 @@
       }
     });
 
-    document.getElementById("cancelSubLink").addEventListener("click", async () => {
-      if (!confirm(BromeoI18n.t("dashboard.cancelSubConfirm"))) return;
-      try {
-        const res = await fetch("/api/user/cancel-subscription", { method: "POST" });
-        const data = await res.json();
-        if (data.ok) {
-          renderDashboard({ email: document.getElementById("userEmailDisplay").textContent }, [data.license]);
-        } else {
-          alert(data.error || BromeoI18n.t("dashboard.cancelSubError"));
+    const cancelSubBtn = document.getElementById("cancelSubLink");
+    if (cancelSubBtn) {
+      cancelSubBtn.addEventListener("click", async () => {
+        if (!confirm(BromeoI18n.t("dashboard.cancelSubConfirm"))) return;
+        try {
+          const res = await fetch("/api/user/cancel-subscription", { method: "POST" });
+          const data = await res.json();
+          if (data.ok) {
+            renderDashboard({ email: document.getElementById("userEmailDisplay").textContent }, [data.license]);
+          } else {
+            alert(data.error || BromeoI18n.t("dashboard.cancelSubError"));
+          }
+        } catch {
+          alert(BromeoI18n.t("dashboard.cancelSubError"));
         }
-      } catch {
-        alert(BromeoI18n.t("dashboard.cancelSubError"));
+      });
+    }
+
+    // DANGER ZONE MODAL HANDLERS
+    const dangerModal = document.getElementById("dangerZoneModal");
+    const openDangerBtn = document.getElementById("openDangerModalBtn");
+    const closeDangerBtn = document.getElementById("closeDangerModalBtn");
+    const closeDangerBackdrop = document.getElementById("closeDangerModalBackdrop");
+    const keepSubBtn = document.getElementById("keepSubBtn");
+    const confirmCancelSubBtn = document.getElementById("confirmCancelSubBtn");
+
+    function openDangerModal() {
+      if (dangerModal) {
+        dangerModal.classList.add("is-active");
+        dangerModal.setAttribute("aria-hidden", "false");
       }
-    });
+    }
+
+    function closeDangerModal() {
+      if (dangerModal) {
+        dangerModal.classList.remove("is-active");
+        dangerModal.setAttribute("aria-hidden", "true");
+      }
+    }
+
+    if (openDangerBtn) openDangerBtn.addEventListener("click", openDangerModal);
+    if (closeDangerBtn) closeDangerBtn.addEventListener("click", closeDangerModal);
+    if (closeDangerBackdrop) closeDangerBackdrop.addEventListener("click", closeDangerModal);
+    if (keepSubBtn) keepSubBtn.addEventListener("click", closeDangerModal);
+
+    if (confirmCancelSubBtn) {
+      confirmCancelSubBtn.addEventListener("click", async () => {
+        closeDangerModal();
+        try {
+          const res = await fetch("/api/user/cancel-subscription", { method: "POST" });
+          const data = await res.json();
+          if (data.ok) {
+            renderDashboard({ email: document.getElementById("userEmailDisplay").textContent }, [data.license]);
+          } else {
+            alert(data.error || BromeoI18n.t("dashboard.cancelSubError"));
+          }
+        } catch {
+          alert(BromeoI18n.t("dashboard.cancelSubError"));
+        }
+      });
+    }
 
     document.getElementById("logoutLink").addEventListener("click", async () => {
       await fetch("/api/user/logout", { method: "POST" });

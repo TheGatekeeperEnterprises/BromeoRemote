@@ -1,182 +1,159 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="BromeoRemote — professional remote desktop software for Windows and Android. Secure, fast and protected with HWID licensing and end-to-end encryption.">
+    <meta name="description" content="BromeoRemote | Professionele remote desktop software voor Windows en Android. Beveiligd met HWID licenties en End-to-End encryptie.">
     <meta name="theme-color" content="#0b1425">
     <link rel="canonical" href="https://bromeoremote.com/">
-    <meta property="og:title" content="BromeoRemote | Professional Remote Desktop Software">
-    <meta property="og:description" content="Securely view, control and transfer files across Windows and Android. Enterprise-grade security with HWID and end-to-end encryption.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://bromeoremote.com/">
-    <meta property="og:image" content="https://bromeoremote.com/assets/logo.png">
     <title>BromeoRemote | Professional Remote Desktop Software</title>
     <link rel="icon" href="/assets/icon.png">
     <link rel="manifest" href="/site.webmanifest">
-    <link rel="stylesheet" href="/styles.css?v=20260801-9">
-    <script src="/i18n.js?v=20260801-9"></script>
+    <link rel="stylesheet" href="/styles.css?v=20260801-10">
+    <script src="/i18n.js?v=20260801-10"></script>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="BromeoRemote home">
+      <a class="brand" href="/" aria-label="BromeoRemote home">
         <img src="/assets/logo2.png" alt="BromeoRemote">
       </a>
       <nav class="nav-links" data-i18n-aria-label="nav.ariaLabel" aria-label="Main navigation">
         <a href="#werkwijze" data-i18n="nav.howItWorks">How it works</a>
-        <a href="#veiligheid" data-i18n="nav.security">Security</a>
+        <a href="#beveiliging" data-i18n="nav.security">Security</a>
         <a href="#licenties" data-i18n="nav.pricing">Pricing</a>
         <a href="#contact" data-i18n="nav.contact">Contact</a>
       </nav>
-        <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
-          <button type="button" class="header-cta" id="accountModalTrigger" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Dashboard</button>
-          <a class="header-cta" href="#downloads" data-i18n="header.downloadFree">Download free</a>
-          <div class="lang-dropdown">
-            <button type="button" class="lang-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
-              <span class="lang-current"></span>
-              <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+      <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
+        <a class="header-cta" href="/?account=1" id="navDashboardBtn" data-i18n="header.dashboard" style="background: rgba(31,99,233,0.12); color: var(--blue); border: 1px solid rgba(31,99,233,0.25);">Dashboard</a>
+        <a class="header-cta" href="#downloads" id="navDownloadBtn" data-i18n="header.downloadFree">Download free</a>
+        <div class="lang-dropdown">
+          <button type="button" class="lang-dropdown-trigger" aria-expanded="false" aria-haspopup="true">
+            <span class="lang-current"></span>
+            <svg class="lang-chevron" width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M1 1L5 5L9 1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <div class="lang-dropdown-menu">
+            <button type="button" class="lang-dropdown-item" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">
+              <svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
+              <span>EN</span>
             </button>
-            <div class="lang-dropdown-menu">
-              <button type="button" class="lang-dropdown-item" data-lang-switch="en" onclick="BromeoI18n.setLang('en')">
-                <svg width="16" height="12" viewBox="0 0 60 30" style="border-radius:2px; flex-shrink:0;"><clipPath id="s_en_d"><path d="M0,0 v30 h60 v-30 z"/></clipPath><clipPath id="t_en_d"><path d="M30,15 h30 v15 z v-30 h-30 z h-30 v-15 z v30 h30 z"/></clipPath><g clip-path="url(#s_en_d)"><path d="M0,0 v30 h60 v-30 z" fill="#012169"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 L60,30 M60,0 L0,30" stroke="#C8102E" stroke-width="4" clip-path="url(#t_en_d)"/><path d="M30,0 v30 M0,15 h60" stroke="#fff" stroke-width="10"/><path d="M30,0 v30 M0,15 h60" stroke="#C8102E" stroke-width="6"/></g></svg>
-                <span>EN</span>
-              </button>
-              <button type="button" class="lang-dropdown-item" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">
-                <svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>
-                <span>NL</span>
-              </button>
+            <button type="button" class="lang-dropdown-item" data-lang-switch="nl" onclick="BromeoI18n.setLang('nl')">
+              <svg width="16" height="12" viewBox="0 0 9 6" style="border-radius:2px; flex-shrink:0;"><rect width="9" height="2" fill="#AE1C28"/><rect y="2" width="9" height="2" fill="#FFFFFF"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>
+              <span>NL</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-content">
+          <p class="eyebrow" data-i18n="hero.eyebrow">Professional Remote Support</p>
+          <h1 id="hero-title" data-i18n-html="hero.title">Remote control with HWID security. Fast, stable &amp; direct.</h1>
+          <p class="hero-lead" data-i18n="hero.lead">
+            Connect securely to remote computers in seconds. Built for Windows and Android with end-to-end encryption and full hardware license binding.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#downloads" id="heroDownloadBtn" data-i18n="hero.downloadCta">Download Free for Windows</a>
+            <a class="secondary-action" href="#licenties" data-i18n="hero.pricingCta">View Licenses</a>
+          </div>
+          <ul class="hero-checks">
+            <li><span data-i18n="hero.check1">End-to-End Encrypted</span></li>
+            <li><span data-i18n="hero.check2">No Installation Required (Portable)</span></li>
+            <li><span data-i18n="hero.check3">HWID License Security</span></li>
+          </ul>
+        </div>
+        <div class="product-frame">
+          <div class="console-window">
+            <div class="console-bar">
+              <span class="live-dot" title="Actief"></span>
+              <strong>BromeoRemote Session #8492</strong>
+              <span>99.9% Uptime</span>
+              <span>AES-256</span>
+            </div>
+            <div class="console-body">
+              <div class="console-nav">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="console-main">
+                <div class="session-strip">
+                  <div>
+                    <small>STATUS</small>
+                    <strong class="green-text">Connected</strong>
+                  </div>
+                  <div>
+                    <small>LATENCY</small>
+                    <strong>12 ms</strong>
+                  </div>
+                  <div>
+                    <small>SECURITY</small>
+                    <strong>HWID Encrypted</strong>
+                  </div>
+                </div>
+                <div class="desktop-preview">
+                  <div class="preview-toolbar">
+                    <span></span><span></span><span></span>
+                  </div>
+                  <div class="desktop-grid">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                  <div class="support-panel">
+                    <strong>Remote Support Active</strong>
+                    <button type="button">Share Screen</button>
+                    <button type="button">Transfer Files</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </header>
-
-    <main id="top">
-
-      <!-- HERO: Eerste indruk, uniek verkoopargument -->
-      <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-copy">
-          <p class="eyebrow" data-i18n="hero.eyebrow">Remote Desktop for Windows & Android</p>
-          <h1 id="hero-title" data-i18n="hero.title">Professional remote support, secured from hardware to session.</h1>
-          <p class="hero-lead" data-i18n="hero.lead">
-            BromeoRemote gives IT professionals and support teams full control: view, control, chat and transfer files — protected by end-to-end encryption and HWID licensing.
-          </p>
-          <div class="hero-actions" aria-label="Key actions">
-            <a class="primary-action" href="#downloads" data-i18n="hero.ctaPrimary">Download free</a>
-            <a class="secondary-action" href="#licenties" data-i18n="hero.ctaSecondary">View plans</a>
-          </div>
-          <ul class="hero-checks" data-i18n-aria-label="hero.checksLabel" aria-label="Key benefits">
-            <li data-i18n="hero.check1">End-to-end encrypted</li>
-            <li data-i18n="hero.check2">HWID hardware binding</li>
-            <li data-i18n="hero.check3">Windows &amp; Android</li>
-          </ul>
-        </div>
-
-        <div class="hero-product" data-i18n-aria-label="hero.productAlt" aria-label="BromeoRemote interface preview">
-          <div class="product-frame" style="background: transparent; border: none; box-shadow: none;">
-            <img src="/assets/bromeoremote_hero.png" alt="BromeoRemote Interface" style="width: 100%; height: auto; border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 255, 255, 0.15);">
-          </div>
-        </div>
       </section>
 
-      <!-- DOWNLOADS: Directe actie -->
-      <section class="download-band" id="downloads" aria-labelledby="downloads-title">
-        <div>
-          <p class="eyebrow" data-i18n="downloads.eyebrow">Downloads</p>
-          <h2 id="downloads-title" data-i18n="downloads.title">Get started right away.</h2>
-          <p style="color: var(--text-secondary); margin-top: 0.5rem;" data-i18n="downloads.subtitle">Free to download. Upgrade to Professional when you're ready.</p>
-        </div>
-        <div class="download-actions">
-          <a class="download-action primary" href="/download/windows" data-download="windows">
-            <span data-i18n="downloads.windowsLabel">Windows</span>
-            <strong data-i18n="downloads.windowsCta">Download installer</strong>
-          </a>
-          <a class="download-action" href="/download/windows-portable" data-download="windows-portable">
-            <span data-i18n="downloads.portableLabel">Portable</span>
-            <strong data-i18n="downloads.portableCta">Run instantly</strong>
-          </a>
-          <a class="download-action" href="/download/android" data-download="android">
-            <span data-i18n="downloads.androidLabel">Android</span>
-            <strong data-i18n="downloads.androidCta">Mobile app</strong>
-          </a>
-        </div>
-      </section>
-
-      <!-- HOE HET WERKT: Werkwijze in 3 stappen -->
+      <!-- WERKWIZJE -->
       <section class="section workflow-section" id="werkwijze" aria-labelledby="workflow-title">
-        <div class="section-heading split-heading">
-          <div>
-            <p class="eyebrow" data-i18n="workflow.eyebrow">How it works</p>
-            <h2 id="workflow-title" data-i18n="workflow.title">From download to active session in three steps.</h2>
-          </div>
-          <p data-i18n="workflow.subtitle">End users just open the app and share their code. The IT admin has full control over session permissions and tools.</p>
+        <div class="section-heading">
+          <p class="eyebrow" data-i18n="workflow.eyebrow">How it works</p>
+          <h2 id="workflow-title" data-i18n="workflow.title">Start in 3 simple steps.</h2>
         </div>
         <div class="workflow-grid">
           <article>
             <span>01</span>
-            <h3 data-i18n="workflow.step1Title">Open BromeoRemote</h3>
-            <p data-i18n="workflow.step1Body">The user opens the app and immediately sees a unique device ID and temporary session password.</p>
+            <h3 data-i18n="workflow.s1Title">Download &amp; Run</h3>
+            <p data-i18n="workflow.s1Body">Download the standalone executable. No installation or admin rights required.</p>
           </article>
           <article>
             <span>02</span>
-            <h3 data-i18n="workflow.step2Title">Connect with ID & password</h3>
-            <p data-i18n="workflow.step2Body">The admin enters the ID and password and chooses the desired session permissions: view, control, or both.</p>
+            <h3 data-i18n="workflow.s2Title">Share your Session ID</h3>
+            <p data-i18n="workflow.s2Body">Give your unique 9-digit session ID to your supporter or partner to establish a connection.</p>
           </article>
           <article>
             <span>03</span>
-            <h3 data-i18n="workflow.step3Title">Solve the problem</h3>
-            <p data-i18n="workflow.step3Body">Chat, transfer files, share the clipboard, record the screen and manage the device — all in one session.</p>
+            <h3 data-i18n="workflow.s3Title">Full Control &amp; Chat</h3>
+            <p data-i18n="workflow.s3Body">Control the remote PC, chat in real-time, transfer files and manage monitors securely.</p>
           </article>
         </div>
       </section>
 
-      <!-- FUNCTIES: Unieke feature-kaarten (niet herhalen wat hierboven staat) -->
-      <section class="section platform-section" id="platformen" aria-labelledby="platformen-title">
+      <!-- BEVEILIGING -->
+      <section class="section security-band" id="beveiliging" aria-labelledby="security-title">
         <div class="section-heading">
-          <p class="eyebrow" data-i18n="features.eyebrow">What you get</p>
-          <h2 id="platformen-title" data-i18n="features.title">Everything a professional support team needs.</h2>
-          <p data-i18n="features.subtitle">Built for daily use: connect fast, take over securely, and give users confidence.</p>
-        </div>
-        <div class="feature-grid">
-          <article>
-            <span class="feature-kicker">01</span>
-            <h3 data-i18n="features.f1Title">Full screen, full control</h3>
-            <p data-i18n="features.f1Body">View and control Windows PCs with mouse, keyboard and multi-monitor support. View-only available wherever needed.</p>
-          </article>
-          <article>
-            <span class="feature-kicker">02</span>
-            <h3 data-i18n="features.f2Title">Built-in session tools</h3>
-            <p data-i18n="features.f2Body">Chat, file transfer, clipboard, screen recording and restart — instantly available, no extra software needed.</p>
-          </article>
-          <article>
-            <span class="feature-kicker">03</span>
-            <h3 data-i18n="features.f3Title">Android app for on the go</h3>
-            <p data-i18n="features.f3Body">Manage remotely from your smartphone. Touch and mouse mode, light mode and instant notifications included.</p>
-          </article>
-          <article>
-            <span class="feature-kicker">04</span>
-            <h3 data-i18n="features.f4Title">Unattended access with 2FA</h3>
-            <p data-i18n="features.f4Body">Set a fixed password for automatic unattended management, secured with two-factor authentication.</p>
-          </article>
-        </div>
-      </section>
-
-      <!-- BEVEILIGING: Geconsolideerd in één sterke sectie -->
-      <section class="security-band" id="veiligheid" aria-labelledby="security-title">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="security.eyebrow">Enterprise Security</p>
-          <h2 id="security-title" data-i18n="security.title">Security that goes beyond a password.</h2>
-          <p data-i18n="security.subtitle">Every layer of BromeoRemote is designed with security first — from the connection to the license.</p>
+          <p class="eyebrow" data-i18n="security.eyebrow">Hardware-Bound Security</p>
+          <h2 id="security-title" data-i18n="security.title">Security that goes beyond passwords.</h2>
+          <p data-i18n="security.subtitle">Every layer of BromeoRemote is designed with security first — from connection to licensing.</p>
         </div>
         <ul class="security-list">
           <li>
             <strong data-i18n="security.s1Title">End-to-End Encryption</strong>
-            <span data-i18n="security.s1Body">All sessions, chat messages and file transfers are fully encrypted. No one can look in.</span>
+            <span data-i18n="security.s1Body">All sessions, chat messages and file transfers are fully encrypted. Nobody can eavesdrop.</span>
           </li>
           <li>
-            <strong data-i18n="security.s2Title">Granular session permissions</strong>
-            <span data-i18n="security.s2Body">Mouse, keyboard, clipboard and files can be allowed or blocked separately per connection.</span>
+            <strong data-i18n="security.s2Title">Granular Session Permissions</strong>
+            <span data-i18n="security.s2Body">Mouse, keyboard, clipboard and file permissions can be toggled per connection.</span>
           </li>
           <li>
             <strong data-i18n="security.s3Title">GDPR &amp; Privacy Proof</strong>
@@ -189,7 +166,7 @@
         </ul>
       </section>
 
-      <!-- PRIJZEN: Licenties en Mollie -->
+      <!-- PRIJZEN -->
       <section class="section pricing-section" id="licenties" aria-labelledby="pricing-title">
         <div class="section-heading" style="text-align: center; margin: 0 auto;">
           <p class="eyebrow" data-i18n="pricing.eyebrow">Licenses &amp; Pricing</p>
@@ -197,113 +174,92 @@
           <p data-i18n="pricing.subtitle">Pay securely via Mollie. Your license is active immediately after payment.</p>
         </div>
 
-        <div class="pricing-grid-container">
-          <div class="pricing-grid">
+        <div class="pricing-grid-container" style="margin-top: 2rem;">
+          <div class="pricing-grid" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem;">
             <!-- FREE CARD -->
-            <article class="pricing-card">
-              <div class="card-header-plan">
-                <h3 data-i18n="pricing.free.title">Free</h3>
-                <p class="plan-subtitle" data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
+            <article class="pricing-card" style="background: var(--surface-strong); border: 1px solid var(--line); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.free.title">Free</h3>
+                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.free.desc">Download for free with basic functionality.</p>
+                <div class="price-box" style="margin: 1.5rem 0;">
+                  <span class="price-val" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€0</span>
+                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                </div>
+                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                  <li>✔ <span data-i18n="pricing.free.f1">Remote control &amp; viewing</span></li>
+                  <li>✔ <span data-i18n="pricing.free.f2">Max. 15 min per session</span></li>
+                  <li>✔ <span data-i18n="pricing.free.f3">Standard picture quality</span></li>
+                </ul>
               </div>
-              <div class="price-box">
-                <span class="price-val">€0</span>
-                <span class="price-period" data-i18n="common.perMonth">/mo</span>
-              </div>
-              <ul class="features-list">
-                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f1">Remote control &amp; viewing</span></li>
-                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f2">Max. 15 min per session</span></li>
-                <li><svg class="check-icon" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.free.f3">Standard picture quality</span></li>
-              </ul>
-              <a href="#downloads" class="plan-btn btn-secondary" data-i18n="pricing.free.cta">Download Free</a>
+              <a class="secondary-action" href="#downloads" style="width:100%; text-align:center;" data-i18n="pricing.free.cta">Download Free</a>
             </article>
 
             <!-- PRO CARD -->
-            <article class="pricing-card premium-card">
-              <div class="popular-badge" data-i18n="pricing.pro.badge">Popular</div>
-              <div class="card-header-plan">
-                <h3 data-i18n="pricing.pro.title">Pro</h3>
-                <p class="plan-subtitle" data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
+            <article class="pricing-card premium-card" style="background: var(--surface-strong); border: 2px solid var(--blue); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between; position: relative;">
+              <span class="popular-badge" style="position:absolute; top:-12px; right:20px; background:var(--blue); color:#fff; font-size:0.75rem; font-weight:700; padding:0.25rem 0.75rem; border-radius:12px; text-transform:uppercase;" data-i18n="pricing.pro.badge">Popular</span>
+              <div>
+                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.pro.title">Pro</h3>
+                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.pro.desc">For the active user and IT admin.</p>
+                <div class="price-box" style="margin: 1.5rem 0; display:flex; align-items:baseline; gap:0.4rem; flex-wrap:wrap;">
+                  <span class="price-original" id="price-original-Pro" hidden style="font-size:1.1rem; color:#ef4444; text-decoration:line-through; font-weight:700;"></span>
+                  <span class="price-val" id="price-amount-Pro" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€7.95</span>
+                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                </div>
+                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                  <li>✔ <strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
+                  <li>✔ <span data-i18n="pricing.pro.f2">File transfer &amp; chat</span></li>
+                  <li>✔ <strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
+                  <li>✔ <span data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</span></li>
+                </ul>
               </div>
-              <div class="price-box">
-                <span class="price-original" id="price-original-Pro" hidden></span>
-                <span class="price-val" id="price-amount-Pro">€7.95</span>
-                <span class="price-period" data-i18n="common.perMonth">/mo</span>
-              </div>
-              <ul class="features-list">
-                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.pro.f1">Unlimited session duration</strong></li>
-                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.pro.f2">File transfer &amp; chat</span></li>
-                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.pro.f3">HWID hardware security</strong></li>
-                <li><svg class="check-icon green" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.pro.f4">Multi-monitor &amp; curtain mode</span></li>
-              </ul>
-              <button type="button" class="plan-btn btn-primary" data-open-account-modal data-plan="Pro">
+              <button type="button" class="primary-action" style="width:100%; border:none;" data-open-account-modal data-plan="Pro">
                 <span data-i18n="pricing.pro.cta">Subscribe</span>
-                <span class="btn-price-tag">(<span id="cta-price-Pro">€7.95</span>)</span>
+                <span class="btn-price-tag" style="margin-left:0.4rem;">(<span id="cta-price-Pro">€7.95</span>)</span>
               </button>
             </article>
 
             <!-- UNLIMITED CARD -->
-            <article class="pricing-card">
-              <div class="card-header-plan">
-                <h3 data-i18n="pricing.unlimited.title">Unlimited</h3>
-                <p class="plan-subtitle" data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
+            <article class="pricing-card" style="background: var(--surface-strong); border: 1px solid var(--line); border-radius: 18px; padding: 2rem; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <h3 style="font-size:1.3rem; margin-bottom:0.5rem;" data-i18n="pricing.unlimited.title">Unlimited</h3>
+                <p style="color:var(--muted); font-size:0.9rem;" data-i18n="pricing.unlimited.desc">For businesses and power users.</p>
+                <div class="price-box" style="margin: 1.5rem 0; display:flex; align-items:baseline; gap:0.4rem; flex-wrap:wrap;">
+                  <span class="price-original" id="price-original-Unlimited" hidden style="font-size:1.1rem; color:#ef4444; text-decoration:line-through; font-weight:700;"></span>
+                  <span class="price-val" id="price-amount-Unlimited" style="font-size: 2.4rem; font-weight: 800; color: #0f172a;">€50.00</span>
+                  <span class="price-period" style="font-size: 0.95rem; color: #64748b;" data-i18n="common.perMonth">/mo</span>
+                </div>
+                <ul class="features-list" style="list-style:none; padding:0; margin:0 0 1.5rem 0; display:grid; gap:0.6rem; font-size:0.9rem;">
+                  <li>✔ <strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
+                  <li>✔ <strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
+                  <li>✔ <span data-i18n="pricing.unlimited.f3">Unattended access with 2FA</span></li>
+                  <li>✔ <span data-i18n="pricing.unlimited.f4">Priority support</span></li>
+                </ul>
               </div>
-              <div class="price-box">
-                <span class="price-original" id="price-original-Unlimited" hidden></span>
-                <span class="price-val" id="price-amount-Unlimited">€50</span>
-                <span class="price-period" data-i18n="common.perMonth">/mo</span>
-              </div>
-              <ul class="features-list">
-                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.unlimited.f1">Unlimited devices &amp; sessions</strong></li>
-                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <strong data-i18n="pricing.unlimited.f2">AI Buddy assistant built in</strong></li>
-                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.unlimited.f3">Unattended access with 2FA</span></li>
-                <li><svg class="check-icon cyan" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> <span data-i18n="pricing.unlimited.f4">Priority support</span></li>
-              </ul>
-              <button type="button" class="plan-btn btn-cyan" data-open-account-modal data-plan="Unlimited">
+              <button type="button" class="primary-action" style="width:100%; border:none; background:#0ea5b7;" data-open-account-modal data-plan="Unlimited">
                 <span data-i18n="pricing.unlimited.cta">Subscribe</span>
-                <span class="btn-price-tag">(<span id="cta-price-Unlimited">€50.00</span>)</span>
+                <span class="btn-price-tag" style="margin-left:0.4rem;">(<span id="cta-price-Unlimited">€50.00</span>)</span>
               </button>
             </article>
           </div>
 
-          <!-- Accepted Payment Methods Banner -->
-          <div class="payment-methods-banner">
-            <p class="payment-methods-title" data-i18n="pricing.acceptedMethods">Accepted payment methods:</p>
-            <div class="payment-methods-grid">
-              <div class="payment-badge" title="iDEAL / Wero">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/iDEAL-Wero/iDEAL-Wero-card.svg" alt="iDEAL" class="payment-logo-img">
-                <span>iDEAL</span>
-              </div>
-              <div class="payment-badge" title="Krediet- en debetkaarten (Visa / Mastercard)">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/Credit-card/Credit-card-card.svg" alt="Creditcard" class="payment-logo-img">
-                <span>Creditcard</span>
-              </div>
-              <div class="payment-badge" title="PayPal">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/PayPal/PayPal-card.svg" alt="PayPal" class="payment-logo-img">
-                <span>PayPal</span>
-              </div>
-              <div class="payment-badge" title="Apple Pay">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/Apple-pay/Apple-pay-card.svg" alt="Apple Pay" class="payment-logo-img">
-                <span>Apple Pay</span>
-              </div>
-              <div class="payment-badge" title="Google Pay">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/Google-Pay/Google-Pay-card.svg" alt="Google Pay" class="payment-logo-img">
-                <span>Google Pay</span>
-              </div>
-              <div class="payment-badge" title="Overboeking (SEPA-zone)">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/Banktransfer/Banktransfer-card.svg" alt="Overboeking" class="payment-logo-img">
-                <span>Overboeking</span>
-              </div>
-              <div class="payment-badge" title="SEPA-incasso">
-                <img src="/assets/Mollie%20-%20Payment%20Methods/Direct-debit/Direct-debit-card.svg" alt="SEPA-incasso" class="payment-logo-img">
-                <span>SEPA-incasso</span>
-              </div>
+          <!-- MOLLIE PAYMENT BADGES -->
+          <div class="payment-methods-banner" style="margin-top: 2.5rem; text-align: center;">
+            <p style="font-size:0.85rem; color:var(--muted); margin-bottom:1rem;" data-i18n="pricing.acceptedMethods">Accepted payment methods:</p>
+            <div style="display:flex; justify-content:center; align-items:center; gap:1rem; flex-wrap:wrap;">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/iDEAL-Wero/iDEAL-Wero-card.svg" alt="iDEAL" title="iDEAL" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/Credit-card/Credit-card-card.svg" alt="Creditcard" title="Creditcard (Visa / Mastercard)" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/PayPal/PayPal-card.svg" alt="PayPal" title="PayPal" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/Apple-pay/Apple-pay-card.svg" alt="Apple Pay" title="Apple Pay" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/Google-Pay/Google-Pay-card.svg" alt="Google Pay" title="Google Pay" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/Banktransfer/Banktransfer-card.svg" alt="SEPA Overboeking" title="SEPA Overboeking" class="payment-logo-img">
+              <img src="/assets/Mollie%20-%20Payment%20Methods/Direct-debit/Direct-debit-card.svg" alt="SEPA-incasso" title="SEPA-incasso" class="payment-logo-img">
             </div>
           </div>
         </div>
       </section>
 
       <!-- FAQ -->
-      <section class="section faq-section" aria-labelledby="faq-title">
+      <section class="section faq-section" id="faq" aria-labelledby="faq-title">
         <div class="section-heading">
           <p class="eyebrow" data-i18n="faq.eyebrow">FAQ</p>
           <h2 id="faq-title" data-i18n="faq.title">Frequently asked questions.</h2>
@@ -437,203 +393,8 @@
       </div>
     </footer>
 
-    <script src="/app.js?v=20260801-8" defer></script>
-  
-    <!-- COOKIE CONSENT BANNER POPUP -->
-    <div id="cookieBanner" class="cookie-banner" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-desc">
-      <div class="cookie-banner-content">
-        <div class="cookie-banner-text">
-          <h4 id="cookie-title" class="cookie-title" data-i18n="cookieBanner.title">🍪 Cookie &amp; Privacy Instellingen</h4>
-          <p id="cookie-desc" class="cookie-desc" data-i18n="cookieBanner.desc">
-            Wij gebruiken functionele cookies voor sessiebeheer, beveiliging en taalselectie. Er worden geen trackingcookies van derden of advertentietrackers geplaatst.
-          </p>
-        </div>
-        <div class="cookie-banner-actions">
-          <a href="/cookiebeleid/" class="cookie-link" data-i18n="cookieBanner.policyLink">Lees Cookiebeleid</a>
-          <button type="button" id="cookieEssentialBtn" class="btn cookie-btn-essential" data-i18n="cookieBanner.essentialOnly">Alleen noodzakelijk</button>
-          <button type="button" id="cookieAcceptAllBtn" class="btn btn-primary cookie-btn-accept" data-i18n="cookieBanner.acceptAll">Alles accepteren</button>
-        </div>
-      </div>
-    </div>
+    <script src="/app.js?v=20260801-10" defer></script>
 
-    <!-- DOWNLOAD MODAL POPUP -->
-    <div id="downloadModal" class="download-modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="modal-title">
-      <div class="download-modal-backdrop" data-close-modal></div>
-      <div class="download-modal-card">
-        <button class="download-modal-close" data-close-modal data-i18n-aria-label="downloadModal.close" aria-label="Close window">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-
-        <div class="download-modal-header">
-          <div class="modal-badge-wrapper">
-            <span class="modal-chip" data-i18n="downloadModal.chip">Start free instantly</span>
-          </div>
-          <h2 id="modal-title" class="download-modal-title" data-i18n="downloadModal.title">Download BromeoRemote</h2>
-          <p class="download-modal-subtitle" data-i18n="downloadModal.subtitle">Choose your platform below. Free for personal and business testing.</p>
-        </div>
-
-        <div class="download-modal-grid">
-          <!-- Windows Installer -->
-          <a class="modal-download-card primary" href="/download/windows" data-download="windows">
-            <div class="card-tag" data-i18n="downloadModal.windowsTag">Recommended</div>
-            <div class="card-icon-wrap windows">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="#00adef">
-                <path d="M0 3.449L9.75 2.1v9.451H0m0 1.049h9.75v9.451L0 20.7V12.6zm10.55-10.65L24 0v11.4h-13.455V1.95zM24 12.6V24l-13.45-1.95V12.6H24z"/>
-              </svg>
-            </div>
-            <div class="card-info">
-              <h3 data-i18n="downloadModal.windowsTitle">Windows Installer</h3>
-              <p data-i18n="downloadModal.windowsDesc">With automatic updates & shortcut (.exe installer)</p>
-            </div>
-            <div class="card-button primary">
-              <span data-i18n="downloadModal.windowsCta">Download installer</span>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            </div>
-          </a>
-
-          <!-- Windows Portable -->
-          <a class="modal-download-card" href="/download/windows-portable" data-download="windows-portable">
-            <div class="card-icon-wrap portable">
-              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="4" width="20" height="12" rx="2"/>
-                <path d="M6 20h12"/>
-                <path d="M10 16v4"/>
-                <path d="M14 16v4"/>
-              </svg>
-            </div>
-            <div class="card-info">
-        </div>
-        <div class="faq-list">
-          <details>
-            <summary data-i18n="faq.q1">Is BromeoRemote an alternative to TeamViewer?</summary>
-            <p data-i18n="faq.a1">Yes. BromeoRemote offers the same core functionality — remote support, viewing, controlling, chatting and transferring files — but with better privacy, HWID security and transparent pricing with no hidden costs.</p>
-          </details>
-          <details>
-            <summary data-i18n="faq.q2">What is HWID and why is it more secure?</summary>
-            <p data-i18n="faq.a2">HWID (Hardware ID) binds your license to a unique, irreversible fingerprint of your admin computer. Even if someone got hold of your login details, the license couldn't be used on another PC.</p>
-          </details>
-          <details>
-            <summary data-i18n="faq.q3">How do I pay and when is my license active?</summary>
-            <p data-i18n="faq.a3">You pay securely via Mollie (iDEAL, Credit card, PayPal, Apple Pay, Google Pay or SEPA). Your license is activated automatically as soon as payment is confirmed — no manual step needed.</p>
-          </details>
-          <details>
-            <summary data-i18n="faq.q4">Does BromeoRemote work on all Windows versions?</summary>
-            <p data-i18n="faq.a4">BromeoRemote supports Windows 10 and newer. The Android app requires Android 8.0 or higher. A stable internet connection is required for remote sessions.</p>
-          </details>
-        </div>
-      </section>
-
-      <!-- CONTACT -->
-      <section class="section contact-section" id="contact" aria-labelledby="contact-title">
-        <div class="section-heading">
-          <p class="eyebrow" data-i18n="contact.eyebrow">Contact</p>
-          <h2 id="contact-title" data-i18n="contact.title">Questions about licenses or business use?</h2>
-          <p data-i18n="contact.subtitle">Send a message and we'll get back to you as soon as possible.</p>
-        </div>
-
-        <div class="contact-layout">
-          <form class="contact-form" id="contactForm" novalidate>
-            <label>
-              <span data-i18n="contact.name">Name</span>
-              <input name="name" autocomplete="name" required>
-            </label>
-            <label>
-              <span data-i18n="contact.email">Email</span>
-              <input name="email" type="email" autocomplete="email" required>
-            </label>
-            <label>
-              <span data-i18n="contact.company">Company</span>
-              <input name="company" autocomplete="organization">
-            </label>
-            <label>
-              <span data-i18n="contact.subject">Subject</span>
-              <input name="subject" required>
-            </label>
-            <label class="full-row">
-              <span data-i18n="contact.message">Message</span>
-              <textarea name="message" rows="5" required></textarea>
-            </label>
-            <button class="primary-action full-row" type="submit" data-i18n="contact.submit">Send message</button>
-            <p class="form-status full-row" id="contactStatus" role="status" aria-live="polite"></p>
-          </form>
-
-          <aside class="newsletter-panel" aria-labelledby="newsletter-title">
-            <h3 id="newsletter-title" data-i18n="newsletter.title">Stay in the loop</h3>
-            <p data-i18n="newsletter.subtitle">Get notified about new releases, features and security updates.</p>
-            <form id="newsletterForm" novalidate>
-              <label>
-                <span data-i18n="newsletter.email">Email</span>
-                <input name="email" type="email" autocomplete="email" required>
-              </label>
-              <button class="secondary-action" type="submit" data-i18n="newsletter.submit">Subscribe</button>
-              <p class="form-status" id="newsletterStatus" role="status" aria-live="polite"></p>
-            </form>
-          </aside>
-        </div>
-      </section>
-    </main>
-
-    <footer class="site-footer">
-      <div class="footer-container">
-        <div class="footer-top-grid">
-          <!-- BRAND COLUMN -->
-          <div class="footer-brand-col">
-            <a href="/" aria-label="BromeoRemote home">
-              <img class="footer-logo" src="/assets/logo2.png" alt="BromeoRemote Logo">
-            </a>
-            <p class="footer-tagline" data-i18n="footer.tagline">Professional remote desktop software for Windows &amp; Android. Secured with HWID licensing and End-to-End encryption.</p>
-            <span class="footer-company" data-i18n-html="footer.company">A product of <a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>.</span>
-            <div class="footer-chips">
-              <span class="footer-chip" data-i18n="footer.chip1">🔒 End-to-End Encrypted</span>
-              <span class="footer-chip" data-i18n="footer.chip2">🇪🇺 EU Datacenters &amp; AVG</span>
-            </div>
-          </div>
-
-          <!-- PRODUCT COLUMN -->
-          <div class="footer-nav-col">
-            <h4 class="footer-col-title" data-i18n="footer.colProduct">Product</h4>
-            <a href="/#werkwijze" data-i18n="footer.linkWorkflow">How it works</a>
-            <a href="/#beveiliging" data-i18n="footer.linkSecurity">Security &amp; HWID</a>
-            <a href="/#licenties" data-i18n="footer.linkPricing">Pricing &amp; Licenses</a>
-            <a href="/#downloads" data-i18n="footer.linkDownloads">Downloads</a>
-            <a href="/?account=1" data-i18n="footer.linkDashboard">My Account / Dashboard</a>
-          </div>
-
-          <!-- LEGAL COLUMN -->
-          <div class="footer-nav-col">
-            <h4 class="footer-col-title" data-i18n="footer.colLegal">Legal &amp; Privacy</h4>
-            <a href="/voorwaarden/" data-i18n="footer.terms">Terms of Service</a>
-            <a href="/privacy/" data-i18n="footer.privacy">Privacy Policy</a>
-            <a href="/cookiebeleid/" data-i18n="footer.linkCookies">Cookie Policy</a>
-          </div>
-
-          <!-- SUPPORT COLUMN -->
-          <div class="footer-nav-col">
-            <h4 class="footer-col-title" data-i18n="footer.colSupport">Support</h4>
-            <a href="/#contact" data-i18n="footer.contact">Contact Form</a>
-            <a href="/#faq" data-i18n="footer.linkFaq">Frequently Asked Questions</a>
-          </div>
-        </div>
-
-        <div class="footer-divider"></div>
-
-        <div class="footer-bottom-bar">
-          <span data-i18n-html="footer.copyright">&copy; 2026 BromeoRemote (<a href="https://TheGateKeeperEnterprises.com" target="_blank" rel="noopener" style="color:#94a3b8; text-decoration:underline;">The Gatekeeper Enterprises</a>). All rights reserved.</span>
-          <div class="footer-payments">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/iDEAL-Wero/iDEAL-Wero-card.svg" alt="iDEAL" title="iDEAL" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/Credit-card/Credit-card-card.svg" alt="Creditcard" title="Creditcard (Visa / Mastercard)" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/PayPal/PayPal-card.svg" alt="PayPal" title="PayPal" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/Apple-pay/Apple-pay-card.svg" alt="Apple Pay" title="Apple Pay" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/Google-Pay/Google-Pay-card.svg" alt="Google Pay" title="Google Pay" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/Banktransfer/Banktransfer-card.svg" alt="SEPA Overboeking" title="SEPA Overboeking" class="footer-payment-logo-img">
-            <img src="/assets/Mollie%20-%20Payment%20Methods/Direct-debit/Direct-debit-card.svg" alt="SEPA-incasso" title="SEPA-incasso" class="footer-payment-logo-img">
-          </div>
-        </div>
-      </div>
-    </footer>
-
-    <script src="/app.js?v=20260801-8" defer></script>
-  
     <!-- COOKIE CONSENT BANNER POPUP -->
     <div id="cookieBanner" class="cookie-banner" role="dialog" aria-labelledby="cookie-title" aria-describedby="cookie-desc">
       <div class="cookie-banner-content">
