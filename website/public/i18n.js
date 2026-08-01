@@ -603,6 +603,15 @@
     document.querySelectorAll("[data-lang-switch]").forEach((btn) => {
       btn.classList.toggle("active", btn.getAttribute("data-lang-switch") === activeLang);
     });
+
+    const desktopImg = document.getElementById("heroDesktopImg");
+    const mobileImg = document.getElementById("heroMobileImg");
+    if (desktopImg) {
+      desktopImg.src = activeLang === "nl" ? "/assets/Desktop%20NL.png" : "/assets/Desktop%20EN.png";
+    }
+    if (mobileImg) {
+      mobileImg.src = activeLang === "nl" ? "/assets/Mobiel%20NL.png" : "/assets/Mobile%20EN.png";
+    }
   }
 
   function setLang(lang) {
