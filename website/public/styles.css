@@ -1769,6 +1769,65 @@ button:focus-visible {
   }
 }
 
+@media (max-width: 600px) {
+  .download-modal-overlay {
+    padding: 10px;
+  }
+  .download-modal-card {
+    padding: 24px 14px 18px 14px;
+    border-radius: 18px;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .download-modal-header {
+    margin-bottom: 16px;
+  }
+  .download-modal-header .download-modal-title {
+    font-size: 1.35rem;
+  }
+  .download-modal-header .download-modal-subtitle {
+    font-size: 0.82rem;
+  }
+  .download-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .modal-download-card {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+  .card-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .card-icon-wrap svg {
+    width: 26px;
+    height: 26px;
+  }
+  .card-info h3 {
+    font-size: 1rem;
+    margin-bottom: 4px;
+  }
+  .card-info p {
+    font-size: 0.78rem;
+    margin-bottom: 12px;
+    line-height: 1.35;
+  }
+  .card-button {
+    padding: 9px 12px;
+    font-size: 0.82rem;
+    border-radius: 10px;
+  }
+  .download-modal-footer {
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.78rem;
+  }
+}
+
 .modal-download-card {
   position: relative;
   display: flex;
